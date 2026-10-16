@@ -1,0 +1,969 @@
+<div class="login-page">
+
+  <!-- =========================================
+       WELCOME SCREEN
+       ========================================= -->
+
+  <main
+    class="welcome-screen"
+    [class.form-open]="showLoginForm"
+  >
+
+    <!-- =========================================
+         BRAND
+         ========================================= -->
+
+    <div class="brand">
+
+      <div
+        class="brand-icon"
+        aria-hidden="true"
+      >
+
+        <!-- ORIGINAL SILKMART WORM + LEAF LOGO -->
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+
+          <!-- WORM -->
+          <circle
+            cx="8.8"
+            cy="8.9"
+            r="1.55"
+            stroke="currentColor"
+            stroke-width="1.2"
+          />
+
+          <circle
+            cx="11.1"
+            cy="8"
+            r="1.55"
+            stroke="currentColor"
+            stroke-width="1.2"
+          />
+
+          <circle
+            cx="13.5"
+            cy="7.4"
+            r="1.55"
+            stroke="currentColor"
+            stroke-width="1.2"
+          />
+
+          <circle
+            cx="15.8"
+            cy="7.2"
+            r="1.55"
+            stroke="currentColor"
+            stroke-width="1.2"
+          />
+
+          <circle
+            cx="18.2"
+            cy="7.4"
+            r="1.75"
+            stroke="currentColor"
+            stroke-width="1.2"
+          />
+
+          <!-- EYE -->
+          <circle
+            cx="18.7"
+            cy="7"
+            r="0.24"
+            fill="currentColor"
+          />
+
+          <!-- ANTENNA -->
+          <path
+            d="M18.5 5.9C19 5.1 19.7 4.9 20.4 5.1"
+            stroke="currentColor"
+            stroke-width="1"
+            stroke-linecap="round"
+          />
+
+          <path
+            d="M17.5 5.9C17.2 5.1 16.5 4.8 15.9 4.9"
+            stroke="currentColor"
+            stroke-width="1"
+            stroke-linecap="round"
+          />
+
+          <!-- LEAF -->
+          <path
+            d="M19.5 3.5C13 3.5 7 6.5 5 12.5C3.8 16.1 5.4 19.2 8.5 20.5C11.8 21.8 15.5 20.1 17.4 17.1C19.5 13.8 19.5 8.5 19.5 3.5Z"
+            stroke="currentColor"
+            stroke-width="1.6"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+
+          <path
+            d="M5 19C8 15 11.5 12 16.5 9"
+            stroke="currentColor"
+            stroke-width="1.6"
+            stroke-linecap="round"
+          />
+
+        </svg>
+
+      </div>
+
+
+      <div class="brand-text">
+
+        <div class="brand-name">
+          SilkMart
+        </div>
+
+        <div class="brand-subtitle">
+          VILLANUEVA (DOST-PTRI)
+        </div>
+
+      </div>
+
+    </div>
+
+
+    <!-- =========================================
+         WELCOME CONTENT
+         ========================================= -->
+
+    <section class="welcome-content">
+
+      <div class="eyebrow">
+        WELCOME!
+      </div>
+
+
+      <h1>
+        Discover the beauty<br />
+
+        of
+
+        <span>
+          Villanueva Silk.
+        </span>
+      </h1>
+
+
+      <p>
+        Handcrafted silk products inspired by the natural
+        beauty and tradition of Villanueva (DOST-PTRI).
+      </p>
+
+
+      <button
+        class="explore-button"
+        type="button"
+        (click)="openLogin()"
+      >
+
+        <span>
+          Explore now
+        </span>
+
+        <i
+          class="pi pi-arrow-right"
+          aria-hidden="true"
+        ></i>
+
+      </button>
+
+    </section>
+
+
+    <!-- =========================================
+         LEAF IMAGE
+         ========================================= -->
+
+    <div
+      class="leaf-decoration"
+      aria-hidden="true"
+    >
+
+      <img
+        class="leaf-worm-image"
+        src="https://mp3tourl.com/images/1792036648578-cce5b0f3-87c3-4557-ab11-f9a03e08a192.png"
+        alt=""
+        referrerpolicy="no-referrer"
+      />
+
+    </div>
+
+
+    <!-- DECORATIVE CIRCLES -->
+
+    <div class="circle circle-1"></div>
+
+    <div class="circle circle-2"></div>
+
+    <div class="circle circle-3"></div>
+
+  </main>
+
+
+  <!-- =========================================
+       LOGIN / REGISTER OVERLAY
+       ========================================= -->
+
+  <div
+    *ngIf="showLoginForm"
+    class="login-overlay"
+    role="dialog"
+    aria-modal="true"
+    (click)="closeLogin()"
+  >
+
+
+    <section
+      class="login-panel"
+      [class.register-mode]="showRegisterForm"
+      (click)="$event.stopPropagation()"
+    >
+
+
+      <!-- =====================================
+           LEFT IMAGE
+           ===================================== -->
+
+      <div class="login-image">
+
+        <img
+          src="https://mp3tourl.com/images/1792036648578-cce5b0f3-87c3-4557-ab11-f9a03e08a192.png"
+          alt=""
+          referrerpolicy="no-referrer"
+        />
+
+      </div>
+
+
+      <!-- =====================================
+           RIGHT FORM SIDE
+           ===================================== -->
+
+      <div class="login-form-side">
+
+
+        <!-- CLOSE BUTTON -->
+
+        <button
+          class="close-button"
+          type="button"
+          aria-label="Close"
+          [disabled]="loginLoading || registerLoading"
+          (click)="closeLogin()"
+        >
+
+          <i
+            class="pi pi-times"
+            aria-hidden="true"
+          ></i>
+
+        </button>
+
+
+        <!-- ===================================
+             PANEL BRAND
+             =================================== -->
+
+        <div class="panel-brand">
+
+          <div
+            class="panel-brand-icon"
+            aria-hidden="true"
+          >
+
+            <!-- ORIGINAL SILKMART LOGO -->
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+
+              <!-- WORM -->
+              <circle
+                cx="8.8"
+                cy="8.9"
+                r="1.55"
+                stroke="currentColor"
+                stroke-width="1.2"
+              />
+
+              <circle
+                cx="11.1"
+                cy="8"
+                r="1.55"
+                stroke="currentColor"
+                stroke-width="1.2"
+              />
+
+              <circle
+                cx="13.5"
+                cy="7.4"
+                r="1.55"
+                stroke="currentColor"
+                stroke-width="1.2"
+              />
+
+              <circle
+                cx="15.8"
+                cy="7.2"
+                r="1.55"
+                stroke="currentColor"
+                stroke-width="1.2"
+              />
+
+              <circle
+                cx="18.2"
+                cy="7.4"
+                r="1.75"
+                stroke="currentColor"
+                stroke-width="1.2"
+              />
+
+              <!-- EYE -->
+              <circle
+                cx="18.7"
+                cy="7"
+                r="0.24"
+                fill="currentColor"
+              />
+
+              <!-- ANTENNA -->
+              <path
+                d="M18.5 5.9C19 5.1 19.7 4.9 20.4 5.1"
+                stroke="currentColor"
+                stroke-width="1"
+                stroke-linecap="round"
+              />
+
+              <path
+                d="M17.5 5.9C17.2 5.1 16.5 4.8 15.9 4.9"
+                stroke="currentColor"
+                stroke-width="1"
+                stroke-linecap="round"
+              />
+
+              <!-- LEAF -->
+              <path
+                d="M19.5 3.5C13 3.5 7 6.5 5 12.5C3.8 16.1 5.4 19.2 8.5 20.5C11.8 21.8 15.5 20.1 17.4 17.1C19.5 13.8 19.5 8.5 19.5 3.5Z"
+                stroke="currentColor"
+                stroke-width="1.6"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+
+              <path
+                d="M5 19C8 15 11.5 12 16.5 9"
+                stroke="currentColor"
+                stroke-width="1.6"
+                stroke-linecap="round"
+              />
+
+            </svg>
+
+          </div>
+
+
+          <div>
+
+            <div class="panel-brand-name">
+              SilkMart
+            </div>
+
+            <div class="panel-brand-subtitle">
+              VILLANUEVA (DOST-PTRI)
+            </div>
+
+          </div>
+
+        </div>
+
+
+        <!-- ===================================
+             LOGIN FORM
+             =================================== -->
+
+        <ng-container
+          *ngIf="!showRegisterForm"
+        >
+
+          <div class="login-heading">
+
+            <div class="eyebrow">
+              ACCOUNT
+            </div>
+
+
+            <h2>
+              Welcome!
+            </h2>
+
+
+            <p>
+              Sign in to continue to your account.
+            </p>
+
+          </div>
+
+
+          <form
+            #loginForm="ngForm"
+            (ngSubmit)="login(loginForm)"
+            novalidate
+          >
+
+            <!-- EMAIL -->
+
+            <div class="form-group">
+
+              <label for="email">
+                Email address
+              </label>
+
+
+              <div class="input-container">
+
+                <span
+                  class="input-icon"
+                  aria-hidden="true"
+                >
+
+                  <i class="pi pi-envelope"></i>
+
+                </span>
+
+
+                <input
+                  id="email"
+                  name="email"
+                  type="email"
+                  [(ngModel)]="email"
+                  placeholder="you@example.com"
+                  autocomplete="email"
+                  required
+                />
+
+              </div>
+
+            </div>
+
+
+            <!-- PASSWORD -->
+
+            <div class="form-group">
+
+              <label for="password">
+                Password
+              </label>
+
+
+              <div class="password-container">
+
+                <span
+                  class="input-icon"
+                  aria-hidden="true"
+                >
+
+                  <i class="pi pi-lock"></i>
+
+                </span>
+
+
+                <input
+                  id="password"
+                  name="password"
+                  [type]="
+                    showPassword
+                      ? 'text'
+                      : 'password'
+                  "
+                  [(ngModel)]="password"
+                  placeholder="Enter your password"
+                  autocomplete="current-password"
+                  required
+                />
+
+
+                <button
+                  type="button"
+                  class="password-toggle"
+                  [attr.aria-label]="
+                    showPassword
+                      ? 'Hide password'
+                      : 'Show password'
+                  "
+                  (click)="togglePassword()"
+                >
+
+                  <i
+                    class="pi"
+                    [ngClass]="
+                      showPassword
+                        ? 'pi-eye'
+                        : 'pi-eye-slash'
+                    "
+                  ></i>
+
+                </button>
+
+              </div>
+
+            </div>
+
+
+            <!-- SIGN IN -->
+
+            <button
+              class="signin-button"
+              type="submit"
+              [disabled]="loginLoading"
+            >
+
+              <ng-container
+                *ngIf="!loginLoading"
+              >
+
+                <span>
+                  Sign in
+                </span>
+
+                <i class="pi pi-arrow-right"></i>
+
+              </ng-container>
+
+
+              <ng-container
+                *ngIf="loginLoading"
+              >
+
+                <i class="pi pi-spin pi-spinner"></i>
+
+                <span>
+                  Signing in...
+                </span>
+
+              </ng-container>
+
+            </button>
+
+          </form>
+
+
+          <!-- DIVIDER -->
+
+          <div class="divider">
+
+            <span>
+              or
+            </span>
+
+          </div>
+
+
+          <!-- CREATE ACCOUNT -->
+
+          <button
+            class="register-button"
+            type="button"
+            (click)="openRegister()"
+          >
+
+            <i class="pi pi-user-plus"></i>
+
+            <span>
+              Create an account
+            </span>
+
+          </button>
+
+
+          <!-- CONTINUE AS CUSTOMER -->
+
+          <button
+            class="guest-button"
+            type="button"
+            (click)="continueAsCustomer()"
+          >
+
+            <i class="pi pi-shopping-bag"></i>
+
+            <span>
+              Continue as customer
+            </span>
+
+            <i class="pi pi-arrow-right"></i>
+
+          </button>
+
+        </ng-container>
+
+
+        <!-- ===================================
+             REGISTER FORM
+             =================================== -->
+
+        <ng-container
+          *ngIf="showRegisterForm"
+        >
+
+
+          <!-- BACK -->
+
+          <button
+            class="back-button"
+            type="button"
+            [disabled]="registerLoading"
+            (click)="backToLogin()"
+          >
+
+            <i class="pi pi-arrow-left"></i>
+
+            <span>
+              Back to login
+            </span>
+
+          </button>
+
+
+          <!-- REGISTER HEADING -->
+
+          <div class="register-heading">
+
+            <div class="eyebrow">
+              CREATE ACCOUNT
+            </div>
+
+
+            <h2>
+              Join SilkMart.
+            </h2>
+
+
+            <p>
+              Create your customer account to start ordering silk products.
+            </p>
+
+          </div>
+
+
+          <form
+            #registerForm="ngForm"
+            (ngSubmit)="createAccount(registerForm)"
+            novalidate
+          >
+
+
+            <!-- FULL NAME -->
+
+            <div class="form-group">
+
+              <label for="fullName">
+                Full Name
+              </label>
+
+
+              <div class="input-container">
+
+                <span
+                  class="input-icon"
+                  aria-hidden="true"
+                >
+
+                  <i class="pi pi-user"></i>
+
+                </span>
+
+
+                <input
+                  id="fullName"
+                  name="fullName"
+                  type="text"
+                  [(ngModel)]="fullName"
+                  placeholder="Enter your full name"
+                  autocomplete="name"
+                  required
+                />
+
+              </div>
+
+            </div>
+
+
+            <!-- EMAIL -->
+
+            <div class="form-group">
+
+              <label for="registerEmail">
+                Email Address
+              </label>
+
+
+              <div class="input-container">
+
+                <span
+                  class="input-icon"
+                  aria-hidden="true"
+                >
+
+                  <i class="pi pi-envelope"></i>
+
+                </span>
+
+
+                <input
+                  id="registerEmail"
+                  name="registerEmail"
+                  type="email"
+                  [(ngModel)]="registerEmail"
+                  placeholder="you@example.com"
+                  autocomplete="email"
+                  required
+                  email
+                />
+
+              </div>
+
+            </div>
+
+
+            <!-- MOBILE -->
+
+            <div class="form-group">
+
+              <label for="mobileNumber">
+                Mobile Number
+              </label>
+
+
+              <div class="input-container">
+
+                <span
+                  class="input-icon"
+                  aria-hidden="true"
+                >
+
+                  <i class="pi pi-phone"></i>
+
+                </span>
+
+
+                <input
+                  id="mobileNumber"
+                  name="mobileNumber"
+                  type="tel"
+                  [(ngModel)]="mobileNumber"
+                  placeholder="09XXXXXXXXX"
+                  autocomplete="tel"
+                  required
+                />
+
+              </div>
+
+            </div>
+
+
+            <!-- COMPLETE ADDRESS -->
+
+            <div class="form-group">
+
+              <label for="completeAddress">
+                Complete Address
+              </label>
+
+
+              <div class="input-container">
+
+                <span
+                  class="input-icon"
+                  aria-hidden="true"
+                >
+
+                  <i class="pi pi-map-marker"></i>
+
+                </span>
+
+
+                <input
+                  id="completeAddress"
+                  name="completeAddress"
+                  type="text"
+                  [(ngModel)]="completeAddress"
+                  placeholder="Enter your complete address"
+                  autocomplete="street-address"
+                  required
+                />
+
+              </div>
+
+            </div>
+
+
+            <!-- PASSWORD -->
+
+            <div class="form-group">
+
+              <label for="registerPassword">
+                Password
+              </label>
+
+
+              <div class="password-container">
+
+                <span
+                  class="input-icon"
+                  aria-hidden="true"
+                >
+
+                  <i class="pi pi-lock"></i>
+
+                </span>
+
+
+                <input
+                  id="registerPassword"
+                  name="registerPassword"
+                  [type]="
+                    showRegisterPassword
+                      ? 'text'
+                      : 'password'
+                  "
+                  [(ngModel)]="registerPassword"
+                  placeholder="Minimum 6 characters"
+                  autocomplete="new-password"
+                  minlength="6"
+                  required
+                />
+
+
+                <button
+                  class="password-toggle"
+                  type="button"
+                  aria-label="Show or hide password"
+                  (click)="toggleRegisterPassword()"
+                >
+
+                  <i
+                    class="pi"
+                    [ngClass]="
+                      showRegisterPassword
+                        ? 'pi-eye'
+                        : 'pi-eye-slash'
+                    "
+                  ></i>
+
+                </button>
+
+              </div>
+
+            </div>
+
+
+            <!-- CONFIRM PASSWORD -->
+
+            <div class="form-group">
+
+              <label for="confirmPassword">
+                Confirm Password
+              </label>
+
+
+              <div class="password-container">
+
+                <span
+                  class="input-icon"
+                  aria-hidden="true"
+                >
+
+                  <i class="pi pi-lock"></i>
+
+                </span>
+
+
+                <input
+                  id="confirmPassword"
+                  name="confirmPassword"
+                  [type]="
+                    showConfirmPassword
+                      ? 'text'
+                      : 'password'
+                  "
+                  [(ngModel)]="confirmPassword"
+                  placeholder="Repeat your password"
+                  autocomplete="new-password"
+                  required
+                />
+
+
+                <button
+                  class="password-toggle"
+                  type="button"
+                  aria-label="Show or hide confirm password"
+                  (click)="toggleConfirmPassword()"
+                >
+
+                  <i
+                    class="pi"
+                    [ngClass]="
+                      showConfirmPassword
+                        ? 'pi-eye'
+                        : 'pi-eye-slash'
+                    "
+                  ></i>
+
+                </button>
+
+              </div>
+
+            </div>
+
+
+            <!-- CREATE ACCOUNT -->
+
+            <button
+              class="signin-button create-account-button"
+              type="submit"
+              [disabled]="registerLoading"
+            >
+
+              <ng-container
+                *ngIf="!registerLoading"
+              >
+
+                <i class="pi pi-user-plus"></i>
+
+                <span>
+                  Create Account
+                </span>
+
+              </ng-container>
+
+
+              <ng-container
+                *ngIf="registerLoading"
+              >
+
+                <i class="pi pi-spin pi-spinner"></i>
+
+                <span>
+                  Creating account...
+                </span>
+
+              </ng-container>
+
+            </button>
+
+          </form>
+
+        </ng-container>
+
+      </div>
+
+    </section>
+
+  </div>
+
+</div>

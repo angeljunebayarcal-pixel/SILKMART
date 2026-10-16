@@ -1,0 +1,1567 @@
+<div class="profile-page">
+
+  <!-- =========================================
+       PROFILE HEADER
+       ========================================= -->
+
+  <section class="profile-heading">
+
+    <div>
+
+      <div class="profile-eyebrow">
+        MY ACCOUNT
+      </div>
+
+      <h1>
+        My Profile
+      </h1>
+
+      <p *ngIf="!authResolved">
+        Checking your SilkMart account...
+      </p>
+
+      <p *ngIf="authResolved && isGuest">
+        Sign in or create an account to access your profile.
+      </p>
+
+      <p *ngIf="authResolved && !isGuest">
+        Manage your personal information, address, and account details.
+      </p>
+
+    </div>
+
+  </section>
+
+
+  <!-- =========================================
+       QUICK AUTH CHECK
+       ========================================= -->
+
+  <div
+    class="profile-loading"
+    *ngIf="!authResolved"
+  >
+
+    <div class="loading-spinner"></div>
+
+    <span>
+      Checking your account...
+    </span>
+
+  </div>
+
+
+  <!-- =========================================
+       GUEST CUSTOMER
+       ========================================= -->
+
+  <section
+    *ngIf="authResolved && isGuest"
+    class="profile-card guest-profile-card"
+  >
+
+    <div class="guest-profile-icon">
+
+      <i class="pi pi-user"></i>
+
+    </div>
+
+
+    <h2>
+      Sign in to view your profile
+    </h2>
+
+
+    <p>
+      You are currently browsing SilkMart as a customer guest.
+      Sign in or create an account to view your personal
+      information, delivery address, and orders.
+    </p>
+
+
+    <div class="guest-profile-actions">
+
+      <button
+        type="button"
+        class="save-button guest-action-button"
+        (click)="goToLogin()"
+      >
+
+        <i class="pi pi-sign-in"></i>
+
+        <span>
+          Sign in
+        </span>
+
+      </button>
+
+
+      <button
+        type="button"
+        class="cancel-button guest-action-button"
+        (click)="goToCreateAccount()"
+      >
+
+        <i class="pi pi-user-plus"></i>
+
+        <span>
+          Create account
+        </span>
+
+      </button>
+
+    </div>
+
+
+    <div class="guest-profile-note">
+
+      <i class="pi pi-shopping-bag"></i>
+
+      You can browse SilkMart without an account,
+      but an account is required before ordering.
+
+    </div>
+
+  </section>
+
+
+  <!-- =========================================
+       AUTHENTICATED PROFILE
+       ========================================= -->
+
+  <div
+    class="profile-layout"
+    *ngIf="authResolved && !isGuest"
+  >
+
+
+    <!-- =========================================
+         LEFT PROFILE CARD
+         ========================================= -->
+
+    <aside class="profile-sidebar">
+
+      <div class="sidebar-decoration"></div>
+
+
+      <!-- PROFILE AVATAR -->
+
+      <div class="profile-avatar">
+
+        <span>
+          {{ profileInitial }}
+        </span>
+
+      </div>
+
+
+      <!-- NAME -->
+
+      <h2>
+        {{
+          profileLoading && !fullName
+            ? 'Customer'
+            : (fullName || 'Customer')
+        }}
+      </h2>
+
+
+      <!-- ROLE -->
+
+      <div class="profile-role">
+        {{ role | titlecase }}
+      </div>
+
+
+      <!-- PROFILE SYNC -->
+
+      <div
+        *ngIf="profileLoading"
+        class="profile-syncing"
+      >
+
+        <i class="pi pi-spin pi-spinner"></i>
+
+        Syncing profile...
+
+      </div>
+
+
+      <!-- =========================================
+           CONTACT
+           ========================================= -->
+
+      <div class="profile-contact">
+
+
+        <!-- EMAIL -->
+
+        <div class="contact-item">
+
+          <i class="pi pi-envelope"></i>
+
+          <span>
+            {{ email }}
+          </span>
+
+        </div>
+
+
+        <!-- MOBILE -->
+
+        <div class="contact-item">
+
+          <i class="pi pi-phone"></i>
+
+          <span>
+            {{
+              profileLoading && !mobileNumber
+                ? 'Loading...'
+                : (mobileNumber || 'No mobile number yet')
+            }}
+          </span>
+
+        </div>
+
+
+        <!-- ADDRESS -->
+
+        <div class="contact-item">
+
+          <i class="pi pi-map-marker"></i>
+
+          <span>
+            {{
+              profileLoading && !completeAddress
+                ? 'Loading...'
+                : (completeAddress || 'No address yet')
+            }}
+          </span>
+
+        </div>
+
+      </div>
+
+
+      <!-- =========================================
+           SIDE MENU
+           ========================================= -->
+
+      <div class="profile-menu">
+
+
+        <!-- MY PROFILE -->
+
+        <button
+          type="button"
+          class="profile-menu-item active"
+        >
+
+          <span class="menu-icon">
+
+            <i class="pi pi-user"></i>
+
+          </span>
+
+          <span>
+            My Profile
+          </span>
+
+          <span class="menu-arrow">
+
+            <i class="pi pi-angle-right"></i>
+
+          </span>
+
+        </button>
+
+
+        <!-- MY ORDERS -->
+
+        <button
+          type="button"
+          class="profile-menu-item"
+          (click)="goToOrders()"
+        >
+
+          <span class="menu-icon">
+
+            <i class="pi pi-shopping-bag"></i>
+
+          </span>
+
+          <span>
+            My Orders
+          </span>
+
+          <span class="menu-arrow">
+
+            <i class="pi pi-angle-right"></i>
+
+          </span>
+
+        </button>
+
+
+        <!-- LOGOUT -->
+
+        <button
+          type="button"
+          class="profile-menu-item logout"
+          (click)="logout()"
+        >
+
+          <span class="menu-icon">
+
+            <i class="pi pi-sign-out"></i>
+
+          </span>
+
+          <span>
+            Logout
+          </span>
+
+        </button>
+
+      </div>
+
+
+      <!-- QUOTE -->
+
+      <div class="sidebar-quote">
+
+        <span>
+          Timeless Silk,
+        </span>
+
+        <span>
+          Naturally Woven.
+        </span>
+
+      </div>
+
+    </aside>
+
+
+    <!-- =========================================
+         RIGHT CONTENT
+         ========================================= -->
+
+    <main class="profile-content">
+
+
+      <!-- =========================================
+           PERSONAL INFORMATION
+           ========================================= -->
+
+      <section class="profile-card">
+
+        <div class="card-header">
+
+          <div class="card-title-group">
+
+            <div class="card-icon">
+
+              <i class="pi pi-user"></i>
+
+            </div>
+
+
+            <div>
+
+              <h2>
+                Personal Information
+              </h2>
+
+              <p>
+                Keep your personal details up to date.
+              </p>
+
+            </div>
+
+          </div>
+
+
+          <!-- EDIT -->
+
+          <button
+            *ngIf="!editMode"
+            type="button"
+            class="edit-button"
+            [disabled]="profileLoading"
+            (click)="enableEdit()"
+          >
+
+            <i class="pi pi-pencil"></i>
+
+            Edit Information
+
+          </button>
+
+        </div>
+
+
+        <!-- =========================================
+             INFORMATION FIELDS
+             ========================================= -->
+
+        <div class="information-grid">
+
+
+          <!-- FULL NAME -->
+
+          <div class="info-field">
+
+            <label>
+              Full Name
+            </label>
+
+            <div
+              class="display-field"
+              *ngIf="!editMode"
+            >
+
+              {{
+                profileLoading && !fullName
+                  ? 'Loading...'
+                  : fullName
+              }}
+
+            </div>
+
+
+            <input
+              *ngIf="editMode"
+              type="text"
+              [(ngModel)]="editFullName"
+            />
+
+          </div>
+
+
+          <!-- MOBILE -->
+
+          <div class="info-field">
+
+            <label>
+              Mobile Number
+            </label>
+
+            <div
+              class="display-field"
+              *ngIf="!editMode"
+            >
+
+              {{
+                profileLoading && !mobileNumber
+                  ? 'Loading...'
+                  : mobileNumber
+              }}
+
+            </div>
+
+
+            <input
+              *ngIf="editMode"
+              type="tel"
+              [(ngModel)]="editMobileNumber"
+            />
+
+          </div>
+
+
+          <!-- EMAIL -->
+
+          <div class="info-field">
+
+            <label>
+              Email Address
+            </label>
+
+            <div class="display-field disabled-field">
+              {{ email }}
+            </div>
+
+            <small>
+              Your email is linked to Firebase Authentication.
+            </small>
+
+          </div>
+
+
+          <!-- ROLE -->
+
+          <div class="info-field">
+
+            <label>
+              Account Type
+            </label>
+
+            <div class="display-field">
+              {{ role | titlecase }}
+            </div>
+
+          </div>
+
+        </div>
+
+
+        <!-- =========================================
+             EDIT ACTIONS
+             ========================================= -->
+
+        <div
+          class="edit-actions"
+          *ngIf="editMode"
+        >
+
+          <button
+            type="button"
+            class="cancel-button"
+            (click)="cancelEdit()"
+          >
+
+            <i class="pi pi-times"></i>
+
+            Cancel
+
+          </button>
+
+
+          <button
+            type="button"
+            class="save-button"
+            [disabled]="saving"
+            (click)="saveProfile()"
+          >
+
+            <ng-container *ngIf="!saving">
+
+              <i class="pi pi-check"></i>
+
+              Save Changes
+
+            </ng-container>
+
+
+            <ng-container *ngIf="saving">
+
+              <i class="pi pi-spin pi-spinner"></i>
+
+              Saving...
+
+            </ng-container>
+
+          </button>
+
+        </div>
+
+
+        <!-- SUCCESS MESSAGE -->
+
+        <div
+          class="profile-message success"
+          *ngIf="successMessage"
+        >
+
+          <i class="pi pi-check-circle"></i>
+
+          {{ successMessage }}
+
+        </div>
+
+
+        <!-- ERROR MESSAGE -->
+
+        <div
+          class="profile-message error"
+          *ngIf="errorMessage"
+        >
+
+          <i class="pi pi-exclamation-circle"></i>
+
+          {{ errorMessage }}
+
+        </div>
+
+      </section>
+
+
+      <!-- =========================================
+           ADDRESS DETAILS
+           ========================================= -->
+
+      <section class="profile-card">
+
+        <div class="card-header">
+
+          <div class="card-title-group">
+
+            <div class="card-icon">
+
+              <i class="pi pi-map-marker"></i>
+
+            </div>
+
+
+            <div>
+
+              <h2>
+                Address Details
+              </h2>
+
+              <p>
+                This will be used for your order delivery.
+              </p>
+
+            </div>
+
+          </div>
+
+        </div>
+
+
+        <div class="address-box">
+
+          <div class="address-label">
+            Complete Address
+          </div>
+
+
+          <div
+            class="display-field"
+            *ngIf="!editMode"
+          >
+
+            {{
+              profileLoading && !completeAddress
+                ? 'Loading...'
+                : (
+                    completeAddress ||
+                    'No address provided yet.'
+                  )
+            }}
+
+          </div>
+
+
+          <textarea
+            *ngIf="editMode"
+            [(ngModel)]="editCompleteAddress"
+            rows="4"
+            placeholder="Enter your complete address"
+          ></textarea>
+
+        </div>
+
+      </section>
+
+
+      <!-- =========================================
+           ACCOUNT INFORMATION
+           ========================================= -->
+
+      <section class="profile-card account-card">
+
+        <div class="card-header">
+
+          <div class="card-title-group">
+
+            <div class="card-icon">
+
+              <i class="pi pi-shield"></i>
+
+            </div>
+
+
+            <div>
+
+              <h2>
+                Account Information
+              </h2>
+
+              <p>
+                Your SilkMart customer account details.
+              </p>
+
+            </div>
+
+          </div>
+
+        </div>
+
+
+        <!-- ROLE -->
+
+        <div class="account-row">
+
+          <span>
+            Account Role
+          </span>
+
+          <strong>
+            {{ role | titlecase }}
+          </strong>
+
+        </div>
+
+
+        <!-- MEMBER SINCE -->
+
+        <div class="account-row">
+
+          <span>
+            Member Since
+          </span>
+
+          <strong>
+
+            {{
+              profileLoading
+                ? 'Loading...'
+                : (
+                    memberSince ||
+                    'Not available'
+                  )
+            }}
+
+          </strong>
+
+        </div>
+
+
+        <!-- STATUS -->
+
+        <div class="account-row">
+
+          <span>
+            Account Status
+          </span>
+
+          <div class="status-badge">
+
+            <span></span>
+
+            Active
+
+          </div>
+
+        </div>
+
+
+        <!-- FIREBASE STATUS -->
+
+        <div class="account-row">
+
+          <span>
+            Firebase Authentication
+          </span>
+
+          <div class="status-badge">
+
+            <span></span>
+
+            Connected
+
+          </div>
+
+        </div>
+
+      </section>
+
+
+      <!-- =========================================
+           RECENT ORDERS
+           ========================================= -->
+
+      <section class="profile-card">
+
+        <div class="card-header">
+
+          <div class="card-title-group">
+
+            <div class="card-icon">
+
+              <i class="pi pi-shopping-bag"></i>
+
+            </div>
+
+
+            <div>
+
+              <h2>
+                Recent Orders
+              </h2>
+
+              <p>
+                Your latest SilkMart purchases.
+              </p>
+
+            </div>
+
+          </div>
+
+
+          <button
+            type="button"
+            class="view-orders-button"
+            (click)="goToOrders()"
+          >
+
+            View all
+
+            <span>
+
+              <i class="pi pi-angle-right"></i>
+
+            </span>
+
+          </button>
+
+        </div>
+
+
+        <!-- EMPTY ORDERS -->
+
+        <div
+          class="recent-orders-empty"
+          *ngIf="recentOrders.length === 0"
+        >
+
+          <i class="pi pi-shopping-bag"></i>
+
+          <span>
+            You don't have any orders yet.
+          </span>
+
+        </div>
+
+
+        <!-- ORDERS -->
+
+        <div
+          class="recent-order"
+          *ngFor="let order of recentOrders"
+        >
+
+          <div class="recent-order-icon">
+
+            <i class="pi pi-box"></i>
+
+          </div>
+
+
+          <div class="recent-order-info">
+
+            <strong>
+              {{ order.name }}
+            </strong>
+
+            <span>
+              {{ order.orderDate }}
+            </span>
+
+          </div>
+
+
+          <div class="recent-order-details">
+
+            <span class="order-status">
+              {{ order.status }}
+            </span>
+
+            <strong>
+              ₱{{ order.total | number:'1.2-2' }}
+            </strong>
+
+          </div>
+
+        </div>
+
+      </section>
+
+    </main>
+
+  </div>
+
+
+  <!-- =====================================================
+       SIGN IN / CREATE ACCOUNT POPUP
+       SAME CENTERED STYLE AS SHOP SILK
+       ===================================================== -->
+
+  <div
+    class="register-backdrop"
+    *ngIf="showAuthPopup"
+    (click)="closeAuthPopup()"
+  >
+
+    <div
+      class="register-modal"
+      [class.login-mode]="authMode === 'login'"
+      (click)="$event.stopPropagation()"
+    >
+
+
+      <!-- =========================================
+           CLOSE
+           ========================================= -->
+
+      <button
+        type="button"
+        class="register-close"
+        [disabled]="authLoading || registerLoading"
+        (click)="closeAuthPopup()"
+        aria-label="Close"
+      >
+
+        <i class="pi pi-times"></i>
+
+      </button>
+
+
+      <!-- =========================================
+           BRAND
+           ========================================= -->
+
+      <div class="register-brand">
+
+        <div class="register-brand-icon">
+
+          <!-- =====================================
+               ORIGINAL SILKMART WORM + LEAF LOGO
+               DO NOT CHANGE
+               ===================================== -->
+
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+          >
+
+            <circle
+              cx="8.8"
+              cy="8.9"
+              r="1.55"
+              stroke="currentColor"
+              stroke-width="1.2"
+            />
+
+            <circle
+              cx="11.1"
+              cy="8"
+              r="1.55"
+              stroke="currentColor"
+              stroke-width="1.2"
+            />
+
+            <circle
+              cx="13.5"
+              cy="7.4"
+              r="1.55"
+              stroke="currentColor"
+              stroke-width="1.2"
+            />
+
+            <circle
+              cx="15.8"
+              cy="7.2"
+              r="1.55"
+              stroke="currentColor"
+              stroke-width="1.2"
+            />
+
+            <circle
+              cx="18.2"
+              cy="7.4"
+              r="1.75"
+              stroke="currentColor"
+              stroke-width="1.2"
+            />
+
+            <circle
+              cx="18.7"
+              cy="7"
+              r="0.24"
+              fill="currentColor"
+            />
+
+            <path
+              d="M18.5 5.9C19 5.1 19.7 4.9 20.4 5.1"
+              stroke="currentColor"
+              stroke-width="1"
+              stroke-linecap="round"
+            />
+
+            <path
+              d="M17.5 5.9C17.2 5.1 16.5 4.8 15.9 4.9"
+              stroke="currentColor"
+              stroke-width="1"
+              stroke-linecap="round"
+            />
+
+            <path
+              d="M19.5 3.5C13 3.5 7 6.5 5 12.5C3.8 16.1 5.4 19.2 8.5 20.5C11.8 21.8 15.5 20.1 17.4 17.1C19.5 13.8 19.5 8.5 19.5 3.5Z"
+              stroke="currentColor"
+              stroke-width="1.6"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+
+            <path
+              d="M5 19C8 15 11.5 12 16.5 9"
+              stroke="currentColor"
+              stroke-width="1.6"
+              stroke-linecap="round"
+            />
+
+          </svg>
+
+        </div>
+
+
+        <div>
+
+          <div class="register-brand-name">
+            SilkMart
+          </div>
+
+          <div class="register-brand-subtitle">
+            VILLANUEVA (DOST-PTRI)
+          </div>
+
+        </div>
+
+      </div>
+
+
+      <!-- =================================================
+           LOGIN MODE
+           ================================================= -->
+
+      <ng-container
+        *ngIf="authMode === 'login'"
+      >
+
+        <div class="register-heading">
+
+          <div class="register-eyebrow">
+            WELCOME BACK
+          </div>
+
+          <h2>
+            Sign in to SilkMart.
+          </h2>
+
+          <p>
+            Sign in to access your profile,
+            orders, and delivery information.
+          </p>
+
+        </div>
+
+
+        <form
+          (ngSubmit)="signInFromProfile()"
+        >
+
+          <div class="register-grid login-grid">
+
+
+            <!-- EMAIL -->
+
+            <div class="register-field register-full-width">
+
+              <label for="profileLoginEmail">
+                Email Address
+              </label>
+
+
+              <div class="register-input-wrap">
+
+                <i class="pi pi-envelope"></i>
+
+
+                <input
+                  id="profileLoginEmail"
+                  type="email"
+                  name="profileLoginEmail"
+                  [(ngModel)]="authEmail"
+                  placeholder="you@example.com"
+                  autocomplete="email"
+                  required
+                />
+
+              </div>
+
+            </div>
+
+
+            <!-- PASSWORD -->
+
+            <div class="register-field register-full-width">
+
+              <label for="profileLoginPassword">
+                Password
+              </label>
+
+
+              <div class="register-input-wrap password-field">
+
+                <i class="pi pi-lock"></i>
+
+
+                <input
+                  id="profileLoginPassword"
+                  [type]="
+                    showAuthPassword
+                      ? 'text'
+                      : 'password'
+                  "
+                  name="profileLoginPassword"
+                  [(ngModel)]="authPassword"
+                  placeholder="Enter your password"
+                  autocomplete="current-password"
+                  required
+                />
+
+
+                <button
+                  type="button"
+                  class="register-password-toggle"
+                  (click)="toggleAuthPassword()"
+                  aria-label="Toggle password visibility"
+                >
+
+                  <i
+                    class="pi"
+                    [ngClass]="
+                      showAuthPassword
+                        ? 'pi-eye-slash'
+                        : 'pi-eye'
+                    "
+                  ></i>
+
+                </button>
+
+              </div>
+
+            </div>
+
+          </div>
+
+
+          <!-- ERROR -->
+
+          <div
+            class="register-error"
+            *ngIf="authError"
+          >
+
+            <i class="pi pi-exclamation-circle"></i>
+
+            {{ authError }}
+
+          </div>
+
+
+          <!-- SIGN IN -->
+
+          <button
+            type="submit"
+            class="register-submit"
+            [disabled]="authLoading"
+          >
+
+            <ng-container
+              *ngIf="!authLoading"
+            >
+
+              <i class="pi pi-sign-in"></i>
+
+              <span>
+                Sign in
+              </span>
+
+              <i class="pi pi-arrow-right"></i>
+
+            </ng-container>
+
+
+            <ng-container
+              *ngIf="authLoading"
+            >
+
+              <i class="pi pi-spin pi-spinner"></i>
+
+              <span>
+                Signing in...
+              </span>
+
+            </ng-container>
+
+          </button>
+
+        </form>
+
+
+        <!-- SWITCH TO REGISTER -->
+
+        <div class="register-switch">
+
+          <span>
+            Don't have an account?
+          </span>
+
+          <button
+            type="button"
+            (click)="showRegisterMode()"
+          >
+
+            <i class="pi pi-user-plus"></i>
+
+            Create account
+
+          </button>
+
+        </div>
+
+      </ng-container>
+
+
+      <!-- =================================================
+           REGISTER MODE
+           ================================================= -->
+
+      <ng-container
+        *ngIf="authMode === 'register'"
+      >
+
+        <!-- BACK -->
+
+        <button
+          type="button"
+          class="register-back"
+          [disabled]="registerLoading"
+          (click)="showLoginMode()"
+        >
+
+          <i class="pi pi-arrow-left"></i>
+
+          <span>
+            Back to sign in
+          </span>
+
+        </button>
+
+
+        <!-- HEADING -->
+
+        <div class="register-heading">
+
+          <div class="register-eyebrow">
+            CREATE ACCOUNT
+          </div>
+
+          <h2>
+            Join SilkMart.
+          </h2>
+
+          <p>
+            Create your customer account
+            to start ordering silk products.
+          </p>
+
+        </div>
+
+
+        <!-- FORM -->
+
+        <form
+          (ngSubmit)="createAccountFromProfile()"
+        >
+
+          <div class="register-grid">
+
+
+            <!-- FULL NAME -->
+
+            <div class="register-field">
+
+              <label for="profileRegisterName">
+                Full Name
+              </label>
+
+
+              <div class="register-input-wrap">
+
+                <i class="pi pi-user"></i>
+
+
+                <input
+                  id="profileRegisterName"
+                  type="text"
+                  name="profileRegisterName"
+                  [(ngModel)]="registerFullName"
+                  placeholder="Enter your full name"
+                  autocomplete="name"
+                  required
+                />
+
+              </div>
+
+            </div>
+
+
+            <!-- EMAIL -->
+
+            <div class="register-field">
+
+              <label for="profileRegisterEmail">
+                Email Address
+              </label>
+
+
+              <div class="register-input-wrap">
+
+                <i class="pi pi-envelope"></i>
+
+
+                <input
+                  id="profileRegisterEmail"
+                  type="email"
+                  name="profileRegisterEmail"
+                  [(ngModel)]="registerEmail"
+                  placeholder="you@example.com"
+                  autocomplete="email"
+                  required
+                />
+
+              </div>
+
+            </div>
+
+
+            <!-- MOBILE -->
+
+            <div class="register-field">
+
+              <label for="profileRegisterMobile">
+                Mobile Number
+              </label>
+
+
+              <div class="register-input-wrap">
+
+                <i class="pi pi-phone"></i>
+
+
+                <input
+                  id="profileRegisterMobile"
+                  type="tel"
+                  name="profileRegisterMobile"
+                  [(ngModel)]="registerMobile"
+                  placeholder="09XXXXXXXXX"
+                  autocomplete="tel"
+                  required
+                />
+
+              </div>
+
+            </div>
+
+
+            <!-- ADDRESS -->
+
+            <div class="register-field">
+
+              <label for="profileRegisterAddress">
+                Complete Address
+              </label>
+
+
+              <div class="register-input-wrap">
+
+                <i class="pi pi-map-marker"></i>
+
+
+                <input
+                  id="profileRegisterAddress"
+                  type="text"
+                  name="profileRegisterAddress"
+                  [(ngModel)]="registerAddress"
+                  placeholder="Enter your complete address"
+                  autocomplete="street-address"
+                  required
+                />
+
+              </div>
+
+            </div>
+
+
+            <!-- PASSWORD -->
+
+            <div class="register-field">
+
+              <label for="profileRegisterPassword">
+                Password
+              </label>
+
+
+              <div class="register-input-wrap password-field">
+
+                <i class="pi pi-lock"></i>
+
+
+                <input
+                  id="profileRegisterPassword"
+                  [type]="
+                    showRegisterPassword
+                      ? 'text'
+                      : 'password'
+                  "
+                  name="profileRegisterPassword"
+                  [(ngModel)]="registerPassword"
+                  placeholder="Minimum 6 characters"
+                  autocomplete="new-password"
+                  required
+                />
+
+
+                <button
+                  type="button"
+                  class="register-password-toggle"
+                  (click)="toggleRegisterPassword()"
+                  aria-label="Toggle password visibility"
+                >
+
+                  <i
+                    class="pi"
+                    [ngClass]="
+                      showRegisterPassword
+                        ? 'pi-eye-slash'
+                        : 'pi-eye'
+                    "
+                  ></i>
+
+                </button>
+
+              </div>
+
+            </div>
+
+
+            <!-- CONFIRM PASSWORD -->
+
+            <div class="register-field">
+
+              <label for="profileConfirmPassword">
+                Confirm Password
+              </label>
+
+
+              <div class="register-input-wrap password-field">
+
+                <i class="pi pi-lock"></i>
+
+
+                <input
+                  id="profileConfirmPassword"
+                  [type]="
+                    showConfirmPassword
+                      ? 'text'
+                      : 'password'
+                  "
+                  name="profileConfirmPassword"
+                  [(ngModel)]="registerConfirmPassword"
+                  placeholder="Confirm password"
+                  autocomplete="new-password"
+                  required
+                />
+
+
+                <button
+                  type="button"
+                  class="register-password-toggle"
+                  (click)="toggleConfirmPassword()"
+                  aria-label="Toggle confirm password visibility"
+                >
+
+                  <i
+                    class="pi"
+                    [ngClass]="
+                      showConfirmPassword
+                        ? 'pi-eye-slash'
+                        : 'pi-eye'
+                    "
+                  ></i>
+
+                </button>
+
+              </div>
+
+            </div>
+
+          </div>
+
+
+          <!-- ERROR -->
+
+          <div
+            class="register-error"
+            *ngIf="authError"
+          >
+
+            <i class="pi pi-exclamation-circle"></i>
+
+            {{ authError }}
+
+          </div>
+
+
+          <!-- CREATE ACCOUNT -->
+
+          <button
+            type="submit"
+            class="register-submit"
+            [disabled]="registerLoading"
+          >
+
+            <ng-container
+              *ngIf="!registerLoading"
+            >
+
+              <i class="pi pi-user-plus"></i>
+
+              <span>
+                Create account
+              </span>
+
+              <i class="pi pi-arrow-right"></i>
+
+            </ng-container>
+
+
+            <ng-container
+              *ngIf="registerLoading"
+            >
+
+              <i class="pi pi-spin pi-spinner"></i>
+
+              <span>
+                Creating account...
+              </span>
+
+            </ng-container>
+
+          </button>
+
+        </form>
+
+      </ng-container>
+
+    </div>
+
+  </div>
+
+</div>

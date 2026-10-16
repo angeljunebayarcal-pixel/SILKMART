@@ -1,0 +1,730 @@
+/* ==============================
+   TOPBAR CUSTOMER
+   ============================== */
+
+:host {
+  display: block;
+  width: 100%;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+.topbar-cust {
+  position: fixed;
+  top: 0;
+  left: 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  width: 100%;
+
+  /* CHANGED: taller topbar */
+  height: 82px;
+
+  padding: 0 22px;
+
+  background: #faf9f2;
+
+  border-bottom: 1px solid rgba(104, 126, 113, 0.18);
+
+  box-shadow: 0 2px 10px rgba(35, 67, 51, 0.04);
+
+  font-family: 'DM Sans', sans-serif;
+
+  z-index: 1000;
+}
+
+
+/* ==============================
+   BRAND AREA
+   ============================== */
+
+.brand-area {
+  position: relative;
+
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+
+  min-width: 270px;
+}
+
+
+.brand-cust {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  min-width: 270px;
+
+  /* CHANGED: move brand slightly upward
+     to create more room for menu below */
+  transform: translateY(-7px);
+}
+
+
+/* LOGO */
+
+.brand-logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 30px;
+  height: 30px;
+
+  flex-shrink: 0;
+
+  border-radius: 50%;
+
+  background: #2f7054;
+  color: #ffffff;
+}
+
+.brand-logo svg {
+  width: 18px;
+  height: 18px;
+}
+
+
+/* BRAND TEXT */
+
+.brand-text {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.brand-name {
+  color: #315344;
+
+  font-family: 'Instrument Serif', Georgia, serif;
+
+  font-size: 18px;
+  line-height: 1;
+}
+
+.brand-subtitle {
+  margin-top: 4px;
+
+  color: #718176;
+
+  font-size: 7px;
+  font-weight: 700;
+
+  letter-spacing: 0.2em;
+
+  line-height: 1;
+}
+
+
+/* ==============================
+   MENU BUTTON
+   ============================== */
+
+.brand-menu-button {
+  position: absolute;
+
+  /* CHANGED: positioned clearly below logo */
+  top: 31px;
+  left: -2px;
+
+  display: flex;
+  align-items: center;
+
+  gap: 6px;
+
+  /* CHANGED: slightly more comfortable button */
+  padding: 5px 7px;
+
+  border: 0;
+  border-radius: 6px;
+
+  background: transparent;
+
+  color: #65796e;
+
+  cursor: pointer;
+
+  font-family: 'DM Sans', sans-serif;
+
+  /* CHANGED: bigger Menu text */
+  font-size: 10px;
+  font-weight: 600;
+
+  transition:
+    background 0.25s ease,
+    color 0.25s ease;
+}
+
+.brand-menu-button:hover {
+  background: #eef2e9;
+  color: #315d49;
+}
+
+
+/* MENU TEXT */
+
+.menu-text {
+  font-size: 10px;
+  font-weight: 600;
+}
+
+
+/* HAMBURGER */
+
+.menu-lines {
+  display: flex;
+  flex-direction: column;
+
+  width: 11px;
+
+  gap: 2px;
+}
+
+.menu-lines span {
+  display: block;
+
+  width: 11px;
+  height: 1px;
+
+  border-radius: 2px;
+
+  background: currentColor;
+
+  transition:
+    transform 0.3s ease,
+    opacity 0.3s ease;
+}
+
+
+/* HAMBURGER TO X */
+
+.brand-menu-button.active .menu-lines span:nth-child(1) {
+  transform: translateY(3px) rotate(45deg);
+}
+
+.brand-menu-button.active .menu-lines span:nth-child(2) {
+  opacity: 0;
+}
+
+.brand-menu-button.active .menu-lines span:nth-child(3) {
+  transform: translateY(-3px) rotate(-45deg);
+}
+
+
+/* MENU ARROW */
+
+.menu-arrow {
+  display: inline-block;
+
+  font-size: 13px;
+
+  transform: rotate(90deg);
+
+  transition: transform 0.3s ease;
+}
+
+.brand-menu-button.active .menu-arrow {
+  transform: rotate(-90deg);
+}
+
+
+/* ==============================
+   DROPDOWN MENU
+   ============================== */
+
+.brand-dropdown {
+  position: absolute;
+
+  /* CHANGED:
+     starts underneath the taller topbar */
+  top: 64px;
+  left: 0;
+
+  display: flex;
+  flex-direction: column;
+
+  width: 170px;
+
+  padding: 7px;
+
+  border: 1px solid rgba(104, 126, 113, 0.18);
+  border-radius: 12px;
+
+  background: #faf9f2;
+
+  box-shadow:
+    0 12px 35px rgba(35, 67, 51, 0.12);
+
+  opacity: 0;
+  visibility: hidden;
+
+  transform: translateY(-12px) scale(0.96);
+
+  transform-origin: top left;
+
+  pointer-events: none;
+
+  transition:
+    opacity 0.3s ease,
+    transform 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+    visibility 0.3s ease;
+}
+
+
+/* OPEN DROPDOWN */
+
+.brand-dropdown.open {
+  opacity: 1;
+  visibility: visible;
+
+  transform: translateY(0) scale(1);
+
+  pointer-events: auto;
+}
+
+
+/* DROPDOWN LINKS */
+
+.brand-dropdown a {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  width: 100%;
+
+  padding: 10px 12px;
+
+  border-radius: 8px;
+
+  color: #60736a;
+
+  text-decoration: none;
+
+  font-family: 'DM Sans', sans-serif;
+
+  font-size: 10px;
+  font-weight: 600;
+
+  opacity: 0;
+
+  transform: translateX(-10px);
+
+  transition:
+    background 0.25s ease,
+    color 0.25s ease,
+    transform 0.35s ease,
+    opacity 0.35s ease;
+}
+
+
+/* STAGGERED ANIMATION */
+
+.brand-dropdown.open a:nth-child(1) {
+  opacity: 1;
+
+  transform: translateX(0);
+
+  transition-delay: 0.05s;
+}
+
+.brand-dropdown.open a:nth-child(2) {
+  opacity: 1;
+
+  transform: translateX(0);
+
+  transition-delay: 0.10s;
+}
+
+.brand-dropdown.open a:nth-child(3) {
+  opacity: 1;
+
+  transform: translateX(0);
+
+  transition-delay: 0.15s;
+}
+
+
+/* HOVER */
+
+.brand-dropdown a:hover {
+  background: #eef2e9;
+  color: #245d43;
+}
+
+
+/* ACTIVE ROUTE */
+
+.brand-dropdown a.active {
+  background: #e7eee4;
+  color: #245d43;
+}
+
+
+/* DROPDOWN ARROW */
+
+.dropdown-arrow {
+  font-size: 15px;
+
+  transition: transform 0.25s ease;
+}
+
+.brand-dropdown a:hover .dropdown-arrow {
+  transform: translateX(3px);
+}
+
+
+/* ==============================
+   RIGHT ACTIONS
+   ============================== */
+
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+
+  min-width: 150px;
+
+  gap: 10px;
+}
+
+
+/* ==============================
+   NOTIFICATION
+   ============================== */
+
+.notification-button {
+  position: relative;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 36px;
+  height: 36px;
+
+  padding: 0;
+
+  border: 0;
+  border-radius: 50%;
+
+  background: transparent;
+
+  color: #486256;
+
+  cursor: pointer;
+
+  transition:
+    background 0.25s ease,
+    transform 0.25s ease;
+}
+
+.notification-button:hover {
+  background: #eef2e9;
+
+  transform: translateY(-2px);
+}
+
+.notification-button svg {
+  width: 18px;
+  height: 18px;
+}
+
+
+/* NOTIFICATION NUMBER */
+
+.notification-dot {
+  position: absolute;
+
+  top: 3px;
+  right: 1px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  min-width: 15px;
+  height: 15px;
+
+  padding: 0 4px;
+
+  border-radius: 50px;
+
+  background: #b95d4d;
+
+  color: #ffffff;
+
+  font-size: 7px;
+  font-weight: 700;
+
+  border: 2px solid #faf9f2;
+}
+
+
+/* ==============================
+   PROFILE
+   ============================== */
+
+.profile-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 36px;
+  height: 36px;
+
+  padding: 0;
+
+  border: 0;
+
+  background: transparent;
+
+  cursor: pointer;
+}
+
+.profile-circle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 30px;
+  height: 30px;
+
+  border: 1px solid #b7c5b8;
+
+  border-radius: 50%;
+
+  background: #eef2e9;
+
+  color: #315d49;
+
+  font-size: 10px;
+  font-weight: 700;
+
+  transition:
+    transform 0.25s ease,
+    background 0.25s ease,
+    box-shadow 0.25s ease;
+}
+
+/* ==============================
+   PROFILE IMAGE
+   ============================== */
+
+.profile-circle {
+  overflow: hidden;
+}
+
+
+.profile-circle-image {
+  display: block;
+
+  width: 100%;
+  height: 100%;
+
+  border-radius: 50%;
+
+  object-fit: cover;
+
+  object-position: center;
+}
+
+
+.profile-circle-letter {
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  width: 100%;
+  height: 100%;
+}
+
+.profile-button:hover .profile-circle {
+  transform: translateY(-2px);
+
+  background: #e1eade;
+
+  box-shadow: 0 5px 12px rgba(49, 93, 73, 0.14);
+}
+
+
+/* ==============================
+   NAV BUTTON
+   ============================== */
+
+.nav-button {
+  border: 0;
+
+  background: transparent;
+
+  padding: 0;
+
+  color: #5e7468;
+
+  cursor: pointer;
+
+  font-family: 'DM Sans', sans-serif;
+
+  font-size: 10px;
+  font-weight: 700;
+
+  transition:
+    color 0.25s ease,
+    transform 0.25s ease;
+}
+
+.nav-button:hover,
+.nav-button.active {
+  color: #245d43;
+}
+
+.nav-button:hover {
+  transform: translateY(-1px);
+}
+
+
+/* ==============================
+   RESPONSIVE
+   ============================== */
+
+@media (max-width: 800px) {
+
+  .topbar-cust {
+    padding: 0 15px;
+  }
+
+  .brand-area {
+    min-width: auto;
+  }
+
+  .brand-cust {
+    min-width: auto;
+  }
+
+  .topbar-actions {
+    min-width: auto;
+  }
+}
+
+
+@media (max-width: 650px) {
+
+  .brand-subtitle {
+    display: none;
+  }
+
+  .brand-name {
+    font-size: 16px;
+  }
+
+  .brand-menu-button {
+    left: -2px;
+
+    font-size: 10px;
+  }
+
+  .brand-dropdown {
+    left: 0;
+  }
+}
+
+
+/* ==============================
+   TOPBAR LOAD ANIMATION
+   ============================== */
+
+/* Main topbar slides down */
+
+.topbar-cust {
+  animation:
+    topbarSlideDown
+    0.7s
+    cubic-bezier(0.22, 1, 0.36, 1)
+    both;
+}
+
+
+/* Logo and brand text */
+
+.brand-cust {
+  animation:
+    topbarSlideLeft
+    0.7s
+    cubic-bezier(0.22, 1, 0.36, 1)
+    0.1s
+    both;
+}
+
+
+/* Right-side buttons */
+
+.topbar-actions {
+  animation:
+    topbarSlideRight
+    0.7s
+    cubic-bezier(0.22, 1, 0.36, 1)
+    0.3s
+    both;
+}
+
+
+/* ==============================
+   ANIMATION KEYFRAMES
+   ============================== */
+
+@keyframes topbarSlideDown {
+
+  from {
+    opacity: 0;
+
+    transform: translateY(-25px);
+  }
+
+  to {
+    opacity: 1;
+
+    transform: translateY(0);
+  }
+
+}
+
+
+@keyframes topbarSlideLeft {
+
+  from {
+    opacity: 0;
+
+    transform: translateX(-35px);
+  }
+
+  to {
+    opacity: 1;
+
+    transform: translateX(0);
+  }
+
+}
+
+
+@keyframes topbarSlideRight {
+
+  from {
+    opacity: 0;
+
+    transform: translateX(35px);
+  }
+
+  to {
+    opacity: 1;
+
+    transform: translateX(0);
+  }
+
+}
+

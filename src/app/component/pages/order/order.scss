@@ -1,0 +1,1802 @@
+/* ==============================
+   ORDER PAGE
+   ============================== */
+
+:host {
+  display: block;
+  width: 100%;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+.order-page {
+  display: flex;
+  flex-direction: column;
+
+  width: 100%;
+  min-height: calc(100vh - 64px);
+
+  background-color: #faf9f1;
+
+  /* FULL PAGE DOT BACKGROUND */
+  background-image:
+    radial-gradient(
+      rgba(82, 112, 94, 0.13) 0.8px,
+      transparent 0.8px
+    );
+
+  background-size: 14px 14px;
+  background-repeat: repeat;
+
+  color: #173b2c;
+  font-family: 'DM Sans', sans-serif;
+
+  animation:
+    orderPageFadeIn
+    0.7s
+    cubic-bezier(0.22, 1, 0.36, 1)
+    both;
+}
+
+
+/* ==============================
+   ORDER CONTENT
+   ============================== */
+
+.order-content {
+  flex: 1;
+
+  width: 100%;
+
+  padding-top: 38px;
+}
+
+
+/* ==============================
+   ORDER SECTION
+   ============================== */
+
+.order-section {
+  width: 100%;
+  max-width: 1120px;
+
+  margin: 0 auto;
+
+  padding: 0 25px 78px;
+}
+
+
+/* ==============================
+   HEADING
+   ============================== */
+
+.order-heading {
+  animation:
+    orderSlideLeft
+    0.75s
+    cubic-bezier(0.22, 1, 0.36, 1)
+    0.08s
+    both;
+}
+
+.eyebrow {
+  margin-bottom: 8px;
+
+  color: #277056;
+
+  font-size: 9px;
+  font-weight: 700;
+
+  letter-spacing: 0.22em;
+  line-height: 1;
+}
+
+.order-heading h1 {
+  margin: 0;
+
+  color: #123a2b;
+
+  font-family:
+    'Instrument Serif',
+    Georgia,
+    serif;
+
+  font-size: clamp(40px, 4vw, 49px);
+  font-weight: 400;
+
+  line-height: 1.05;
+}
+
+.order-heading p {
+  margin: 12px 0 0;
+
+  color: #61796d;
+
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+
+/* ==============================
+   EMPTY ORDER BOX
+   ============================== */
+
+.empty-order {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 100%;
+  height: 248px;
+
+  margin-top: 35px;
+
+  border: 1px dashed #d0d8cc;
+  border-radius: 15px;
+
+  background: rgba(255, 254, 251, 0.72);
+
+  animation:
+    orderSlideUp
+    0.8s
+    cubic-bezier(0.22, 1, 0.36, 1)
+    0.18s
+    both;
+}
+
+
+/* ==============================
+   EMPTY ORDER CONTENT
+   ============================== */
+
+.empty-order-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  text-align: center;
+}
+
+
+/* ==============================
+   EMPTY ICON
+   ============================== */
+
+.empty-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 27px;
+  height: 27px;
+
+  margin-bottom: 10px;
+
+  color: #6d8a7d;
+}
+
+.empty-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+
+/* ==============================
+   EMPTY TITLE
+   ============================== */
+
+.empty-order h2 {
+  margin: 0;
+
+  color: #173b2c;
+
+  font-size: 12px;
+  font-weight: 700;
+
+  line-height: 1.4;
+}
+
+
+/* ==============================
+   EMPTY DESCRIPTION
+   ============================== */
+
+.empty-order p {
+  margin: 4px 0 0;
+
+  color: #668075;
+
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+
+/* ==============================
+   SHOP BUTTON
+   ============================== */
+
+.shop-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  height: 33px;
+
+  margin-top: 16px;
+  padding: 0 17px;
+
+  border: 0;
+  border-radius: 20px;
+
+  background: #287156;
+  color: #ffffff;
+
+  cursor: pointer;
+
+  font-family: 'DM Sans', sans-serif;
+
+  font-size: 9px;
+  font-weight: 700;
+
+  transition:
+    transform 0.25s ease,
+    background 0.25s ease,
+    box-shadow 0.25s ease;
+}
+
+.shop-button:hover {
+  transform: translateY(-2px);
+
+  background: #225f49;
+
+  box-shadow:
+    0 8px 18px
+    rgba(40, 113, 86, 0.18);
+}
+
+.shop-button:active {
+  transform: translateY(0);
+}
+
+
+/* ==============================
+   FOOTER
+   ============================== */
+
+.customer-footer {
+  flex-shrink: 0;
+
+  width: 100%;
+
+  padding: 38px 5.5% 24px;
+
+  background: #28715a;
+  color: #ffffff;
+
+  animation:
+    orderSlideUp
+    0.8s
+    cubic-bezier(0.22, 1, 0.36, 1)
+    0.35s
+    both;
+}
+
+
+/* ==============================
+   FOOTER MAIN
+   ============================== */
+
+.footer-main {
+  display: grid;
+
+  grid-template-columns:
+    1.4fr
+    1fr
+    1fr;
+
+  gap: 70px;
+
+  width: 100%;
+  max-width: 1120px;
+
+  margin: 0 auto;
+}
+
+
+/* ==============================
+   FOOTER BRAND
+   ============================== */
+
+.footer-brand-title {
+  display: flex;
+  align-items: center;
+
+  gap: 12px;
+}
+
+.footer-leaf {
+  font-size: 22px;
+  line-height: 1;
+}
+
+.footer-name {
+  font-family:
+    'Instrument Serif',
+    Georgia,
+    serif;
+
+  font-size: 18px;
+  line-height: 1;
+}
+
+.footer-subtitle {
+  margin-top: 4px;
+
+  color: #c6dfd1;
+
+  font-size: 7px;
+  font-weight: 700;
+
+  letter-spacing: 0.18em;
+  line-height: 1;
+}
+
+
+/* ==============================
+   FOOTER TEXT
+   ============================== */
+
+.footer-brand p,
+.footer-column p {
+  max-width: 280px;
+
+  margin: 16px 0 0;
+
+  color: #d4e6dc;
+
+  font-size: 10px;
+  line-height: 1.8;
+}
+
+
+/* ==============================
+   FOOTER HEADING
+   ============================== */
+
+.footer-heading {
+  margin-bottom: 14px;
+
+  color: #c5dfd1;
+
+  font-size: 7px;
+  font-weight: 700;
+
+  letter-spacing: 0.2em;
+  line-height: 1;
+}
+
+
+/* ==============================
+   TRACK ORDER BUTTON
+   ============================== */
+
+.track-button {
+  display: flex;
+  align-items: center;
+
+  gap: 7px;
+
+  margin-top: 10px;
+  padding: 0;
+
+  border: 0;
+
+  background: transparent;
+  color: #e6b56c;
+
+  cursor: pointer;
+
+  font-family: 'DM Sans', sans-serif;
+
+  font-size: 10px;
+  font-weight: 700;
+
+  transition:
+    color 0.25s ease,
+    transform 0.25s ease;
+}
+
+.track-button span {
+  font-size: 13px;
+
+  transition:
+    transform 0.25s ease;
+}
+
+.track-button:hover {
+  color: #f0c17d;
+}
+
+.track-button:hover span {
+  transform: translateX(5px);
+}
+
+
+/* ==============================
+   FOOTER BOTTOM
+   ============================== */
+
+.footer-bottom {
+  width: 100%;
+  max-width: 1120px;
+
+  margin: 32px auto 0;
+
+  padding-top: 17px;
+
+  border-top:
+    1px solid
+    rgba(255, 255, 255, 0.18);
+
+  color: #bcd7ca;
+
+  font-size: 8px;
+  line-height: 1.5;
+}
+
+
+/* =====================================================
+   ORDERS LIST
+   ===================================================== */
+
+.orders-list {
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 14px;
+
+  width: 100%;
+
+  margin-top: 35px;
+}
+
+
+/* =====================================================
+   ORDER CARD
+   ===================================================== */
+
+.order-card {
+  display: grid;
+
+  grid-template-columns:
+    150px
+    minmax(0, 1fr)
+    150px;
+
+  align-items: stretch;
+
+  min-height: 150px;
+  height: 150px;
+
+  overflow: hidden;
+
+  border:
+    1px solid
+    #d5ddcf;
+
+  border-radius: 15px;
+
+  background:
+    rgba(255, 254, 251, 0.82);
+
+  box-shadow:
+    0 8px 20px
+    rgba(42, 79, 59, 0.05);
+
+  animation:
+    orderCardFrame
+    0.65s
+    cubic-bezier(0.22, 1, 0.36, 1)
+    both;
+
+  transition:
+    transform 0.25s ease,
+    box-shadow 0.25s ease;
+}
+
+.order-card:hover {
+  transform: translateY(-3px);
+
+  box-shadow:
+    0 12px 28px
+    rgba(42, 79, 59, 0.1);
+}
+
+
+/* =====================================================
+   ORDER IMAGE
+   ===================================================== */
+
+.order-product-image {
+  position: relative;
+
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  width: 150px;
+  height: 150px;
+
+  overflow: hidden;
+
+  background: #edf5ed;
+}
+
+.order-product-image.sleep-art {
+  background: #e7f0e4;
+}
+
+.order-product-image.ribbon-art {
+  background: #f6f8f4;
+}
+
+.order-product-image.throw-art {
+  background: #edf4eb;
+}
+
+
+/* =====================================================
+   SMALL PRODUCT ART
+   ===================================================== */
+
+.order-product-image .scarf-shape {
+  width: 75px;
+  height: 150px;
+}
+
+.order-product-image .sleep-shape {
+  width: 75px;
+  height: 115px;
+}
+
+.order-product-image .ribbon-shape {
+  width: 85px;
+  height: 115px;
+}
+
+.order-product-image .throw-shape {
+  width: 90px;
+  height: 125px;
+}
+
+
+/* =====================================================
+   ORDER DETAILS
+   ===================================================== */
+
+.order-details {
+  min-width: 0;
+
+  display: flex;
+
+  flex-direction: column;
+
+  justify-content: center;
+
+  padding:
+    20px
+    25px;
+}
+
+.order-category {
+  margin-bottom: 7px;
+
+  color: #287156;
+
+  font-size: 7px;
+
+  font-weight: 700;
+
+  letter-spacing: 0.2em;
+}
+
+.order-details h2 {
+  margin: 0;
+
+  color: #173b2c;
+
+  font-family:
+    'Instrument Serif',
+    Georgia,
+    serif;
+
+  font-size: 27px;
+
+  font-weight: 400;
+
+  line-height: 1.1;
+}
+
+.order-date {
+  margin-top: 10px;
+
+  color: #758a80;
+
+  font-size: 9px;
+}
+
+.order-quantity {
+  margin-top: 6px;
+
+  color: #61796d;
+
+  font-size: 9px;
+}
+
+
+/* =====================================================
+   CANCELLED REASON
+   ===================================================== */
+
+.order-cancelled-reason {
+  margin-top: 9px;
+
+  color: #8b665f;
+
+  font-size: 9px;
+
+  line-height: 1.4;
+
+  white-space: nowrap;
+
+  overflow: hidden;
+
+  text-overflow: ellipsis;
+}
+
+
+/* =====================================================
+   ORDER SUMMARY
+   ===================================================== */
+
+.order-summary {
+  display: flex;
+
+  flex-direction: column;
+
+  align-items: flex-end;
+
+  justify-content: center;
+
+  gap: 9px;
+
+  padding:
+    20px
+    25px;
+
+  min-width: 150px;
+}
+
+.order-total {
+  color: #14705a;
+
+  font-size: 15px;
+
+  font-weight: 700;
+}
+
+.order-status {
+  padding:
+    6px
+    10px;
+
+  border-radius: 15px;
+
+  background: #e2edd7;
+
+  color: #287156;
+
+  font-size: 8px;
+
+  font-weight: 700;
+}
+
+
+/* =====================================================
+   CANCEL ORDER BUTTON
+   ===================================================== */
+
+.cancel-order-button {
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  height: 30px;
+
+  margin-top: 1px;
+
+  padding: 0 13px;
+
+  border:
+    1px solid
+    #d7aaa2;
+
+  border-radius: 18px;
+
+  background: transparent;
+
+  color: #a45448;
+
+  cursor: pointer;
+
+  font-family: 'DM Sans', sans-serif;
+
+  font-size: 9px;
+
+  font-weight: 700;
+
+  white-space: nowrap;
+
+  transition:
+    background 0.2s ease,
+    color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.cancel-order-button:hover {
+  background: #a45448;
+
+  color: #ffffff;
+
+  transform: translateY(-1px);
+}
+
+
+/* =====================================================
+   DELETE BUTTON
+   ===================================================== */
+
+.delete-order-button {
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  height: 30px;
+
+  margin-top: 1px;
+
+  padding: 0 13px;
+
+  border:
+    1px solid
+    #b7c2bb;
+
+  border-radius: 18px;
+
+  background: transparent;
+
+  color: #68786f;
+
+  cursor: pointer;
+
+  font-family: 'DM Sans', sans-serif;
+
+  font-size: 9px;
+
+  font-weight: 700;
+
+  white-space: nowrap;
+
+  transition:
+    background 0.2s ease,
+    color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.delete-order-button:hover {
+  background: #68786f;
+
+  color: #ffffff;
+
+  transform: translateY(-1px);
+}
+
+
+/* =====================================================
+   ORDER CARD ANIMATION
+   ===================================================== */
+
+@keyframes orderCardFrame {
+
+  from {
+    opacity: 0;
+
+    transform:
+      translateY(25px)
+      scale(0.97);
+  }
+
+  to {
+    opacity: 1;
+
+    transform:
+      translateY(0)
+      scale(1);
+  }
+
+}
+
+
+/* =====================================================
+   CANCEL ORDER POPUP BACKDROP
+   ===================================================== */
+
+.cancel-modal-backdrop {
+  position: fixed;
+
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+
+  width: 100vw;
+  height: 100vh;
+
+  z-index: 99999;
+
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  padding: 20px;
+
+  background:
+    rgba(18, 48, 37, 0.45);
+
+  backdrop-filter: blur(5px);
+
+  overflow-y: auto;
+
+  animation:
+    cancelBackdropIn
+    0.25s
+    ease
+    both;
+}
+
+
+/* =====================================================
+   CANCEL POPUP FRAME
+   ===================================================== */
+
+.cancel-modal {
+  position: relative;
+
+  width: min(460px, 90vw);
+
+  max-height: calc(100vh - 70px);
+
+  overflow-y: auto;
+
+  margin: auto;
+
+  padding: 25px;
+
+  border:
+    1px solid
+    rgba(40, 113, 86, 0.18);
+
+  border-radius: 18px;
+
+  background: #faf9f1;
+
+  box-shadow:
+    0 30px 80px
+    rgba(20, 55, 42, 0.28);
+
+  animation:
+    cancelFrameIn
+    0.4s
+    cubic-bezier(0.22, 1, 0.36, 1)
+    both;
+}
+
+/* =====================================================
+   CLOSE BUTTON
+   ===================================================== */
+
+.cancel-modal-close {
+  position: absolute;
+
+  top: 13px;
+  right: 15px;
+
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  width: 32px;
+  height: 32px;
+
+  border:
+    1px solid
+    #d7ded6;
+
+  border-radius: 50%;
+
+  background: #ffffff;
+
+  color: #173b2c;
+
+  cursor: pointer;
+
+  font-size: 20px;
+
+  line-height: 1;
+
+  transition:
+    transform 0.2s ease,
+    background 0.2s ease;
+}
+
+.cancel-modal-close:hover {
+  transform: rotate(90deg);
+
+  background: #edf5ef;
+}
+
+
+/* =====================================================
+   CANCEL ICON
+   ===================================================== */
+
+.cancel-modal-icon {
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  width: 38px;
+  height: 38px;
+
+  margin-bottom: 11px;
+
+  border-radius: 50%;
+
+  background: #f6e7e4;
+
+  color: #a45448;
+
+  font-size: 16px;
+
+  font-weight: 700;
+}
+
+
+/* =====================================================
+   EYEBROW
+   ===================================================== */
+
+.cancel-modal-eyebrow {
+  color: #a45448;
+
+  font-size: 8px;
+
+  font-weight: 700;
+
+  letter-spacing: 0.2em;
+}
+
+
+/* =====================================================
+   POPUP TITLE
+   ===================================================== */
+
+.cancel-modal h2 {
+  margin: 5px 30px 0 0;
+
+  color: #173b2c;
+
+  font-family:
+    'Instrument Serif',
+    Georgia,
+    serif;
+
+  font-size: 25px;
+
+  font-weight: 400;
+
+  line-height: 1.1;
+}
+
+
+/* =====================================================
+   DESCRIPTION
+   ===================================================== */
+
+.cancel-modal-description {
+  margin: 7px 0 14px;
+
+  color: #668075;
+
+  font-size: 9px;
+
+  line-height: 1.6;
+}
+
+
+/* =====================================================
+   PRODUCT PREVIEW
+   ===================================================== */
+
+.cancel-product {
+  display: flex;
+
+  align-items: center;
+
+  gap: 12px;
+
+  margin-bottom: 14px;
+
+  padding: 8px;
+
+  border:
+    1px solid
+    #dce4dc;
+
+  border-radius: 11px;
+
+  background: #f3f7f2;
+}
+
+/* =====================================================
+   REASONS
+   ===================================================== */
+
+.cancel-reasons {
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 7px;
+}
+
+.cancel-reason-option {
+  display: flex;
+
+  align-items: center;
+
+  gap: 10px;
+
+  width: 100%;
+
+  min-height: 39px;
+
+  padding: 8px 11px;
+
+  border:
+    1px solid
+    #dce3dc;
+
+  border-radius: 9px;
+
+  background: #ffffff;
+
+  color: #486457;
+
+  cursor: pointer;
+
+  text-align: left;
+
+  font-family: 'DM Sans', sans-serif;
+
+  font-size: 9px;
+
+  transition:
+    border-color 0.2s ease,
+    background 0.2s ease,
+    transform 0.2s ease;
+}
+
+.cancel-reason-option:hover {
+  transform: translateX(2px);
+
+  border-color: #8eb19f;
+
+  background: #f4f8f4;
+}
+
+.cancel-reason-option.selected {
+  border-color: #287156;
+
+  background: #edf6ef;
+
+  color: #173b2c;
+}
+
+
+/* =====================================================
+   RADIO
+   ===================================================== */
+
+.reason-radio {
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  width: 15px;
+  height: 15px;
+
+  flex-shrink: 0;
+
+  border:
+    1px solid
+    #aebdb2;
+
+  border-radius: 50%;
+}
+
+.cancel-reason-option.selected
+.reason-radio {
+  border-color: #287156;
+}
+
+.cancel-reason-option.selected
+.reason-radio span {
+  width: 7px;
+  height: 7px;
+
+  border-radius: 50%;
+
+  background: #287156;
+}
+
+
+/* =====================================================
+   POPUP ACTIONS
+   ===================================================== */
+
+.cancel-modal-actions {
+  display: grid;
+
+  grid-template-columns:
+    1fr
+    1fr;
+
+  gap: 9px;
+
+  margin-top: 20px;
+}
+
+.keep-order-button,
+.confirm-cancel-button {
+  height: 39px;
+
+  border-radius: 20px;
+
+  cursor: pointer;
+
+  font-family: 'DM Sans', sans-serif;
+
+  font-size: 9px;
+
+  font-weight: 700;
+
+  transition:
+    transform 0.2s ease,
+    background 0.2s ease,
+    opacity 0.2s ease;
+}
+
+.keep-order-button {
+  border:
+    1px solid
+    #287156;
+
+  background: transparent;
+
+  color: #287156;
+}
+
+.keep-order-button:hover {
+  transform: translateY(-1px);
+
+  background: #edf6ef;
+}
+
+.confirm-cancel-button {
+  border: 0;
+
+  background: #a45448;
+
+  color: #ffffff;
+}
+
+.confirm-cancel-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+
+  background: #8e453c;
+}
+
+.confirm-cancel-button:disabled {
+  opacity: 0.45;
+
+  cursor: not-allowed;
+}
+
+/* =====================================================
+   DELETE ORDER POPUP BACKDROP
+   ===================================================== */
+
+.delete-modal-backdrop {
+  position: fixed;
+
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+
+  width: 100vw;
+  height: 100vh;
+
+  z-index: 100000;
+
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  padding: 20px;
+
+  background:
+    rgba(18, 48, 37, 0.45);
+
+  backdrop-filter: blur(5px);
+
+  overflow-y: auto;
+
+  animation:
+    cancelBackdropIn
+    0.25s
+    ease
+    both;
+}
+
+
+/* =====================================================
+   DELETE ORDER POPUP
+   ===================================================== */
+
+.delete-modal {
+  position: relative;
+
+  width: min(420px, 90vw);
+
+  padding: 25px;
+
+  border:
+    1px solid
+    rgba(40, 113, 86, 0.18);
+
+  border-radius: 18px;
+
+  background: #faf9f1;
+
+  box-shadow:
+    0 30px 80px
+    rgba(20, 55, 42, 0.28);
+
+  animation:
+    cancelFrameIn
+    0.4s
+    cubic-bezier(0.22, 1, 0.36, 1)
+    both;
+}
+
+
+/* =====================================================
+   DELETE POPUP CLOSE BUTTON
+   ===================================================== */
+
+.delete-modal-close {
+  position: absolute;
+
+  top: 11px;
+  right: 13px;
+
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  width: 30px;
+  height: 30px;
+
+  border:
+    1px solid
+    #d7ded6;
+
+  border-radius: 50%;
+
+  background: #ffffff;
+
+  color: #173b2c;
+
+  cursor: pointer;
+
+  font-size: 19px;
+
+  line-height: 1;
+
+  transition:
+    transform 0.2s ease,
+    background 0.2s ease;
+}
+
+.delete-modal-close:hover {
+  transform: rotate(90deg);
+
+  background: #edf5ef;
+}
+
+
+/* =====================================================
+   DELETE POPUP ICON
+   ===================================================== */
+
+.delete-modal-icon {
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  width: 38px;
+  height: 38px;
+
+  margin-bottom: 11px;
+
+  border-radius: 50%;
+
+  background: #f6e7e4;
+
+  color: #a45448;
+
+  font-size: 16px;
+
+  font-weight: 700;
+}
+
+
+/* =====================================================
+   DELETE POPUP EYEBROW
+   ===================================================== */
+
+.delete-modal-eyebrow {
+  color: #a45448;
+
+  font-size: 8px;
+
+  font-weight: 700;
+
+  letter-spacing: 0.2em;
+}
+
+
+/* =====================================================
+   DELETE POPUP TITLE
+   ===================================================== */
+
+.delete-modal h2 {
+  margin: 5px 30px 0 0;
+
+  color: #173b2c;
+
+  font-family:
+    'Instrument Serif',
+    Georgia,
+    serif;
+
+  font-size: 25px;
+
+  font-weight: 400;
+
+  line-height: 1.1;
+}
+
+
+/* =====================================================
+   DELETE POPUP DESCRIPTION
+   ===================================================== */
+
+.delete-modal-description {
+  margin: 8px 0 14px;
+
+  color: #668075;
+
+  font-size: 9px;
+
+  line-height: 1.6;
+}
+
+
+/* =====================================================
+   DELETE PRODUCT
+   ===================================================== */
+
+.delete-product {
+  display: flex;
+
+  align-items: center;
+
+  gap: 12px;
+
+  margin-bottom: 16px;
+
+  padding: 8px;
+
+  border:
+    1px solid
+    #dce4dc;
+
+  border-radius: 11px;
+
+  background: #f3f7f2;
+}
+
+
+/* =====================================================
+   DELETE PRODUCT IMAGE
+   ===================================================== */
+
+.delete-product-image {
+  position: relative;
+
+  width: 55px;
+  height: 55px;
+
+  flex-shrink: 0;
+
+  overflow: hidden;
+
+  border-radius: 8px;
+
+  background: #eaf4ec;
+}
+
+.delete-product-image .scarf-shape {
+  width: 35px;
+  height: 55px;
+}
+
+.delete-product-image .sleep-shape {
+  width: 38px;
+  height: 50px;
+}
+
+.delete-product-image .ribbon-shape {
+  width: 40px;
+  height: 50px;
+}
+
+.delete-product-image .throw-shape {
+  width: 45px;
+  height: 52px;
+}
+
+/* =====================================================
+   DELETE PRODUCT NAME
+   ===================================================== */
+
+.delete-product-info h3 {
+  margin: 4px 0 0;
+
+  color: #173b2c;
+
+  font-family:
+    'Instrument Serif',
+    Georgia,
+    serif;
+
+  font-size: 17px;
+
+  font-weight: 400;
+}
+
+
+/* =====================================================
+   DELETE POPUP ACTIONS
+   ===================================================== */
+
+.delete-modal-actions {
+  display: grid;
+
+  grid-template-columns:
+    1fr
+    1fr;
+
+  gap: 9px;
+
+  margin-top: 17px;
+}
+
+
+.keep-delete-button,
+.confirm-delete-button {
+  height: 38px;
+
+  border-radius: 20px;
+
+  cursor: pointer;
+
+  font-family: 'DM Sans', sans-serif;
+
+  font-size: 9px;
+
+  font-weight: 700;
+
+  transition:
+    transform 0.2s ease,
+    background 0.2s ease;
+}
+
+
+/* =====================================================
+   KEEP ORDER BUTTON
+   ===================================================== */
+
+.keep-delete-button {
+  border:
+    1px solid
+    #287156;
+
+  background: transparent;
+
+  color: #287156;
+}
+
+.keep-delete-button:hover {
+  transform: translateY(-1px);
+
+  background: #edf6ef;
+}
+
+
+/* =====================================================
+   CONFIRM DELETE BUTTON
+   ===================================================== */
+
+.confirm-delete-button {
+  border: 0;
+
+  background: #a45448;
+
+  color: #ffffff;
+}
+
+.confirm-delete-button:hover {
+  transform: translateY(-1px);
+
+  background: #8e453c;
+}
+
+
+/* =====================================================
+   ANIMATIONS
+   ===================================================== */
+
+@keyframes orderPageFadeIn {
+
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+
+}
+
+@keyframes orderSlideLeft {
+
+  from {
+    opacity: 0;
+
+    transform:
+      translateX(-35px);
+  }
+
+  to {
+    opacity: 1;
+
+    transform:
+      translateX(0);
+  }
+
+}
+
+@keyframes orderSlideUp {
+
+  from {
+    opacity: 0;
+
+    transform:
+      translateY(30px);
+  }
+
+  to {
+    opacity: 1;
+
+    transform:
+      translateY(0);
+  }
+
+}
+
+@keyframes cancelBackdropIn {
+
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+
+}
+
+@keyframes cancelFrameIn {
+
+  from {
+    opacity: 0;
+
+    transform:
+      translateY(30px)
+      scale(0.94);
+  }
+
+  to {
+    opacity: 1;
+
+    transform:
+      translateY(0)
+      scale(1);
+  }
+
+}
+
+
+/* =====================================================
+   RESPONSIVE
+   ===================================================== */
+
+@media (max-width: 950px) {
+
+  .footer-main {
+    gap: 35px;
+  }
+
+  .order-section {
+    padding-left: 25px;
+    padding-right: 25px;
+  }
+
+}
+
+
+@media (max-width: 650px) {
+
+  .order-content {
+    padding-top: 30px;
+  }
+
+  .order-section {
+    padding:
+      0
+      18px
+      55px;
+  }
+
+  .order-heading h1 {
+    font-size: 38px;
+  }
+
+  .empty-order {
+    height: 230px;
+
+    margin-top: 30px;
+  }
+
+  .footer-main {
+    grid-template-columns: 1fr;
+
+    gap: 28px;
+  }
+
+  .customer-footer {
+    padding:
+      35px
+      24px
+      22px;
+  }
+
+  .footer-bottom {
+    margin-top: 28px;
+  }
+
+
+  /* ==============================
+     MOBILE ORDER CARD
+     ============================== */
+
+  .order-card {
+    grid-template-columns:
+      100px
+      minmax(0, 1fr);
+
+    height: auto;
+
+    min-height: 150px;
+  }
+
+  .order-product-image {
+    width: 100px;
+    height: 150px;
+  }
+
+  .order-summary {
+    grid-column: 2;
+
+    align-items: flex-start;
+
+    min-width: 0;
+
+    padding:
+      0
+      20px
+      20px;
+  }
+
+  .order-details {
+    padding: 18px;
+  }
+
+  .order-details h2 {
+    font-size: 23px;
+  }
+
+}
+
+
+@media (max-width: 600px) {
+
+  .cancel-modal {
+    padding:
+      25px
+      20px;
+  }
+
+  .cancel-modal-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .delete-modal {
+
+    padding:
+      22px
+      18px;
+  }
+
+  .delete-modal-actions {
+    grid-template-columns: 1fr;
+  }
+
+}

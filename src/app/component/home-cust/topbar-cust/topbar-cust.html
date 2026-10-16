@@ -1,0 +1,273 @@
+<header class="topbar-cust">
+
+  <!-- LEFT: BRAND + MENU -->
+  <div class="brand-area">
+
+    <div class="brand-cust">
+
+      <div class="brand-logo">
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <!-- BIGGER WORM -->
+          <circle
+            cx="8.7"
+            cy="8.7"
+            r="1.45"
+            stroke="currentColor"
+            stroke-width="1.15"
+          />
+
+          <circle
+            cx="10.8"
+            cy="7.9"
+            r="1.45"
+            stroke="currentColor"
+            stroke-width="1.15"
+          />
+
+          <circle
+            cx="13"
+            cy="7.4"
+            r="1.45"
+            stroke="currentColor"
+            stroke-width="1.15"
+          />
+
+          <circle
+            cx="15.2"
+            cy="7.2"
+            r="1.45"
+            stroke="currentColor"
+            stroke-width="1.15"
+          />
+
+          <circle
+            cx="17.4"
+            cy="7.3"
+            r="1.65"
+            stroke="currentColor"
+            stroke-width="1.15"
+          />
+
+          <!-- EYE -->
+          <circle
+            cx="17.85"
+            cy="6.95"
+            r="0.22"
+            fill="currentColor"
+          />
+
+          <!-- ANTENNA -->
+          <path
+            d="M17.7 5.9C18.2 5.1 18.8 4.9 19.5 5.1"
+            stroke="currentColor"
+            stroke-width="0.95"
+            stroke-linecap="round"
+          />
+
+          <path
+            d="M16.7 5.9C16.4 5.1 15.8 4.8 15.2 4.9"
+            stroke="currentColor"
+            stroke-width="0.95"
+            stroke-linecap="round"
+          />
+
+          <!-- ORIGINAL LEAF -->
+          <path
+            d="M17.8 4.5C13.2 4.8 8.4 7.2 7 11.2C6.1 13.8 7.3 16.2 9.8 17.1C12.7 18.1 15.5 16.4 16.5 13.9"
+            stroke="currentColor"
+            stroke-width="1.5"
+            stroke-linecap="round"
+          />
+
+          <path
+            d="M7.4 17.2C9.8 14.4 12.5 12.2 16.5 10.4"
+            stroke="currentColor"
+            stroke-width="1.5"
+            stroke-linecap="round"
+          />
+
+        </svg>
+      </div>
+
+
+      <div class="brand-text">
+
+        <div class="brand-name">
+          SilkMart
+        </div>
+
+        <div class="brand-subtitle">
+          VILLANUEVA (DOST-PTRI)
+        </div>
+
+      </div>
+
+    </div>
+
+
+    <!-- MENU BUTTON -->
+    <button
+      class="brand-menu-button"
+      type="button"
+      [class.active]="menuOpen"
+      (click)="toggleMenu()"
+      aria-label="Open navigation menu"
+    >
+
+      <span class="menu-lines">
+        <span></span>
+        <span></span>
+        <span></span>
+      </span>
+
+      <span class="menu-text">
+        Menu
+      </span>
+
+      <span class="menu-arrow">
+        ›
+      </span>
+
+    </button>
+
+
+    <!-- DROPDOWN NAVIGATION -->
+    <nav
+      class="brand-dropdown"
+      [class.open]="menuOpen"
+    >
+
+      <!-- SHOP SILK -->
+      <a
+        routerLink="/home-cust/shopsilk"
+        routerLinkActive="active"
+        (click)="closeMenu()"
+      >
+        <span>
+          Shop silk
+        </span>
+
+        <span class="dropdown-arrow">
+          ›
+        </span>
+      </a>
+
+
+      <!-- MY ORDERS -->
+      <a
+        routerLink="/home-cust/order"
+        routerLinkActive="active"
+        (click)="closeMenu()"
+      >
+        <span>
+          My orders
+        </span>
+
+        <span class="dropdown-arrow">
+          ›
+        </span>
+      </a>
+
+
+      <!-- STAFF VIEW -->
+      <a
+        routerLink="/staff-view"
+        routerLinkActive="active"
+        (click)="closeMenu()"
+      >
+        <span>
+          Staff view
+        </span>
+
+        <span class="dropdown-arrow">
+          ›
+        </span>
+      </a>
+
+    </nav>
+
+  </div>
+
+
+  <!-- RIGHT: NOTIFICATION + PROFILE -->
+  <div class="topbar-actions">
+
+    <!-- NOTIFICATION -->
+    <button
+      class="notification-button"
+      type="button"
+      aria-label="Notifications"
+      (click)="openNotifications()"
+    >
+
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          d="M18 9.5C18 6.46 16.21 4 12 4C7.79 4 6 6.46 6 9.5C6 14 4.5 15.5 4.5 17H19.5C19.5 15.5 18 14 18 9.5Z"
+          stroke="currentColor"
+          stroke-width="1.6"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+
+        <path
+          d="M9.5 20C10.1 20.7 11 21 12 21C13 21 13.9 20.7 14.5 20"
+          stroke="currentColor"
+          stroke-width="1.6"
+          stroke-linecap="round"
+        />
+      </svg>
+
+      <span
+        *ngIf="notificationCount > 0"
+        class="notification-dot"
+      >
+        {{ notificationCount }}
+      </span>
+
+    </button>
+
+
+    <!-- PROFILE -->
+    <button
+      class="profile-button"
+      type="button"
+      aria-label="Open profile"
+      (click)="openProfile()"
+    >
+
+      <span class="profile-circle">
+
+  <!-- PROFILE PICTURE -->
+
+  <img
+    *ngIf="profileImageUrl"
+    [src]="profileImageUrl"
+    alt="Profile picture"
+    class="profile-circle-image"
+  />
+
+
+  <!-- PROFILE INITIAL -->
+
+  <span
+    *ngIf="!profileImageUrl"
+    class="profile-circle-letter"
+  >
+    {{ profileInitial }}
+  </span>
+
+</span>
+
+    </button>
+
+  </div>
+
+</header>

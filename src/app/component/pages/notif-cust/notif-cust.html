@@ -1,0 +1,344 @@
+<div class="notification-page">
+
+  <main class="notification-container">
+
+
+    <!-- =========================================
+         HERO
+         ========================================= -->
+
+    <section class="notification-hero">
+
+      <div class="hero-main">
+
+        <span class="eyebrow">
+          MY ACCOUNT
+        </span>
+
+
+        <h1>
+          Notifications,
+          <span>
+            kept close.
+          </span>
+        </h1>
+
+
+        <p>
+          Stay updated on your orders,
+          account activity, and the latest
+          from SilkMart.
+        </p>
+
+      </div>
+
+
+      <div class="hero-note">
+
+        <span class="hero-note-line"></span>
+
+        <p>
+          Thoughtful updates for
+          <br />
+          a more beautiful everyday.
+        </p>
+
+      </div>
+
+    </section>
+
+
+    <!-- =========================================
+         FILTER BAR
+         ========================================= -->
+
+    <section class="notification-toolbar">
+
+      <div class="notification-filters">
+
+
+        <!-- ALL -->
+
+        <button
+          type="button"
+          class="filter-button"
+          [class.active]="selectedFilter === 'all'"
+          (click)="setFilter('all')"
+        >
+
+          All
+          <span>
+            ({{ notifications.length }})
+          </span>
+
+        </button>
+
+
+        <!-- UNREAD -->
+
+        <button
+          type="button"
+          class="filter-button"
+          [class.active]="selectedFilter === 'unread'"
+          (click)="setFilter('unread')"
+        >
+
+          Unread
+          <span>
+            ({{ unreadCount }})
+          </span>
+
+        </button>
+
+
+        <!-- ORDERS -->
+
+        <button
+          type="button"
+          class="filter-button"
+          [class.active]="selectedFilter === 'orders'"
+          (click)="setFilter('orders')"
+        >
+
+          Orders
+          <span>
+            ({{ orderCount }})
+          </span>
+
+        </button>
+
+      </div>
+
+
+      <!-- MARK ALL READ -->
+
+      <button
+        type="button"
+        class="mark-all-button"
+        (click)="markAllAsRead()"
+        [disabled]="unreadCount === 0"
+      >
+
+        <i class="pi pi-check"></i>
+
+        <span>
+          Mark all as read
+        </span>
+
+      </button>
+
+    </section>
+
+
+    <!-- =========================================
+         NOTIFICATIONS CARD
+         ========================================= -->
+
+    <section class="notifications-card">
+
+
+      <!-- EMPTY STATE -->
+
+      <div
+        class="notifications-empty"
+        *ngIf="filteredNotifications.length === 0"
+      >
+
+        <div class="empty-icon">
+
+          <i class="pi pi-bell"></i>
+
+        </div>
+
+
+        <h2>
+          You're all caught up.
+        </h2>
+
+
+        <p>
+          There are no notifications
+          in this section right now.
+        </p>
+
+      </div>
+
+
+      <!-- =========================================
+           NOTIFICATION ITEM
+           ========================================= -->
+
+      <article
+        class="notification-item"
+        *ngFor="let notification of filteredNotifications"
+        [class.unread]="!notification.read"
+        (click)="markAsRead(notification)"
+      >
+
+
+        <!-- UNREAD DOT -->
+
+        <div class="notification-dot-wrap">
+
+          <span
+            class="notification-dot"
+            *ngIf="!notification.read"
+          ></span>
+
+        </div>
+
+
+        <!-- ICON -->
+
+        <div class="notification-icon">
+
+          <i
+            [class]="notification.icon"
+          ></i>
+
+        </div>
+
+
+        <!-- CONTENT -->
+
+        <div class="notification-content">
+
+          <h2>
+            {{ notification.title }}
+          </h2>
+
+
+          <p>
+            {{ notification.message }}
+          </p>
+
+        </div>
+
+
+        <!-- RIGHT SIDE -->
+
+        <div class="notification-side">
+
+          <span class="notification-time">
+            {{ notification.time }}
+          </span>
+
+
+          <div class="notification-actions-row">
+
+
+            <!-- VIEW ACTION -->
+
+            <button
+              *ngIf="notification.actionLabel"
+              type="button"
+              class="notification-action"
+              (click)="
+                $event.stopPropagation();
+                openNotification(notification)
+              "
+            >
+
+              <span>
+                {{ notification.actionLabel }}
+              </span>
+
+              <i class="pi pi-arrow-right"></i>
+
+            </button>
+
+
+            <!-- DELETE -->
+
+            <button
+              type="button"
+              class="notification-delete"
+              aria-label="Delete notification"
+              title="Delete notification"
+              (click)="
+                $event.stopPropagation();
+                openDeleteConfirmation(notification)
+              "
+            >
+
+              <i class="pi pi-trash"></i>
+
+            </button>
+
+          </div>
+
+        </div>
+
+      </article>
+
+    </section>
+
+  </main>
+
+
+  <!-- =========================================
+       DELETE CONFIRMATION POPUP
+       ========================================= -->
+
+  <div
+    class="delete-confirm-backdrop"
+    *ngIf="deleteConfirmPopup"
+    (click)="closeDeleteConfirmation()"
+  >
+
+    <div
+      class="delete-confirm-modal"
+      (click)="$event.stopPropagation()"
+    >
+
+      <div class="delete-confirm-icon">
+
+        <i class="pi pi-trash"></i>
+
+      </div>
+
+
+      <h2>
+        Delete notification?
+      </h2>
+
+
+      <p>
+        Are you sure you want to delete this notification?
+        This action cannot be undone.
+      </p>
+
+
+      <div class="delete-confirm-actions">
+
+
+        <button
+          type="button"
+          class="delete-cancel-button"
+          (click)="closeDeleteConfirmation()"
+        >
+          Cancel
+        </button>
+
+
+        <button
+          type="button"
+          class="delete-confirm-button"
+          (click)="confirmDeleteNotification()"
+        >
+
+          <i class="pi pi-trash"></i>
+
+          <span>
+            Delete
+          </span>
+
+        </button>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</div>

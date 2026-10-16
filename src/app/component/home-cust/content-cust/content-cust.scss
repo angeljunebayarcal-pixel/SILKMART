@@ -1,0 +1,44 @@
+:host {
+  display: block;
+  width: 100%;
+  min-height: 100vh;
+}
+
+/* ==============================
+   CONTENT CUSTOMER
+   ============================== */
+
+:host {
+  display: block;
+  width: 100%;
+  min-height: 100vh;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* ==============================
+   CONTENT CUSTOMER
+   ============================== */
+
+.content-cust {
+  width: 100%;
+  min-height: 100vh;
+
+  /* EXACT SAME BACKGROUND AS ORDER */
+  background-color: #faf9f1;
+  background-image:
+    radial-gradient(
+      rgba(82, 112, 94, 0.13) 0.8px,
+      transparent 0.8px
+    );
+  background-size: 14px 14px;
+  background-repeat: repeat;
+
+  color: #173b2c;
+  font-family: 'DM Sans', sans-serif;
+
+  /* Fixed topbar */
+  padding-top: 64px;
+}
