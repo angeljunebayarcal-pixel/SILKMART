@@ -1,0 +1,733 @@
+
+<div class="cart-page">
+
+  <main class="cart-container">
+
+    <!-- =========================================
+         HEADER
+         ========================================= -->
+
+    <section class="cart-hero">
+
+      <div class="cart-heading">
+
+        <span class="eyebrow">
+          MY ACCOUNT / SHOPPING BAG
+        </span>
+
+        <h1>
+          Your shopping <em>bag.</em>
+        </h1>
+
+        <p>
+          A little collection of things you love.
+          Review your pieces before placing your order.
+        </p>
+
+      </div>
+
+      <div class="hero-note">
+        <span class="hero-line"></span>
+
+        <p>
+          Thoughtfully selected.
+          Beautifully yours.
+        </p>
+      </div>
+
+    </section>
+
+    <!-- =========================================
+         GUEST
+         ========================================= -->
+
+    <section
+      class="empty-cart"
+      *ngIf="authResolved && !currentUserId">
+
+      <div class="empty-icon">
+        <i class="pi pi-shopping-bag"></i>
+      </div>
+
+      <h2>Sign in to view your bag.</h2>
+
+      <p>
+        Your shopping bag is available when
+        you're signed in to your SilkMart account.
+      </p>
+
+      <button
+        type="button"
+        class="primary-button"
+        (click)="goToLogin()">
+
+        Sign in
+        <i class="pi pi-arrow-right"></i>
+
+      </button>
+
+    </section>
+
+    <!-- =========================================
+         EMPTY CART
+         ========================================= -->
+
+    <section
+      class="empty-cart"
+      *ngIf="
+        authResolved &&
+        currentUserId &&
+        cartItems.length === 0
+      ">
+
+      <div class="empty-icon">
+        <i class="pi pi-shopping-bag"></i>
+      </div>
+
+      <span class="empty-label">
+        YOUR BAG IS EMPTY
+      </span>
+
+      <h2>Nothing in your bag yet.</h2>
+
+      <p>
+        Explore the SilkMart collection and find
+        something special to bring home.
+      </p>
+
+      <button
+        type="button"
+        class="primary-button"
+        (click)="continueShopping()">
+
+        Explore collection
+        <i class="pi pi-arrow-right"></i>
+
+      </button>
+
+    </section>
+
+    <!-- =========================================
+         CART CONTENT
+         ========================================= -->
+
+    <div
+      class="cart-layout"
+      *ngIf="currentUserId && cartItems.length > 0">
+
+      <!-- LEFT SIDE -->
+
+      <section class="cart-list-section">
+
+        <div class="cart-toolbar">
+
+          <div class="cart-toolbar-heading">
+
+            <h2>Bag items</h2>
+
+            <span>
+              {{ itemCount }} items
+            </span>
+
+          </div>
+
+          <label class="select-all">
+
+            <input
+              type="checkbox"
+              [checked]="allSelected"
+              [disabled]="checkoutSaving"
+              (change)="toggleAll()">
+
+            <span>Select all</span>
+
+          </label>
+
+        </div>
+
+        <!-- CART ITEMS -->
+
+        <div class="cart-list">
+
+          <article
+            class="cart-item"
+            *ngFor="let item of cartItems">
+
+            <!-- SELECT ITEM -->
+
+            <div class="cart-select">
+
+              <input
+                type="checkbox"
+                [checked]="item.selected"
+                [disabled]="checkoutSaving"
+                (change)="toggleItem(item)"
+                [attr.aria-label]="'Select ' + item.name">
+
+            </div>
+
+            <!-- PRODUCT ART -->
+
+            <div
+              class="product-art"
+              [ngClass]="item.artClass">
+
+              <span class="art-decoration art-one"></span>
+              <span class="art-decoration art-two"></span>
+
+              <i class="pi pi-box"></i>
+
+            </div>
+
+            <!-- PRODUCT DETAILS -->
+
+            <div class="cart-product-info">
+
+              <span class="product-category">
+                {{ item.category }}
+              </span>
+
+              <h3>
+                {{ item.name }}
+              </h3>
+
+              <p class="unit-price">
+
+                {{
+                  item.price |
+                  currency:'PHP':'symbol':'1.2-2'
+                }}
+
+                <span>/ piece</span>
+
+              </p>
+
+              <div class="stock-indicator">
+
+                <span class="stock-dot"></span>
+
+                {{ item.stock }} available
+
+              </div>
+
+              <!-- QUANTITY -->
+
+              <div class="quantity-control">
+
+                <button
+                  type="button"
+                  (click)="decreaseQuantity(item)"
+                  [disabled]="
+                    item.quantity <= 1 ||
+                    checkoutSaving
+                  "
+                  aria-label="Decrease quantity">
+
+                  <i class="pi pi-minus"></i>
+
+                </button>
+
+                <span>
+                  {{ item.quantity }}
+                </span>
+
+                <button
+                  type="button"
+                  (click)="increaseQuantity(item)"
+                  [disabled]="
+                    item.quantity >= item.stock ||
+                    checkoutSaving
+                  "
+                  aria-label="Increase quantity">
+
+                  <i class="pi pi-plus"></i>
+
+                </button>
+
+              </div>
+
+            </div>
+
+            <!-- PRODUCT ACTIONS -->
+
+            <div class="cart-product-side">
+
+              <button
+                class="remove-button"
+                type="button"
+                title="Remove item"
+                [disabled]="checkoutSaving"
+                [attr.aria-label]="'Remove ' + item.name"
+                (click)="openRemovePopup(item)">
+
+                <i class="pi pi-trash"></i>
+
+              </button>
+
+              <div class="item-price">
+
+                <small>ITEM TOTAL</small>
+
+                <strong>
+
+                  {{
+                    item.price * item.quantity |
+                    currency:'PHP':'symbol':'1.2-2'
+                  }}
+
+                </strong>
+
+              </div>
+
+            </div>
+
+          </article>
+
+        </div>
+
+        <!-- CONTINUE SHOPPING -->
+
+        <button
+          type="button"
+          class="continue-button"
+          [disabled]="checkoutSaving"
+          (click)="continueShopping()">
+
+          <i class="pi pi-arrow-left"></i>
+
+          Continue shopping
+
+        </button>
+
+      </section>
+
+      <!-- =========================================
+           RIGHT SIDE: BAG SUMMARY
+           ========================================= -->
+
+      <aside class="summary-card">
+
+        <div class="summary-top">
+
+          <span class="eyebrow">
+            YOUR ORDER
+          </span>
+
+          <h2>Bag summary</h2>
+
+          <p>
+            Review your selected items before
+            proceeding to checkout.
+          </p>
+
+        </div>
+
+        <div class="summary-details">
+
+          <div class="summary-row">
+
+            <span>Selected products</span>
+
+            <strong>
+              {{ selectedCount }}
+            </strong>
+
+          </div>
+
+          <div class="summary-row">
+
+            <span>Subtotal</span>
+
+            <strong>
+
+              {{
+                subtotal |
+                currency:'PHP':'symbol':'1.2-2'
+              }}
+
+            </strong>
+
+          </div>
+
+          <div class="summary-row">
+
+            <span>Delivery fee</span>
+
+            <strong class="muted">
+              To be confirmed
+            </strong>
+
+          </div>
+
+        </div>
+
+        <div class="summary-total">
+
+          <span>Items total</span>
+
+          <strong>
+
+            {{
+              total |
+              currency:'PHP':'symbol':'1.2-2'
+            }}
+
+          </strong>
+
+        </div>
+
+        <p class="summary-note">
+          The displayed amount excludes any delivery fee,
+          which will be confirmed separately.
+        </p>
+
+        <!-- PLACE ORDER BUTTON -->
+
+        <button
+          type="button"
+          class="checkout-button"
+          [disabled]="
+            selectedCount === 0 ||
+            checkoutSaving
+          "
+          (click)="openCheckoutPopup()">
+
+          {{
+            checkoutSaving
+              ? 'Placing order...'
+              : 'Place order'
+          }}
+
+          <i
+            *ngIf="!checkoutSaving"
+            class="pi pi-arrow-right">
+          </i>
+
+          <i
+            *ngIf="checkoutSaving"
+            class="pi pi-spin pi-spinner">
+          </i>
+
+        </button>
+
+        <!-- CHECKOUT ERROR -->
+
+        <p
+          class="cart-error"
+          *ngIf="errorMessage && !showCheckoutPopup"
+          role="alert">
+
+          {{ errorMessage }}
+
+        </p>
+
+        <div class="summary-footer">
+
+          <i class="pi pi-heart"></i>
+
+          <span>
+            Made with care, chosen with love.
+          </span>
+
+        </div>
+
+      </aside>
+
+    </div>
+
+  </main>
+
+  <!-- =========================================
+       REMOVE CONFIRMATION
+       ========================================= -->
+
+  <div
+    class="modal-backdrop"
+    *ngIf="showRemovePopup"
+    (click)="closeRemovePopup()">
+
+    <div
+      class="modal-card"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="remove-cart-title"
+      (click)="$event.stopPropagation()">
+
+      <div class="modal-icon danger">
+
+        <i class="pi pi-trash"></i>
+
+      </div>
+
+      <h2 id="remove-cart-title">
+        Remove this item?
+      </h2>
+
+      <p>
+
+        Are you sure you want to remove
+
+        <strong>
+          {{ selectedRemoveItem?.name }}
+        </strong>
+
+        from your shopping bag?
+
+      </p>
+
+      <div class="modal-actions">
+
+        <button
+          type="button"
+          class="cancel-button"
+          (click)="closeRemovePopup()">
+
+          Keep item
+
+        </button>
+
+        <button
+          type="button"
+          class="danger-button"
+          (click)="confirmRemove()">
+
+          Remove
+
+        </button>
+
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- =========================================
+       CHECKOUT CONFIRMATION
+       ========================================= -->
+
+  <div
+    class="modal-backdrop"
+    *ngIf="showCheckoutPopup"
+    (click)="closeCheckoutPopup()">
+
+    <div
+      class="modal-card"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="checkout-cart-title"
+      (click)="$event.stopPropagation()">
+
+      <div class="modal-icon success">
+
+        <i
+          class="pi"
+          [ngClass]="
+            checkoutSaving
+              ? 'pi-spin pi-spinner'
+              : 'pi-shopping-bag'
+          ">
+        </i>
+
+      </div>
+
+      <h2 id="checkout-cart-title">
+
+        {{
+          checkoutSaving
+            ? 'Saving your order...'
+            : 'Place your order?'
+        }}
+
+      </h2>
+
+      <p>
+
+        {{
+          checkoutSaving
+            ? 'Your order is being saved to SilkMart. Please keep this page open.'
+            : "You're about to place an order for " +
+              selectedCount +
+              " selected " +
+              (selectedCount === 1 ? 'product.' : 'products.')
+        }}
+
+      </p>
+
+      <!-- ORDER TOTAL -->
+
+      <div class="checkout-preview">
+
+        <span>Items total</span>
+
+        <strong>
+
+          {{
+            total |
+            currency:'PHP':'symbol':'1.2-2'
+          }}
+
+        </strong>
+
+      </div>
+
+      <!-- =====================================
+           PREFERRED DELIVERY DATE
+           ===================================== -->
+
+      <div class="cart-delivery-date">
+
+        <label for="cartPreferredDeliveryDate">
+
+          Preferred delivery date
+
+        </label>
+
+        <div class="cart-delivery-date-field">
+
+          <i
+            class="pi pi-calendar"
+            aria-hidden="true">
+          </i>
+
+          <input
+            id="cartPreferredDeliveryDate"
+            type="date"
+            name="cartPreferredDeliveryDate"
+            [min]="minDeliveryDate"
+            [disabled]="checkoutSaving"
+            [(ngModel)]="preferredDeliveryDate"
+            aria-describedby="cartDeliveryDateNote"
+            required>
+
+        </div>
+
+        <small id="cartDeliveryDateNote">
+
+          Choose when you'd like to receive your order.
+          This is a requested date, subject to staff
+          confirmation and delivery availability.
+
+        </small>
+
+      </div>
+
+      <p class="checkout-disclaimer">
+        Delivery details and fees are not included
+        in this amount.
+      </p>
+
+      <!-- FIREBASE ERROR MESSAGE -->
+
+      <p
+        class="cart-error"
+        *ngIf="errorMessage"
+        role="alert">
+
+        {{ errorMessage }}
+
+      </p>
+
+      <!-- MODAL BUTTONS -->
+
+      <div class="modal-actions">
+
+        <button
+          type="button"
+          class="cancel-button"
+          [disabled]="checkoutSaving"
+          (click)="closeCheckoutPopup()">
+
+          Go back
+
+        </button>
+
+        <button
+          type="button"
+          class="confirm-button"
+          [disabled]="
+            checkoutSaving ||
+            !preferredDeliveryDate ||
+            preferredDeliveryDate < minDeliveryDate
+          "
+          (click)="confirmCheckout()">
+
+          <ng-container *ngIf="!checkoutSaving">
+            Confirm order
+          </ng-container>
+
+          <ng-container *ngIf="checkoutSaving">
+
+            <i class="pi pi-spin pi-spinner"></i>
+
+            Placing order...
+
+          </ng-container>
+
+        </button>
+
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- =========================================
+       SUCCESS POPUP
+       ========================================= -->
+
+  <div
+    class="modal-backdrop"
+    *ngIf="showSuccessPopup">
+
+    <div
+      class="modal-card"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="success-cart-title">
+
+      <div class="modal-icon success">
+
+        <i class="pi pi-check"></i>
+
+      </div>
+
+      <h2 id="success-cart-title">
+        Order placed!
+      </h2>
+
+      <p>
+
+        Your selected items have been successfully
+        saved to SilkMart.
+
+        You can track your order under My Orders.
+
+      </p>
+
+      <div class="modal-actions">
+
+        <button
+          type="button"
+          class="cancel-button"
+          (click)="closeSuccessPopup()">
+
+          Stay here
+
+        </button>
+
+        <button
+          type="button"
+          class="confirm-button"
+          (click)="viewOrders()">
+
+          View orders
+
+        </button>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</div>

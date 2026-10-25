@@ -1,337 +1,553 @@
+
 <div class="notification-page">
 
   <main class="notification-container">
 
-
-    <!-- =========================================
-         HERO
-         ========================================= -->
-
+    <!-- HEADER -->
     <section class="notification-hero">
 
       <div class="hero-main">
-
-        <span class="eyebrow">
-          MY ACCOUNT
-        </span>
-
+        <span class="eyebrow">MY ACCOUNT</span>
 
         <h1>
           Notifications,
-          <span>
-            kept close.
-          </span>
+          <span>kept close.</span>
         </h1>
 
-
         <p>
-          Stay updated on your orders,
-          account activity, and the latest
-          from SilkMart.
+          Stay updated on your orders, account activity,
+          and the latest from SilkMart.
         </p>
-
       </div>
 
-
       <div class="hero-note">
-
         <span class="hero-note-line"></span>
-
         <p>
           Thoughtful updates for
-          <br />
           a more beautiful everyday.
         </p>
-
       </div>
 
     </section>
 
-
-    <!-- =========================================
-         FILTER BAR
-         ========================================= -->
-
+    <!-- FILTERS -->
     <section class="notification-toolbar">
 
       <div class="notification-filters">
-
-
-        <!-- ALL -->
 
         <button
           type="button"
           class="filter-button"
           [class.active]="selectedFilter === 'all'"
-          (click)="setFilter('all')"
-        >
-
-          All
-          <span>
-            ({{ notifications.length }})
-          </span>
-
+          (click)="setFilter('all')">
+          All ({{ notifications.length }})
         </button>
-
-
-        <!-- UNREAD -->
 
         <button
           type="button"
           class="filter-button"
           [class.active]="selectedFilter === 'unread'"
-          (click)="setFilter('unread')"
-        >
-
-          Unread
-          <span>
-            ({{ unreadCount }})
-          </span>
-
+          (click)="setFilter('unread')">
+          Unread ({{ unreadCount }})
         </button>
-
-
-        <!-- ORDERS -->
 
         <button
           type="button"
           class="filter-button"
           [class.active]="selectedFilter === 'orders'"
-          (click)="setFilter('orders')"
-        >
-
-          Orders
-          <span>
-            ({{ orderCount }})
-          </span>
-
+          (click)="setFilter('orders')">
+          Orders ({{ orderCount }})
         </button>
+
+        
+<!-- CHAT FILTER WITH UNREAD COUNT -->
+<button
+  type="button"
+  class="filter-button"
+  [class.active]="selectedFilter === 'chat'"
+  (click)="setFilter('chat')">
+
+  <i class="pi pi-comments"></i>
+
+  Chat ({{ unreadChatCount }})
+
+</button>
+
 
       </div>
 
-
-      <!-- MARK ALL READ -->
-
       <button
+        *ngIf="selectedFilter !== 'chat'"
         type="button"
         class="mark-all-button"
         (click)="markAllAsRead()"
-        [disabled]="unreadCount === 0"
-      >
+        [disabled]="unreadCount === 0">
 
         <i class="pi pi-check"></i>
-
-        <span>
-          Mark all as read
-        </span>
+        <span>Mark all as read</span>
 
       </button>
 
     </section>
 
-
-    <!-- =========================================
-         NOTIFICATIONS CARD
-         ========================================= -->
-
+    <!-- MAIN CARD -->
     <section class="notifications-card">
 
-
-      <!-- EMPTY STATE -->
-
+      <!-- ACCOUNT LOADING -->
       <div
         class="notifications-empty"
-        *ngIf="filteredNotifications.length === 0"
-      >
+        *ngIf="!authResolved || (authResolved && loadingNotifications)">
 
         <div class="empty-icon">
-
-          <i class="pi pi-bell"></i>
-
+          <i class="pi pi-spin pi-spinner"></i>
         </div>
 
+        <h2>Loading...</h2>
+        <p>Checking your SilkMart account.</p>
 
-        <h2>
-          You're all caught up.
-        </h2>
+      </div>
 
+      <!-- GUEST -->
+      <div
+        class="notifications-empty"
+        *ngIf="authResolved && !currentUserId">
+
+        <div class="empty-icon">
+          <i class="pi pi-user"></i>
+        </div>
+
+        <h2>Sign in to view your updates.</h2>
 
         <p>
-          There are no notifications
-          in this section right now.
+          Your notifications and conversations
+          will appear when you're signed in.
         </p>
 
       </div>
 
+      <!-- ERROR -->
+      <div
+        class="notifications-empty"
+        *ngIf="currentUserId && notificationError && !loadingNotifications">
 
-      <!-- =========================================
-           NOTIFICATION ITEM
-           ========================================= -->
-
-      <article
-        class="notification-item"
-        *ngFor="let notification of filteredNotifications"
-        [class.unread]="!notification.read"
-        (click)="markAsRead(notification)"
-      >
-
-
-        <!-- UNREAD DOT -->
-
-        <div class="notification-dot-wrap">
-
-          <span
-            class="notification-dot"
-            *ngIf="!notification.read"
-          ></span>
-
+        <div class="empty-icon">
+          <i class="pi pi-exclamation-circle"></i>
         </div>
 
+        <h2>Unable to load updates</h2>
+        <p>{{ notificationError }}</p>
 
-        <!-- ICON -->
+        <button
+          type="button"
+          class="notification-action"
+          (click)="loadNotifications()">
+          Try again
+        </button>
 
-        <div class="notification-icon">
+      </div>
 
-          <i
-            [class]="notification.icon"
-          ></i>
+      <!-- NOTIFICATIONS -->
+      <ng-container
+        *ngIf="
+          authResolved &&
+          currentUserId &&
+          !loadingNotifications &&
+          !notificationError &&
+          selectedFilter !== 'chat'
+        ">
 
-        </div>
+        <div
+          class="notifications-empty"
+          *ngIf="filteredNotifications.length === 0">
 
+          <div class="empty-icon">
+            <i class="pi pi-bell"></i>
+          </div>
 
-        <!-- CONTENT -->
-
-        <div class="notification-content">
-
-          <h2>
-            {{ notification.title }}
-          </h2>
-
+          <h2>You're all caught up.</h2>
 
           <p>
-            {{ notification.message }}
+            There are no notifications in this section right now.
           </p>
 
         </div>
 
+        <article
+          class="notification-item"
+          *ngFor="let notification of filteredNotifications"
+          [class.unread]="!notification.read"
+          (click)="markAsRead(notification)">
 
-        <!-- RIGHT SIDE -->
-
-        <div class="notification-side">
-
-          <span class="notification-time">
-            {{ notification.time }}
-          </span>
-
-
-          <div class="notification-actions-row">
-
-
-            <!-- VIEW ACTION -->
-
-            <button
-              *ngIf="notification.actionLabel"
-              type="button"
-              class="notification-action"
-              (click)="
-                $event.stopPropagation();
-                openNotification(notification)
-              "
-            >
-
-              <span>
-                {{ notification.actionLabel }}
-              </span>
-
-              <i class="pi pi-arrow-right"></i>
-
-            </button>
-
-
-            <!-- DELETE -->
-
-            <button
-              type="button"
-              class="notification-delete"
-              aria-label="Delete notification"
-              title="Delete notification"
-              (click)="
-                $event.stopPropagation();
-                openDeleteConfirmation(notification)
-              "
-            >
-
-              <i class="pi pi-trash"></i>
-
-            </button>
-
+          <div class="notification-dot-wrap">
+            <span
+              class="notification-dot"
+              *ngIf="!notification.read">
+            </span>
           </div>
+
+          <div class="notification-icon">
+            <i [class]="notification.icon"></i>
+          </div>
+
+          <div class="notification-content">
+            <h2>{{ notification.title }}</h2>
+            <p>{{ notification.message }}</p>
+          </div>
+
+          <div class="notification-side">
+
+            <span class="notification-time">
+              {{ notification.time }}
+            </span>
+
+            <div class="notification-actions-row">
+
+              <button
+                type="button"
+                class="notification-action"
+                (click)="
+                  $event.stopPropagation();
+                  openNotification(notification)
+                ">
+
+                View order
+                <i class="pi pi-arrow-right"></i>
+
+              </button>
+
+              <button
+                type="button"
+                class="notification-delete"
+                aria-label="Delete notification"
+                (click)="
+                  $event.stopPropagation();
+                  openDeleteConfirmation(notification)
+                ">
+
+                <i class="pi pi-trash"></i>
+
+              </button>
+
+            </div>
+          </div>
+
+        </article>
+
+      </ng-container>
+
+      <!-- ======================================
+           NEW CHAT TAB
+           ====================================== -->
+
+      <ng-container
+        *ngIf="
+          authResolved &&
+          currentUserId &&
+          !loadingNotifications &&
+          !notificationError &&
+          selectedFilter === 'chat'
+        ">
+
+        <div class="chat-tab-heading">
+
+          <div>
+            <h2>Order Conversations</h2>
+            <p>
+              Select an order to message SilkMart staff
+              about your delivery or purchase.
+            </p>
+          </div>
+
+          <span class="chat-order-count">
+            {{ customerOrders.length }} orders
+          </span>
 
         </div>
 
-      </article>
+        <div
+          class="notifications-empty"
+          *ngIf="customerOrders.length === 0">
+
+          <div class="empty-icon">
+            <i class="pi pi-comments"></i>
+          </div>
+
+          <h2>No conversations yet</h2>
+
+          <p>
+            Once you place an order, you can contact
+            SilkMart staff here.
+          </p>
+
+        </div>
+
+        <article
+          class="chat-order-card"
+          *ngFor="let order of customerOrders">
+
+          <div class="chat-order-art">
+            <i class="pi pi-shopping-bag"></i>
+          </div>
+
+          <div class="chat-order-information">
+
+            <small>ORDER #{{ order.id }}</small>
+
+            <h3>
+              {{ getChatProductName(order) }}
+            </h3>
+
+            <p>
+              Status: {{ order.status }}
+            </p>
+
+          </div>
+
+          
+<!-- OPEN CHAT WITH PER-ORDER UNREAD BADGE -->
+<button
+  type="button"
+  class="open-chat-button"
+  (click)="openChat(order)">
+
+  <i class="pi pi-comments"></i>
+
+  Open Chat
+
+  <span
+    class="chat-unread-badge"
+    *ngIf="getUnreadChatCount(order.id) > 0">
+
+    {{
+      getUnreadChatCount(order.id) > 99
+        ? '99+'
+        : getUnreadChatCount(order.id)
+    }}
+
+  </span>
+
+</button>
+
+
+        </article>
+
+      </ng-container>
 
     </section>
 
   </main>
 
+  <!-- ======================================
+       CUSTOMER CHAT POPUP
+       ====================================== -->
 
-  <!-- =========================================
-       DELETE CONFIRMATION POPUP
-       ========================================= -->
+  <div
+    class="customer-chat-backdrop"
+    *ngIf="showChatPopup && selectedChatOrder"
+    (click)="closeChat()">
+
+    <section
+      class="customer-chat-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="customer-chat-title"
+      (click)="$event.stopPropagation()">
+
+      <header class="customer-chat-header">
+
+        <div>
+          <span class="chat-eyebrow">
+            SILKMART MESSAGES
+          </span>
+
+          <h2 id="customer-chat-title">
+            Chat with SilkMart
+          </h2>
+        </div>
+
+        <button
+          type="button"
+          class="chat-close-button"
+          aria-label="Close chat"
+          [disabled]="chatSaving"
+          (click)="closeChat()">
+
+          <i class="pi pi-times"></i>
+
+        </button>
+
+      </header>
+
+      <div class="customer-chat-recipient">
+
+        <div class="staff-avatar">
+          <i class="pi pi-users"></i>
+        </div>
+
+        <div>
+          <strong>SilkMart Admin / Staff</strong>
+          <small>
+            Order #{{ selectedChatOrder!.id }}
+          </small>
+        </div>
+
+      </div>
+
+      <!-- MESSAGES -->
+      <div class="customer-chat-messages">
+
+        <div
+          class="chat-loading"
+          *ngIf="chatLoading">
+
+          <i class="pi pi-spin pi-spinner"></i>
+          Loading conversation...
+
+        </div>
+
+        <div
+          class="chat-empty-state"
+          *ngIf="!chatLoading && chatMessages.length === 0">
+
+          <i class="pi pi-comments"></i>
+
+          <h3>Start a conversation</h3>
+
+          <p>
+            Ask about delivery schedules, product details,
+            or your order.
+          </p>
+
+        </div>
+
+        <div
+          class="customer-chat-message"
+          *ngFor="
+            let message of chatMessages;
+            trackBy: trackMessage
+          "
+          [class.from-me]="isMyMessage(message)"
+          [class.from-staff]="!isMyMessage(message)">
+
+          <div class="customer-message-bubble">
+
+            <p>{{ message.text }}</p>
+
+            <div class="customer-message-meta">
+
+              <span>
+                {{
+                  isMyMessage(message)
+                    ? 'You'
+                    : 'SilkMart Staff'
+                }}
+              </span>
+
+              <span>
+                {{ formatChatTime(message.createdAt) }}
+              </span>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- MESSAGE COMPOSER -->
+      <footer class="customer-chat-composer">
+
+        <p class="chat-error" *ngIf="chatError">
+          {{ chatError }}
+        </p>
+
+        <div class="customer-message-input">
+
+          <textarea
+            [(ngModel)]="chatInput"
+            placeholder="Type your message to SilkMart staff..."
+            aria-label="Chat message"
+            maxlength="1000"
+            rows="2"
+            [disabled]="chatSaving">
+          </textarea>
+
+          <button
+            type="button"
+            class="customer-send-button"
+            [disabled]="chatSaving || !chatInput.trim()"
+            (click)="sendChatMessage()">
+
+            <i
+              class="pi"
+              [ngClass]="chatSaving
+                ? 'pi-spin pi-spinner'
+                : 'pi-send'">
+            </i>
+
+            {{ chatSaving ? 'Sending' : 'Send' }}
+
+          </button>
+
+        </div>
+
+        <small>
+          Messages are saved securely in your
+          order conversation on Firebase.
+        </small>
+
+      </footer>
+
+    </section>
+
+  </div>
+
+  <!-- ======================================
+       DELETE NOTIFICATION POPUP
+       ====================================== -->
 
   <div
     class="delete-confirm-backdrop"
     *ngIf="deleteConfirmPopup"
-    (click)="closeDeleteConfirmation()"
-  >
+    (click)="closeDeleteConfirmation()">
 
     <div
       class="delete-confirm-modal"
-      (click)="$event.stopPropagation()"
-    >
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="delete-notification-title"
+      (click)="$event.stopPropagation()">
 
       <div class="delete-confirm-icon">
-
         <i class="pi pi-trash"></i>
-
       </div>
 
-
-      <h2>
+      <h2 id="delete-notification-title">
         Delete notification?
       </h2>
 
-
       <p>
         Are you sure you want to delete this notification?
-        This action cannot be undone.
+        This action cannot be undone in this browser.
       </p>
 
-
       <div class="delete-confirm-actions">
-
 
         <button
           type="button"
           class="delete-cancel-button"
-          (click)="closeDeleteConfirmation()"
-        >
+          (click)="closeDeleteConfirmation()">
           Cancel
         </button>
-
 
         <button
           type="button"
           class="delete-confirm-button"
-          (click)="confirmDeleteNotification()"
-        >
+          (click)="confirmDeleteNotification()">
 
           <i class="pi pi-trash"></i>
-
-          <span>
-            Delete
-          </span>
+          <span>Delete</span>
 
         </button>
 

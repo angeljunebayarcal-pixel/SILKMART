@@ -1,0 +1,285 @@
+
+<header class="topbar-adm">
+
+  <!-- LEFT: BRAND AND MENU -->
+  <div class="brand-area">
+
+    <div class="brand-adm">
+
+      <!-- SILKMART LOGO -->
+      <div class="brand-logo">
+
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+
+          <!-- SILKWORM -->
+          <circle
+            cx="8.7"
+            cy="8.7"
+            r="1.45"
+            stroke="currentColor"
+            stroke-width="1.15"
+          />
+
+          <circle
+            cx="10.8"
+            cy="7.9"
+            r="1.45"
+            stroke="currentColor"
+            stroke-width="1.15"
+          />
+
+          <circle
+            cx="13"
+            cy="7.4"
+            r="1.45"
+            stroke="currentColor"
+            stroke-width="1.15"
+          />
+
+          <circle
+            cx="15.2"
+            cy="7.2"
+            r="1.45"
+            stroke="currentColor"
+            stroke-width="1.15"
+          />
+
+          <circle
+            cx="17.4"
+            cy="7.3"
+            r="1.65"
+            stroke="currentColor"
+            stroke-width="1.15"
+          />
+
+          <!-- EYE -->
+          <circle
+            cx="17.85"
+            cy="6.95"
+            r="0.22"
+            fill="currentColor"
+          />
+
+          <!-- ANTENNA -->
+          <path
+            d="M17.7 5.9C18.2 5.1 18.8 4.9 19.5 5.1"
+            stroke="currentColor"
+            stroke-width="0.95"
+            stroke-linecap="round"
+          />
+
+          <path
+            d="M16.7 5.9C16.4 5.1 15.8 4.8 15.2 4.9"
+            stroke="currentColor"
+            stroke-width="0.95"
+            stroke-linecap="round"
+          />
+
+          <!-- ORIGINAL LEAF -->
+          <path
+            d="M17.8 4.5C13.2 4.8 8.4 7.2 7 11.2C6.1 13.8 7.3 16.2 9.8 17.1C12.7 18.1 15.5 16.4 16.5 13.9"
+            stroke="currentColor"
+            stroke-width="1.5"
+            stroke-linecap="round"
+          />
+
+          <path
+            d="M7.4 17.2C9.8 14.4 12.5 12.2 16.5 10.4"
+            stroke="currentColor"
+            stroke-width="1.5"
+            stroke-linecap="round"
+          />
+
+        </svg>
+
+      </div>
+
+      <!-- BRAND NAME -->
+      <div class="brand-text">
+
+        <div class="brand-name">
+          SilkMart
+        </div>
+
+        <div class="brand-subtitle">
+          VILLANUEVA (DOST-PTRI)
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- MENU BUTTON -->
+    <button
+      class="brand-menu-button"
+      type="button"
+      [class.active]="menuOpen"
+      [attr.aria-expanded]="menuOpen"
+      aria-controls="admin-navigation"
+      aria-label="Toggle admin navigation menu"
+      (click)="toggleMenu()"
+    >
+
+      <span class="menu-lines">
+        <span></span>
+        <span></span>
+        <span></span>
+      </span>
+
+      <span class="menu-text">
+        Menu
+      </span>
+
+      <span class="menu-arrow">
+        ›
+      </span>
+
+    </button>
+
+    <!-- ADMIN DROPDOWN NAVIGATION -->
+    <nav
+      id="admin-navigation"
+      class="brand-dropdown"
+      [class.open]="menuOpen"
+      [attr.aria-hidden]="!menuOpen"
+    >
+
+      <!-- INVENTORY -->
+      <a
+        routerLink="/home-adm/inventory"
+        routerLinkActive="active"
+        [attr.tabindex]="menuOpen ? 0 : -1"
+        (click)="closeMenu()"
+      >
+
+        <span>
+          Inventory Management
+        </span>
+
+        <span class="dropdown-arrow">
+          ›
+        </span>
+
+      </a>
+
+      <!-- PRODUCT MANAGEMENT -->
+      <a
+        routerLink="/home-adm/products"
+        routerLinkActive="active"
+        [attr.tabindex]="menuOpen ? 0 : -1"
+        (click)="closeMenu()"
+      >
+
+        <span>
+          Product Management
+        </span>
+
+        <span class="dropdown-arrow">
+          ›
+        </span>
+
+      </a>
+
+      <!-- CUSTOMER ORDERS -->
+      <a
+        routerLink="/home-adm/cust-order"
+        routerLinkActive="active"
+        [attr.tabindex]="menuOpen ? 0 : -1"
+        (click)="closeMenu()"
+      >
+
+        <span>
+          Customer Orders
+        </span>
+
+        <span class="dropdown-arrow">
+          ›
+        </span>
+
+      </a>
+
+    </nav>
+
+  </div>
+
+  <!-- RIGHT: NOTIFICATION AND PROFILE -->
+  <div class="topbar-actions">
+
+    <!-- NOTIFICATION -->
+    <button
+      class="notification-button"
+      type="button"
+      aria-label="Admin notifications"
+      (click)="openNotifications()"
+    >
+
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+
+        <path
+          d="M18 9.5C18 6.46 16.21 4 12 4C7.79 4 6 6.46 6 9.5C6 14 4.5 15.5 4.5 17H19.5C19.5 15.5 18 14 18 9.5Z"
+          stroke="currentColor"
+          stroke-width="1.6"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+
+        <path
+          d="M9.5 20C10.1 20.7 11 21 12 21C13 21 13.9 20.7 14.5 20"
+          stroke="currentColor"
+          stroke-width="1.6"
+          stroke-linecap="round"
+        />
+
+      </svg>
+
+      <!-- NOTIFICATION COUNT -->
+      <span
+        *ngIf="notificationCount > 0"
+        class="notification-dot"
+      >
+        {{ notificationCount }}
+      </span>
+
+    </button>
+
+    <!-- ADMIN PROFILE -->
+    <button
+      class="profile-button"
+      type="button"
+      aria-label="Open admin profile"
+      (click)="openProfile()"
+    >
+
+      <span class="profile-circle">
+
+        <!-- PROFILE IMAGE -->
+        <img
+          *ngIf="profileImageUrl"
+          [src]="profileImageUrl"
+          alt="Admin profile picture"
+          class="profile-circle-image"
+        />
+
+        <!-- PROFILE INITIAL -->
+        <span
+          *ngIf="!profileImageUrl"
+          class="profile-circle-letter"
+        >
+          {{ profileInitial }}
+        </span>
+
+      </span>
+
+    </button>
+
+  </div>
+
+</header>

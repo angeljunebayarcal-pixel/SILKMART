@@ -1,916 +1,372 @@
 <div class="shopsilk">
 
-  <!-- =====================================================
-       COLLECTION HEADER
-       ===================================================== -->
-
+  <!-- COLLECTION -->
   <section class="collection-section">
-
     <div class="collection-heading">
-
       <div>
-
-        <div class="eyebrow">
-          THE COLLECTION
-        </div>
-
-        <h1>
-          Useful beauty, woven slowly.
-        </h1>
-
+        <div class="eyebrow">THE COLLECTION</div>
+        <h1>Useful beauty, woven slowly.</h1>
       </div>
-
-
       <p class="collection-description">
-
         Pieces for quiet mornings, thoughtful gifting, and
         the everyday rituals in between.
-
       </p>
-
     </div>
 
-
-    <!-- =====================================================
-         SEARCH + FILTERS
-         ===================================================== -->
-
+    <!-- SEARCH AND FILTERS -->
     <div class="collection-controls">
-
-      <!-- SEARCH -->
-
       <div class="search-box">
-
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-
-          <circle
-            cx="11"
-            cy="11"
-            r="6.5"
-            stroke="currentColor"
-            stroke-width="1.5"
-          />
-
-          <path
-            d="M16 16L20 20"
-            stroke="currentColor"
-            stroke-width="1.5"
-            stroke-linecap="round"
-          />
-
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="11" cy="11" r="6.5" stroke="currentColor" stroke-width="1.5" />
+          <path d="M16 16L20 20" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
         </svg>
-
-
         <input
           type="text"
           placeholder="Search the collection"
           [(ngModel)]="searchTerm"
         />
-
       </div>
 
-
-      <!-- CATEGORY BUTTONS -->
-
       <div class="category-buttons">
-
         <button
           type="button"
           [class.active]="selectedCategory === 'All pieces'"
           (click)="selectCategory('All pieces')"
-        >
-          All pieces
-        </button>
-
+        >All pieces</button>
 
         <button
           type="button"
           [class.active]="selectedCategory === 'Scarves'"
           (click)="selectCategory('Scarves')"
-        >
-          Scarves
-        </button>
-
+        >Scarves</button>
 
         <button
           type="button"
           [class.active]="selectedCategory === 'Home & sleep'"
           (click)="selectCategory('Home & sleep')"
-        >
-          Home &amp; sleep
-        </button>
-
+        >Home &amp; sleep</button>
 
         <button
           type="button"
           [class.active]="selectedCategory === 'Ribbons & trim'"
           (click)="selectCategory('Ribbons & trim')"
-        >
-          Ribbons &amp; trim
-        </button>
-
+        >Ribbons &amp; trim</button>
       </div>
 
-
-      <!-- SORT -->
-
-      <select
-        class="sort-select"
-        [(ngModel)]="sortOption"
-      >
-
-        <option value="featured">
-          Featured first
-        </option>
-
-        <option value="low">
-          Price: Low to high
-        </option>
-
-        <option value="high">
-          Price: High to low
-        </option>
-
+      <select class="sort-select" [(ngModel)]="sortOption">
+        <option value="featured">Featured first</option>
+        <option value="low">Price: Low to high</option>
+        <option value="high">Price: High to low</option>
       </select>
-
     </div>
 
-
-    <!-- =====================================================
-         PRODUCTS
-         ===================================================== -->
-
+    <!-- PRODUCTS -->
     <div class="product-grid">
-
       <article
         class="product-card"
         *ngFor="let product of filteredProducts"
         (click)="openProduct(product)"
       >
-
-        <!-- PRODUCT IMAGE -->
-
-        <div
-          class="product-image"
-          [ngClass]="product.artClass"
-        >
-
-          <span
-            class="featured-label"
-            *ngIf="product.featured"
-          >
-            FEATURED
-          </span>
-
-
-          <div
-            *ngIf="product.artClass === 'scarf-art'"
-            class="scarf-shape"
-          ></div>
-
-
-          <div
-            *ngIf="product.artClass === 'sleep-art'"
-            class="sleep-shape"
-          ></div>
-
-
-          <div
-            *ngIf="product.artClass === 'ribbon-art'"
-            class="ribbon-shape"
-          ></div>
-
-
-          <div
-            *ngIf="product.artClass === 'throw-art'"
-            class="throw-shape"
-          ></div>
-
+        <div class="product-image" [ngClass]="product.artClass">
+          <span class="featured-label" *ngIf="product.featured">FEATURED</span>
+          <div *ngIf="product.artClass === 'scarf-art'" class="scarf-shape"></div>
+          <div *ngIf="product.artClass === 'sleep-art'" class="sleep-shape"></div>
+          <div *ngIf="product.artClass === 'ribbon-art'" class="ribbon-shape"></div>
+          <div *ngIf="product.artClass === 'throw-art'" class="throw-shape"></div>
         </div>
 
-
-        <!-- PRODUCT INFORMATION -->
-
         <div class="product-info">
-
-          <div class="product-category">
-            {{ product.category }}
-          </div>
-
-
-          <h2>
-            {{ product.name }}
-          </h2>
-
+          <div class="product-category">{{ product.category }}</div>
+          <h2>{{ product.name }}</h2>
 
           <div class="product-bottom">
-
             <div>
-
               <div class="product-price">
                 ₱{{ product.price | number:'1.2-2' }}
               </div>
-
-
-              <div class="stock">
-                {{ product.stock }} available nearby
-              </div>
-
+              <div class="stock">{{ product.stock }} available nearby</div>
             </div>
-
 
             <button
               class="add-button"
               type="button"
               (click)="$event.stopPropagation(); addToCart(product)"
               [attr.aria-label]="'Add ' + product.name + ' to cart'"
-            >
-              +
-            </button>
-
+            >+</button>
           </div>
-
         </div>
-
       </article>
-
     </div>
 
-
-    <!-- NO RESULTS -->
-
-    <div
-      class="no-products"
-      *ngIf="filteredProducts.length === 0"
-    >
-
-      <p>
-        No pieces found.
-      </p>
-
+    <div class="no-products" *ngIf="filteredProducts.length === 0">
+      <p>No pieces found.</p>
     </div>
-
   </section>
 
-
-  <!-- =====================================================
-       CARE SECTION
-       ===================================================== -->
-
+  <!-- CARE SECTION -->
   <section class="care-section">
-
     <div class="care-content">
-
-      <div class="care-label">
-        CARE IS PART OF THE CRAFT
-      </div>
-
-
-      <h2>
-        Keep the softness going.
-      </h2>
-
-
+      <div class="care-label">CARE IS PART OF THE CRAFT</div>
+      <h2>Keep the softness going.</h2>
       <p>
-
         Silk likes a gentle life: cool water, a little shade,
         and time to breathe.<br />
-
         Every piece comes with simple care notes from our makers.
-
       </p>
-
-
       <button
         type="button"
         class="find-piece-button"
         (click)="scrollToCollection()"
       >
-
         Find your piece
-
-        <span>
-          →
-        </span>
-
+        <span>→</span>
       </button>
-
     </div>
-
 
     <div class="care-art">
-
-      <div class="care-sparkle">
-        ✧
-      </div>
-
+      <div class="care-sparkle">✧</div>
       <div class="care-oval"></div>
-
       <div class="care-circle"></div>
-
     </div>
-
   </section>
 
-
-  <!-- =====================================================
-       FOOTER
-       ===================================================== -->
-
+  <!-- FOOTER -->
   <footer class="customer-footer">
-
     <div class="footer-main">
-
-
       <div class="footer-brand">
-
         <div class="footer-brand-title">
-
-          <div class="footer-leaf">
-            ♡
-          </div>
-
-
+          <div class="footer-leaf">♡</div>
           <div>
-
-            <div class="footer-name">
-              SilkMart
-            </div>
-
-
-            <div class="footer-subtitle">
-              VILLANUEVA SILK
-            </div>
-
+            <div class="footer-name">SilkMart</div>
+            <div class="footer-subtitle">VILLANUEVA SILK</div>
           </div>
-
         </div>
-
-
         <p>
-
           Naturally raised, locally woven. A small silk
           producer in Barangay Imelda, Villanueva, Misamis
           Oriental.
-
         </p>
-
       </div>
 
-
       <div class="footer-column">
-
-        <div class="footer-heading">
-          STAY CLOSE
-        </div>
-
-
+        <div class="footer-heading">STAY CLOSE</div>
         <p>
-
           Every order supports the hands, homes, and patient
           work behind local silk.
-
         </p>
-
       </div>
 
-
       <div class="footer-column">
-
-        <div class="footer-heading">
-          NEED A HAND?
-        </div>
-
-
+        <div class="footer-heading">NEED A HAND?</div>
         <p>
-
           Questions about care or delivery? Our small team is
           happy to help.
-
         </p>
-
-
         <button
           type="button"
           class="track-button"
           (click)="trackOrder()"
         >
-
           Track an order
-
-          <span>
-            →
-          </span>
-
+          <span>→</span>
         </button>
-
       </div>
-
     </div>
-
 
     <div class="footer-bottom">
-
       © 2026 SilkMart · Made in Misamis Oriental
-
     </div>
-
   </footer>
 
-
-  <!-- =====================================================
-       PRODUCT POPUP / MODAL
-       ===================================================== -->
-
+  <!-- PRODUCT DETAILS POPUP -->
   <div
     class="product-modal-backdrop"
     *ngIf="selectedProduct"
     (click)="closeProduct()"
   >
-
-    <div
-      class="product-modal"
-      (click)="$event.stopPropagation()"
-    >
-
-
+    <div class="product-modal" (click)="$event.stopPropagation()">
       <button
         type="button"
         class="modal-close"
         (click)="closeProduct()"
         aria-label="Close product"
-      >
-        ×
-      </button>
+      >×</button>
 
-
-      <div
-        class="modal-product-image"
-        [ngClass]="selectedProduct.artClass"
-      >
-
-
-        <span
-          class="featured-label"
-          *ngIf="selectedProduct.featured"
-        >
+      <div class="modal-product-image" [ngClass]="selectedProduct.artClass">
+        <span class="featured-label" *ngIf="selectedProduct.featured">
           FEATURED
         </span>
-
-
-        <div
-          *ngIf="selectedProduct.artClass === 'scarf-art'"
-          class="scarf-shape"
-        ></div>
-
-
-        <div
-          *ngIf="selectedProduct.artClass === 'sleep-art'"
-          class="sleep-shape"
-        ></div>
-
-
-        <div
-          *ngIf="selectedProduct.artClass === 'ribbon-art'"
-          class="ribbon-shape"
-        ></div>
-
-
-        <div
-          *ngIf="selectedProduct.artClass === 'throw-art'"
-          class="throw-shape"
-        ></div>
-
+        <div *ngIf="selectedProduct.artClass === 'scarf-art'" class="scarf-shape"></div>
+        <div *ngIf="selectedProduct.artClass === 'sleep-art'" class="sleep-shape"></div>
+        <div *ngIf="selectedProduct.artClass === 'ribbon-art'" class="ribbon-shape"></div>
+        <div *ngIf="selectedProduct.artClass === 'throw-art'" class="throw-shape"></div>
       </div>
 
-
       <div class="modal-product-details">
-
-
-        <div class="product-category">
-
-          {{ selectedProduct.category }}
-
-        </div>
-
-
-        <h2>
-
-          {{ selectedProduct.name }}
-
-        </h2>
-
-
+        <div class="product-category">{{ selectedProduct.category }}</div>
+        <h2>{{ selectedProduct.name }}</h2>
         <div class="modal-price">
-
           ₱{{ selectedProduct.price | number:'1.2-2' }}
-
         </div>
-
 
         <p class="modal-description">
-
           A carefully finished silk piece made for quiet
           everyday moments, thoughtful gifting, and simple
           comfort.
-
         </p>
 
-
         <div class="modal-stock">
-
           {{ selectedProduct.stock }} pieces available
-
         </div>
-
 
         <div class="modal-quantity-row">
-
-          <span>
-            Quantity
-          </span>
-
-
+          <span>Quantity</span>
           <div class="quantity-control">
-
-            <button
-              type="button"
-              (click)="decreaseQuantity()"
-            >
-              −
-            </button>
-
-
-            <span>
-              {{ selectedQuantity }}
-            </span>
-
-
-            <button
-              type="button"
-              (click)="increaseQuantity()"
-            >
-              +
-            </button>
-
+            <button type="button" (click)="decreaseQuantity()">−</button>
+            <span>{{ selectedQuantity }}</span>
+            <button type="button" (click)="increaseQuantity()">+</button>
           </div>
-
         </div>
 
-
         <div class="modal-actions">
-
-
           <button
             type="button"
             class="modal-add-button"
             (click)="addSelectedProduct()"
-          >
-
-            Add to bag
-
-          </button>
-
+          >Add to bag</button>
 
           <button
             type="button"
             class="modal-order-button"
             (click)="orderSelectedProduct()"
           >
-
             Order now
-
-            <span>
-              →
-            </span>
-
+            <span>→</span>
           </button>
-
         </div>
-
       </div>
-
     </div>
-
   </div>
 
-
-  <!-- =====================================================
-       ADD TO ORDERS SUCCESS POPUP
-       ===================================================== -->
-
+  <!-- ADD SUCCESS POPUP -->
   <div
     class="add-success-backdrop"
     *ngIf="addSuccessPopup"
     (click)="closeAddSuccessPopup()"
   >
-
-    <div
-      class="add-success-modal"
-      (click)="$event.stopPropagation()"
-    >
-
+    <div class="add-success-modal" (click)="$event.stopPropagation()">
       <button
         type="button"
         class="add-success-close"
         (click)="closeAddSuccessPopup()"
         aria-label="Close"
-      >
-        ×
-      </button>
+      >×</button>
 
+      <div class="add-success-icon">✓</div>
+      <div class="add-success-eyebrow">ADDED TO ORDERS</div>
+      <h2>Added successfully.</h2>
+      <p>Your selected silk piece has been added to your orders.</p>
 
-      <div class="add-success-icon">
-        ✓
-      </div>
-
-
-      <div class="add-success-eyebrow">
-        ADDED TO ORDERS
-      </div>
-
-
-      <h2>
-        Added successfully.
-      </h2>
-
-
-      <p>
-        Your selected silk piece has been added to
-        your orders.
-      </p>
-
-
-      <div
-        class="added-product"
-        *ngIf="addedProduct"
-      >
-
-        <div
-          class="added-product-image"
-          [ngClass]="addedProduct.artClass"
-        >
-
-          <div
-            *ngIf="addedProduct.artClass === 'scarf-art'"
-            class="scarf-shape"
-          ></div>
-
-          <div
-            *ngIf="addedProduct.artClass === 'sleep-art'"
-            class="sleep-shape"
-          ></div>
-
-          <div
-            *ngIf="addedProduct.artClass === 'ribbon-art'"
-            class="ribbon-shape"
-          ></div>
-
-          <div
-            *ngIf="addedProduct.artClass === 'throw-art'"
-            class="throw-shape"
-          ></div>
-
+      <div class="added-product" *ngIf="addedProduct">
+        <div class="added-product-image" [ngClass]="addedProduct.artClass">
+          <div *ngIf="addedProduct.artClass === 'scarf-art'" class="scarf-shape"></div>
+          <div *ngIf="addedProduct.artClass === 'sleep-art'" class="sleep-shape"></div>
+          <div *ngIf="addedProduct.artClass === 'ribbon-art'" class="ribbon-shape"></div>
+          <div *ngIf="addedProduct.artClass === 'throw-art'" class="throw-shape"></div>
         </div>
 
-
         <div class="added-product-info">
-
-          <div class="product-category">
-            {{ addedProduct.category }}
-          </div>
-
-          <h3>
-            {{ addedProduct.name }}
-          </h3>
-
+          <div class="product-category">{{ addedProduct.category }}</div>
+          <h3>{{ addedProduct.name }}</h3>
           <div class="added-product-price">
             ₱{{ addedProduct.price | number:'1.2-2' }}
           </div>
-
         </div>
-
       </div>
 
-
       <div class="add-success-actions">
-
         <button
           type="button"
           class="continue-shopping-button"
           (click)="closeAddSuccessPopup()"
-        >
-          Continue shopping
-        </button>
-
+        >Continue shopping</button>
 
         <button
           type="button"
           class="view-orders-button"
           (click)="viewOrders()"
         >
-
           View orders
-
-          <span>
-            →
-          </span>
-
+          <span>→</span>
         </button>
-
       </div>
-
     </div>
-
   </div>
 
-
-  <!-- =====================================================
-       CREATE ACCOUNT POPUP
-       ===================================================== -->
-
+  <!-- CREATE ACCOUNT POPUP -->
   <div
     class="register-backdrop"
     *ngIf="showRegisterPopup"
     (click)="closeRegisterPopup()"
   >
-
-    <div
-      class="register-modal"
-      (click)="$event.stopPropagation()"
-    >
-
-      <!-- CLOSE -->
-
+    <div class="register-modal" (click)="$event.stopPropagation()">
       <button
         type="button"
         class="register-close"
         (click)="closeRegisterPopup()"
         aria-label="Close registration"
       >
-
         <i class="pi pi-times"></i>
-
       </button>
 
-
-      <!-- BRAND -->
-
       <div class="register-brand">
-
         <div class="register-brand-icon">
-
-          <!-- ORIGINAL SILKMART WORM + LEAF LOGO -->
-
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-          >
-
-            <circle
-              cx="8.7"
-              cy="8.7"
-              r="1.45"
-              stroke="currentColor"
-              stroke-width="1.15"
-            />
-
-            <circle
-              cx="10.8"
-              cy="7.9"
-              r="1.45"
-              stroke="currentColor"
-              stroke-width="1.15"
-            />
-
-            <circle
-              cx="13"
-              cy="7.4"
-              r="1.45"
-              stroke="currentColor"
-              stroke-width="1.15"
-            />
-
-            <circle
-              cx="15.2"
-              cy="7.2"
-              r="1.45"
-              stroke="currentColor"
-              stroke-width="1.15"
-            />
-
-            <circle
-              cx="17.4"
-              cy="7.3"
-              r="1.65"
-              stroke="currentColor"
-              stroke-width="1.15"
-            />
-
-
-            <circle
-              cx="17.85"
-              cy="6.95"
-              r="0.22"
-              fill="currentColor"
-            />
-
-
+          <!-- ORIGINAL SILKMART WORM AND LEAF -->
+          <svg viewBox="0 0 24 24" fill="none">
+            <circle cx="8.7" cy="8.7" r="1.45" stroke="currentColor" stroke-width="1.15" />
+            <circle cx="10.8" cy="7.9" r="1.45" stroke="currentColor" stroke-width="1.15" />
+            <circle cx="13" cy="7.4" r="1.45" stroke="currentColor" stroke-width="1.15" />
+            <circle cx="15.2" cy="7.2" r="1.45" stroke="currentColor" stroke-width="1.15" />
+            <circle cx="17.4" cy="7.3" r="1.65" stroke="currentColor" stroke-width="1.15" />
+            <circle cx="17.85" cy="6.95" r="0.22" fill="currentColor" />
             <path
               d="M17.7 5.9C18.2 5.1 18.8 4.9 19.5 5.1"
-              stroke="currentColor"
-              stroke-width="0.95"
-              stroke-linecap="round"
+              stroke="currentColor" stroke-width="0.95" stroke-linecap="round"
             />
-
             <path
               d="M16.7 5.9C16.4 5.1 15.8 4.8 15.2 4.9"
-              stroke="currentColor"
-              stroke-width="0.95"
-              stroke-linecap="round"
+              stroke="currentColor" stroke-width="0.95" stroke-linecap="round"
             />
-
-
             <path
               d="M17.8 4.5C13.2 4.8 8.4 7.2 7 11.2C6.1 13.8 7.3 16.2 9.8 17.1C12.7 18.1 15.5 16.4 16.5 13.9"
-              stroke="currentColor"
-              stroke-width="1.5"
-              stroke-linecap="round"
+              stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
             />
-
             <path
               d="M7.4 17.2C9.8 14.4 12.5 12.2 16.5 10.4"
-              stroke="currentColor"
-              stroke-width="1.5"
-              stroke-linecap="round"
+              stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
             />
-
           </svg>
-
         </div>
-
 
         <div>
-
-          <div class="register-brand-name">
-            SilkMart
-          </div>
-
-          <div class="register-brand-subtitle">
-            VILLANUEVA SILK
-          </div>
-
+          <div class="register-brand-name">SilkMart</div>
+          <div class="register-brand-subtitle">VILLANUEVA SILK</div>
         </div>
-
       </div>
-
-
-      <!-- HEADING -->
 
       <div class="register-heading">
-
-        <div class="register-eyebrow">
-          CUSTOMER ACCOUNT
-        </div>
-
-        <h2>
-          Create your account
-        </h2>
-
-        <p>
-          Create an account to continue with your order.
-        </p>
-
+        <div class="register-eyebrow">CUSTOMER ACCOUNT</div>
+        <h2>Create your account</h2>
+        <p>Create an account to continue with your order.</p>
       </div>
 
-
-      <!-- FORM -->
-
-      <form
-        (ngSubmit)="createAccount()"
-      >
-
+      <form (ngSubmit)="createAccount()">
         <div class="register-grid">
 
-
-          <!-- FULL NAME -->
-
           <div class="register-field">
-
-            <label for="fullName">
-              Full Name
-            </label>
-
-
+            <label for="fullName">Full Name</label>
             <div class="register-input-wrap">
-
               <i class="pi pi-user"></i>
-
-
               <input
                 id="fullName"
                 type="text"
@@ -920,26 +376,13 @@
                 autocomplete="name"
                 required
               />
-
             </div>
-
           </div>
 
-
-          <!-- EMAIL -->
-
           <div class="register-field">
-
-            <label for="registerEmail">
-              Email Address
-            </label>
-
-
+            <label for="registerEmail">Email Address</label>
             <div class="register-input-wrap">
-
               <i class="pi pi-envelope"></i>
-
-
               <input
                 id="registerEmail"
                 type="email"
@@ -949,26 +392,13 @@
                 autocomplete="email"
                 required
               />
-
             </div>
-
           </div>
 
-
-          <!-- MOBILE -->
-
           <div class="register-field">
-
-            <label for="mobileNumber">
-              Mobile Number
-            </label>
-
-
+            <label for="mobileNumber">Mobile Number</label>
             <div class="register-input-wrap">
-
               <i class="pi pi-phone"></i>
-
-
               <input
                 id="mobileNumber"
                 type="tel"
@@ -978,26 +408,13 @@
                 autocomplete="tel"
                 required
               />
-
             </div>
-
           </div>
 
-
-          <!-- ADDRESS -->
-
           <div class="register-field register-full-width">
-
-            <label for="completeAddress">
-              Complete Address
-            </label>
-
-
+            <label for="completeAddress">Complete Address</label>
             <div class="register-input-wrap register-textarea-wrap">
-
               <i class="pi pi-map-marker"></i>
-
-
               <textarea
                 id="completeAddress"
                 name="completeAddress"
@@ -1007,26 +424,13 @@
                 autocomplete="street-address"
                 required
               ></textarea>
-
             </div>
-
           </div>
 
-
-          <!-- PASSWORD -->
-
           <div class="register-field">
-
-            <label for="registerPassword">
-              Password
-            </label>
-
-
+            <label for="registerPassword">Password</label>
             <div class="register-input-wrap register-password-wrap">
-
               <i class="pi pi-lock"></i>
-
-
               <input
                 id="registerPassword"
                 [type]="showRegisterPassword ? 'text' : 'password'"
@@ -1036,45 +440,24 @@
                 autocomplete="new-password"
                 required
               />
-
-
               <button
                 type="button"
                 class="register-eye-button"
                 (click)="toggleRegisterPassword()"
                 aria-label="Toggle password visibility"
               >
-
                 <i
                   class="pi"
-                  [ngClass]="
-                    showRegisterPassword
-                      ? 'pi-eye-slash'
-                      : 'pi-eye'
-                  "
+                  [ngClass]="showRegisterPassword ? 'pi-eye-slash' : 'pi-eye'"
                 ></i>
-
               </button>
-
             </div>
-
           </div>
 
-
-          <!-- CONFIRM PASSWORD -->
-
           <div class="register-field">
-
-            <label for="confirmPassword">
-              Confirm Password
-            </label>
-
-
+            <label for="confirmPassword">Confirm Password</label>
             <div class="register-input-wrap register-password-wrap">
-
               <i class="pi pi-lock"></i>
-
-
               <input
                 id="confirmPassword"
                 [type]="showConfirmPassword ? 'text' : 'password'"
@@ -1084,86 +467,185 @@
                 autocomplete="new-password"
                 required
               />
-
-
               <button
                 type="button"
                 class="register-eye-button"
                 (click)="toggleConfirmPassword()"
                 aria-label="Toggle confirm password visibility"
               >
-
                 <i
                   class="pi"
-                  [ngClass]="
-                    showConfirmPassword
-                      ? 'pi-eye-slash'
-                      : 'pi-eye'
-                  "
+                  [ngClass]="showConfirmPassword ? 'pi-eye-slash' : 'pi-eye'"
                 ></i>
-
               </button>
-
             </div>
-
           </div>
 
         </div>
 
-
-        <!-- ERROR -->
-
-        <div
-          class="register-error"
-          *ngIf="registerError"
-        >
-
+        <div class="register-error" *ngIf="registerError">
           <i class="pi pi-exclamation-circle"></i>
-
-          <span>
-            {{ registerError }}
-          </span>
-
+          <span>{{ registerError }}</span>
         </div>
-
-
-        <!-- CREATE BUTTON -->
 
         <button
           type="submit"
           class="register-submit"
           [disabled]="registerLoading"
         >
-
           <ng-container *ngIf="!registerLoading">
-
             <i class="pi pi-user-plus"></i>
-
-            <span>
-              Create account &amp; continue
-            </span>
-
+            <span>Create account &amp; continue</span>
             <i class="pi pi-arrow-right"></i>
-
           </ng-container>
-
 
           <ng-container *ngIf="registerLoading">
-
             <i class="pi pi-spin pi-spinner"></i>
-
-            <span>
-              Creating account...
-            </span>
-
+            <span>Creating account...</span>
           </ng-container>
-
         </button>
-
       </form>
+    </div>
+  </div>
+
+  <!-- ADD TO BAG CONFIRMATION -->
+  <div
+    class="bag-confirm-backdrop"
+    *ngIf="showAddBagConfirmation"
+    (click)="closeAddBagConfirmation()"
+  >
+    <div
+      class="bag-confirm-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="bag-confirm-title"
+      (click)="$event.stopPropagation()"
+    >
+      <div class="bag-confirm-icon">
+        <i class="pi pi-shopping-bag"></i>
+      </div>
+
+      <div class="bag-confirm-eyebrow">YOUR SHOPPING BAG</div>
+      <h2 id="bag-confirm-title">Add to your bag?</h2>
+      <p>
+        Would you like to continue adding this
+        silk piece to your shopping cart?
+      </p>
+
+      <div class="bag-confirm-product" *ngIf="confirmationProduct">
+        <div class="bag-confirm-product-info">
+          <span>{{ confirmationProduct.category }}</span>
+          <h3>{{ confirmationProduct.name }}</h3>
+          <small>Quantity: {{ confirmationQuantity }}</small>
+        </div>
+        <strong>
+          ₱{{ confirmationProduct.price * confirmationQuantity | number:'1.2-2' }}
+        </strong>
+      </div>
+
+      <div class="bag-confirm-actions">
+        <button
+          type="button"
+          class="bag-cancel-button"
+          (click)="closeAddBagConfirmation()"
+        >Cancel</button>
+
+        <button
+          type="button"
+          class="bag-continue-button"
+          (click)="confirmAddToBag()"
+        >
+          <i class="pi pi-shopping-bag"></i>
+          Add to cart
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ORDER NOW CONFIRMATION AND DELIVERY CALENDAR -->
+  <div
+    class="order-confirm-backdrop"
+    *ngIf="showOrderConfirmation"
+    (click)="closeOrderConfirmation()"
+  >
+    <div
+      class="order-confirm-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="order-confirm-title"
+      (click)="$event.stopPropagation()"
+    >
+      <div class="order-confirm-icon">
+        <i class="pi pi-shopping-bag"></i>
+      </div>
+
+      <div class="order-confirm-eyebrow">ORDER CONFIRMATION</div>
+      <h2 id="order-confirm-title">Place your order?</h2>
+
+      <p>
+        Review your selected silk piece and choose
+        your preferred delivery date.
+      </p>
+
+      <div
+        class="order-confirm-product"
+        *ngIf="confirmationOrderProduct"
+      >
+        <div class="order-confirm-product-info">
+          <span>{{ confirmationOrderProduct.category }}</span>
+          <h3>{{ confirmationOrderProduct.name }}</h3>
+          <small>Quantity: {{ confirmationOrderQuantity }}</small>
+        </div>
+        <strong>
+          ₱{{ confirmationOrderProduct.price * confirmationOrderQuantity | number:'1.2-2' }}
+        </strong>
+      </div>
+
+      <!-- CALENDAR -->
+      <div class="order-delivery-date">
+        <label for="preferredDeliveryDate">
+          Preferred delivery date
+        </label>
+
+        <div class="order-delivery-date-field">
+          <i class="pi pi-calendar" aria-hidden="true"></i>
+
+          <input
+            id="preferredDeliveryDate"
+            name="preferredDeliveryDate"
+            type="date"
+            [min]="minDeliveryDate"
+            [(ngModel)]="preferredDeliveryDate"
+            required
+            aria-describedby="deliveryDateNote"
+          />
+        </div>
+
+        <small id="deliveryDateNote">
+          This is a requested date, subject to seller
+          confirmation and delivery availability.
+        </small>
+      </div>
+
+      <div class="order-confirm-actions">
+        <button
+          type="button"
+          class="order-cancel-button"
+          (click)="closeOrderConfirmation()"
+        >Cancel</button>
+
+        <button
+          type="button"
+          class="order-continue-button"
+          [disabled]="!preferredDeliveryDate || preferredDeliveryDate < minDeliveryDate"
+          (click)="confirmOrderNow()"
+        >
+          <i class="pi pi-check"></i>
+          Confirm order
+        </button>
+      </div>
 
     </div>
-
   </div>
 
 </div>

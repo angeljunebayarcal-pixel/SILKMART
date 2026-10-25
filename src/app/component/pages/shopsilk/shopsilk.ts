@@ -1,3 +1,4 @@
+
 import { CommonModule } from '@angular/common';
 import { Component } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -5,7 +6,7 @@ import { Router } from '@angular/router';
 
 import { AuthServ } from '../../../services/auth.serv';
 import { UserServ } from '../../../services/user.serv';
-
+import { OrderServ } from '../../../services/order.serv';
 
 interface Product {
   name: string;
@@ -16,23 +17,16 @@ interface Product {
   artClass: string;
 }
 
-
 type PendingAction =
   | 'quick-add'
   | 'add-bag'
   | 'order-now'
   | null;
 
-
 @Component({
   selector: 'app-shopsilk',
   standalone: true,
-
-  imports: [
-    CommonModule,
-    FormsModule
-  ],
-
+  imports: [CommonModule, FormsModule],
   templateUrl: './shopsilk.html',
   styleUrl: './shopsilk.scss',
 })
@@ -43,85 +37,84 @@ export class Shopsilk {
   // =========================================
 
   searchTerm = '';
-
   selectedCategory = 'All pieces';
-
   sortOption = 'featured';
-
 
   // =========================================
   // PRODUCT POPUP
   // =========================================
 
   selectedProduct: Product | null = null;
-
   selectedQuantity = 1;
 
+  // =========================================
+  // ADD TO BAG CONFIRMATION
+  // =========================================
+
+  showAddBagConfirmation = false;
+  confirmationProduct: Product | null = null;
+  confirmationQuantity = 1;
 
   // =========================================
-  // ADD TO ORDERS POPUP
+  // ORDER NOW CONFIRMATION
+  // =========================================
+
+  showOrderConfirmation = false;
+  confirmationOrderProduct: Product | null = null;
+  confirmationOrderQuantity = 1;
+
+  preferredDeliveryDate = '';
+  minDeliveryDate = this.getEarliestDeliveryDate();
+
+  // Prevent duplicate Firebase purchases.
+  orderSaving = false;
+
+  // =========================================
+  // ADD SUCCESS POPUP
   // =========================================
 
   addSuccessPopup = false;
-
   addedProduct: Product | null = null;
 
-
   // =========================================
-  // CREATE ACCOUNT POPUP
+  // REGISTER
   // =========================================
 
   showRegisterPopup = false;
 
   fullName = '';
-
   registerEmail = '';
-
   mobileNumber = '';
-
   completeAddress = '';
-
   registerPassword = '';
-
   confirmPassword = '';
 
   showRegisterPassword = false;
-
   showConfirmPassword = false;
 
   registerError = '';
-
   registerLoading = false;
 
-
   // =========================================
-  // PENDING ORDER
+  // PENDING ACTION
   // =========================================
 
   pendingProduct: Product | null = null;
-
   pendingQuantity = 1;
-
   pendingAction: PendingAction = null;
-
-
-  // =========================================
-  // CONSTRUCTOR
-  // =========================================
 
   constructor(
     private router: Router,
     private authService: AuthServ,
-    private userService: UserServ
+    private userService: UserServ,
+    private orderService: OrderServ
   ) {}
-
 
   // =========================================
   // PRODUCTS
   // =========================================
 
   products: Product[] = [
-
     {
       name: 'Luzon Mist Silk Scarf',
       category: 'SCARVES',
@@ -130,7 +123,6 @@ export class Shopsilk {
       featured: true,
       artClass: 'scarf-art'
     },
-
     {
       name: 'Mulberry Grove Silk Sleep Set',
       category: 'HOME & SLEEP',
@@ -139,7 +131,6 @@ export class Shopsilk {
       featured: true,
       artClass: 'sleep-art'
     },
-
     {
       name: 'Cocoon White Silk Ribbon',
       category: 'RIBBONS & TRIM',
@@ -148,7 +139,6 @@ export class Shopsilk {
       featured: false,
       artClass: 'ribbon-art'
     },
-
     {
       name: 'Imelda Heritage Silk Throw',
       category: 'HOME & SLEEP',
@@ -157,199 +147,101 @@ export class Shopsilk {
       featured: false,
       artClass: 'throw-art'
     }
-
   ];
-
 
   // =========================================
   // FILTERED PRODUCTS
   // =========================================
 
   get filteredProducts(): Product[] {
-
     let result = [...this.products];
 
-
     if (this.selectedCategory !== 'All pieces') {
-
-      const categoryMap: {
-        [key: string]: string;
-      } = {
-
+      const categoryMap: { [key: string]: string } = {
         'Scarves': 'SCARVES',
-
         'Home & sleep': 'HOME & SLEEP',
-
         'Ribbons & trim': 'RIBBONS & TRIM'
-
       };
-
 
       result = result.filter(
         product =>
-          product.category ===
-          categoryMap[this.selectedCategory]
+          product.category === categoryMap[this.selectedCategory]
       );
-
     }
-
 
     if (this.searchTerm.trim()) {
+      const search = this.searchTerm.toLowerCase().trim();
 
-      const search =
-        this.searchTerm
-          .toLowerCase()
-          .trim();
-
-
-      result = result.filter(product =>
-
-        product.name
-          .toLowerCase()
-          .includes(search)
-
-        ||
-
-        product.category
-          .toLowerCase()
-          .includes(search)
-
+      result = result.filter(
+        product =>
+          product.name.toLowerCase().includes(search) ||
+          product.category.toLowerCase().includes(search)
       );
-
     }
-
 
     switch (this.sortOption) {
-
       case 'low':
-
-        result.sort(
-          (a, b) =>
-            a.price - b.price
-        );
-
+        result.sort((a, b) => a.price - b.price);
         break;
-
 
       case 'high':
-
-        result.sort(
-          (a, b) =>
-            b.price - a.price
-        );
-
+        result.sort((a, b) => b.price - a.price);
         break;
-
 
       case 'name':
-
-        result.sort(
-          (a, b) =>
-            a.name.localeCompare(b.name)
-        );
-
+        result.sort((a, b) => a.name.localeCompare(b.name));
         break;
-
 
       case 'featured':
-
       default:
-
         result.sort(
           (a, b) =>
-            Number(b.featured) -
-            Number(a.featured)
+            Number(b.featured) - Number(a.featured)
         );
-
         break;
-
     }
 
-
     return result;
-
   }
 
-
   // =========================================
-  // CATEGORY BUTTON
+  // CATEGORY
   // =========================================
 
   selectCategory(category: string): void {
-
     this.selectedCategory = category;
-
   }
 
-
   // =========================================
-  // OPEN PRODUCT POPUP
+  // PRODUCT DETAILS
   // =========================================
 
   openProduct(product: Product): void {
-
     this.selectedProduct = product;
-
     this.selectedQuantity = 1;
-
   }
-
-
-  // =========================================
-  // CLOSE PRODUCT POPUP
-  // =========================================
 
   closeProduct(): void {
-
     this.selectedProduct = null;
-
     this.selectedQuantity = 1;
-
   }
-
-
-  // =========================================
-  // INCREASE QUANTITY
-  // =========================================
 
   increaseQuantity(): void {
+    if (!this.selectedProduct) return;
 
-    if (!this.selectedProduct) {
-
-      return;
-
-    }
-
-
-    if (
-      this.selectedQuantity <
-      this.selectedProduct.stock
-    ) {
-
+    if (this.selectedQuantity < this.selectedProduct.stock) {
       this.selectedQuantity++;
-
     }
-
   }
-
-
-  // =========================================
-  // DECREASE QUANTITY
-  // =========================================
 
   decreaseQuantity(): void {
-
     if (this.selectedQuantity > 1) {
-
       this.selectedQuantity--;
-
     }
-
   }
 
-
   // =========================================
-  // OPEN REGISTER POPUP
+  // REGISTER POPUP
   // =========================================
 
   openRegisterPopup(
@@ -357,79 +249,46 @@ export class Shopsilk {
     quantity: number,
     action: Exclude<PendingAction, null>
   ): void {
-
     this.pendingProduct = product;
-
     this.pendingQuantity = quantity;
-
     this.pendingAction = action;
 
     this.showRegisterPopup = true;
-
     this.registerError = '';
-
     this.showRegisterPassword = false;
-
     this.showConfirmPassword = false;
-
   }
 
-
-  // =========================================
-  // CLOSE REGISTER POPUP
-  // =========================================
-
   closeRegisterPopup(): void {
+    if (this.registerLoading) return;
 
     this.showRegisterPopup = false;
-
     this.registerError = '';
 
     this.showRegisterPassword = false;
-
     this.showConfirmPassword = false;
 
     this.pendingProduct = null;
-
     this.pendingQuantity = 1;
-
     this.pendingAction = null;
-
   }
-
-
-  // =========================================
-  // TOGGLE REGISTER PASSWORD
-  // =========================================
 
   toggleRegisterPassword(): void {
-
-    this.showRegisterPassword =
-      !this.showRegisterPassword;
-
+    this.showRegisterPassword = !this.showRegisterPassword;
   }
-
-
-  // =========================================
-  // TOGGLE CONFIRM PASSWORD
-  // =========================================
 
   toggleConfirmPassword(): void {
-
-    this.showConfirmPassword =
-      !this.showConfirmPassword;
-
+    this.showConfirmPassword = !this.showConfirmPassword;
   }
-
 
   // =========================================
   // CREATE CUSTOMER ACCOUNT
   // =========================================
 
   async createAccount(): Promise<void> {
+    if (this.registerLoading) return;
 
     this.registerError = '';
-
 
     if (
       !this.fullName.trim() ||
@@ -439,657 +298,483 @@ export class Shopsilk {
       !this.registerPassword ||
       !this.confirmPassword
     ) {
-
-      this.registerError =
-        'Please complete all fields.';
-
+      this.registerError = 'Please complete all fields.';
       return;
-
     }
 
-
-    if (
-      this.registerPassword !==
-      this.confirmPassword
-    ) {
-
-      this.registerError =
-        'Passwords do not match.';
-
+    if (this.registerPassword !== this.confirmPassword) {
+      this.registerError = 'Passwords do not match.';
       return;
-
     }
 
-
-    if (
-      this.registerPassword.length < 6
-    ) {
-
+    if (this.registerPassword.length < 6) {
       this.registerError =
         'Password must contain at least 6 characters.';
-
       return;
-
     }
 
-
     try {
-
       this.registerLoading = true;
 
-
-      const result =
-        await this.authService.register(
-          this.registerEmail.trim(),
-          this.registerPassword
-        );
-
+      const result = await this.authService.register(
+        this.registerEmail.trim(),
+        this.registerPassword
+      );
 
       await this.userService.createUserProfile(
         result.user.uid,
         {
-
-          fullName:
-            this.fullName.trim(),
-
-          email:
-            this.registerEmail
-              .trim()
-              .toLowerCase(),
-
-          mobileNumber:
-            this.mobileNumber.trim(),
-
-          completeAddress:
-            this.completeAddress.trim(),
-
-          role:
-            'customer'
-
+          fullName: this.fullName.trim(),
+          email: this.registerEmail.trim().toLowerCase(),
+          mobileNumber: this.mobileNumber.trim(),
+          completeAddress: this.completeAddress.trim(),
+          role: 'customer'
         }
       );
 
-
-      // User is no longer browsing as guest
-      sessionStorage.removeItem(
-        'silkmartGuestMode'
-      );
-
+      sessionStorage.removeItem('silkmartGuestMode');
 
       this.showRegisterPopup = false;
-
-
       this.continuePendingOrder();
-
-
       this.clearRegisterForm();
 
-
     } catch (error: any) {
-
-      console.error(
-        'Registration error:',
-        error
-      );
-
+      console.error('Registration error:', error);
 
       switch (error?.code) {
-
         case 'auth/email-already-in-use':
-
           this.registerError =
             'This email address is already registered.';
-
           break;
-
 
         case 'auth/invalid-email':
-
           this.registerError =
             'Please enter a valid email address.';
-
           break;
-
 
         case 'auth/weak-password':
-
           this.registerError =
             'Please use a stronger password.';
-
           break;
-
 
         case 'auth/network-request-failed':
-
           this.registerError =
             'Network error. Please check your internet connection.';
-
           break;
 
+        case 'permission-denied':
+          this.registerError =
+            'Firebase denied access to save your profile.';
+          break;
 
         default:
-
           this.registerError =
             'Unable to create your account. Please try again.';
-
-          break;
-
       }
-
-
     } finally {
-
       this.registerLoading = false;
-
     }
-
   }
-
 
   // =========================================
   // CLEAR REGISTER FORM
   // =========================================
 
   clearRegisterForm(): void {
-
     this.fullName = '';
-
     this.registerEmail = '';
-
     this.mobileNumber = '';
-
     this.completeAddress = '';
-
     this.registerPassword = '';
-
     this.confirmPassword = '';
 
     this.showRegisterPassword = false;
-
     this.showConfirmPassword = false;
-
   }
 
-
   // =========================================
-  // CONTINUE PENDING ORDER
+  // CONTINUE PENDING ACTION
   // =========================================
 
   continuePendingOrder(): void {
-
-    if (
-      !this.pendingProduct ||
-      !this.pendingAction
-    ) {
-
+    if (!this.pendingProduct || !this.pendingAction) {
       return;
-
     }
 
+    const product = this.pendingProduct;
+    const quantity = this.pendingQuantity;
+    const action = this.pendingAction;
 
-    const product =
-      this.pendingProduct;
-
-
-    const quantity =
-      this.pendingQuantity;
-
-
-    const action =
-      this.pendingAction;
-
-
-    if (action === 'quick-add') {
-
-      const saved =
-        this.saveOrder(
-          product,
-          quantity
-        );
-
-
-      if (saved) {
-
-        this.addedProduct =
-          product;
-
-
-        this.addSuccessPopup =
-          true;
-
-      }
-
+    if (action === 'quick-add' || action === 'order-now') {
+      this.openOrderConfirmation(product, quantity);
     }
-
 
     if (action === 'add-bag') {
-
-      const saved =
-        this.saveOrder(
-          product,
-          quantity
-        );
-
-
-      if (saved) {
-
-        this.addedProduct =
-          product;
-
-
-        this.addSuccessPopup =
-          true;
-
-
-        this.closeProduct();
-
-      }
-
+      this.confirmationProduct = product;
+      this.confirmationQuantity = quantity;
+      this.showAddBagConfirmation = true;
     }
-
-
-    if (action === 'order-now') {
-
-      const saved =
-        this.saveOrder(
-          product,
-          quantity
-        );
-
-
-      if (saved) {
-
-        this.closeProduct();
-
-
-        this.router.navigate([
-          '/home-cust/order'
-        ]);
-
-      }
-
-    }
-
 
     this.pendingProduct = null;
-
     this.pendingQuantity = 1;
-
     this.pendingAction = null;
-
   }
 
-
   // =========================================
-  // ADD TO CART / QUICK ADD
+  // PRODUCT CARD QUICK BUTTON
   // =========================================
 
   addToCart(product: Product): void {
-
-    const user =
-      this.authService.currentUser;
-
+    const user = this.authService.currentUser;
 
     if (!user) {
-
-      this.openRegisterPopup(
-        product,
-        1,
-        'quick-add'
-      );
-
+      this.openRegisterPopup(product, 1, 'quick-add');
       return;
-
     }
 
-
-    const saved =
-      this.saveOrder(
-        product,
-        1
-      );
-
-
-    if (!saved) {
-
-      return;
-
-    }
-
-
-    this.addedProduct =
-      product;
-
-
-    this.addSuccessPopup =
-      true;
-
+    // Preserve original behavior:
+    // This quick button opens Order Now.
+    this.openOrderConfirmation(product, 1);
   }
 
-
   // =========================================
-  // CLOSE ADD SUCCESS POPUP
+  // ADD SUCCESS POPUP
   // =========================================
 
   closeAddSuccessPopup(): void {
-
     this.addSuccessPopup = false;
-
     this.addedProduct = null;
-
   }
-
-
-  // =========================================
-  // VIEW ORDERS
-  // =========================================
 
   viewOrders(): void {
-
     this.closeAddSuccessPopup();
-
-
-    this.router.navigate([
-      '/home-cust/order'
-    ]);
-
+    this.router.navigate(['/home-cust/order']);
   }
 
-
   // =========================================
-  // ADD PRODUCT FROM POPUP
+  // ADD TO BAG
   // =========================================
 
   addSelectedProduct(): void {
+    if (!this.selectedProduct) return;
 
-    if (!this.selectedProduct) {
-
-      return;
-
-    }
-
-
-    const user =
-      this.authService.currentUser;
-
+    const user = this.authService.currentUser;
 
     if (!user) {
-
       this.openRegisterPopup(
         this.selectedProduct,
         this.selectedQuantity,
         'add-bag'
       );
-
       return;
-
     }
 
-
-    const product =
-      this.selectedProduct;
-
-
-    const saved =
-      this.saveOrder(
-        product,
-        this.selectedQuantity
-      );
-
-
-    if (!saved) {
-
-      return;
-
-    }
-
-
-    this.addedProduct =
-      product;
-
-
-    this.addSuccessPopup =
-      true;
-
-
-    this.closeProduct();
-
+    this.confirmationProduct = this.selectedProduct;
+    this.confirmationQuantity = this.selectedQuantity;
+    this.showAddBagConfirmation = true;
   }
 
+  closeAddBagConfirmation(): void {
+    this.showAddBagConfirmation = false;
+    this.confirmationProduct = null;
+    this.confirmationQuantity = 1;
+  }
+
+  // =========================================
+  // SAVE TO CART (NOT A PURCHASE)
+  // =========================================
+
+  saveProductToBag(
+    product: Product,
+    quantity: number
+  ): boolean {
+    const user = this.authService.currentUser;
+
+    if (!user) return false;
+
+    if (
+      !Number.isInteger(quantity) ||
+      quantity < 1 ||
+      quantity > product.stock
+    ) {
+      return false;
+    }
+
+    try {
+      const stored = localStorage.getItem('silkCart');
+      let cart: any[] = [];
+
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        cart = Array.isArray(parsed) ? parsed : [];
+      }
+
+      const existingItem = cart.find(
+        item =>
+          item.userId === user.uid &&
+          item.name === product.name
+      );
+
+      if (existingItem) {
+        const updatedQuantity =
+          Number(existingItem.quantity) + quantity;
+
+        if (
+          !Number.isFinite(updatedQuantity) ||
+          updatedQuantity > product.stock
+        ) {
+          return false;
+        }
+
+        existingItem.quantity = updatedQuantity;
+        existingItem.stock = product.stock;
+
+      } else {
+        cart.push({
+          id: Date.now(),
+          userId: user.uid,
+          name: product.name,
+          category: product.category,
+          price: product.price,
+          quantity,
+          stock: product.stock,
+          artClass: product.artClass,
+          selected: true
+        });
+      }
+
+      localStorage.setItem(
+        'silkCart',
+        JSON.stringify(cart)
+      );
+
+      return true;
+
+    } catch (error) {
+      console.error('Unable to save cart:', error);
+      return false;
+    }
+  }
+
+  confirmAddToBag(): void {
+    if (!this.confirmationProduct) return;
+
+    const saved = this.saveProductToBag(
+      this.confirmationProduct,
+      this.confirmationQuantity
+    );
+
+    if (!saved) {
+      alert(
+        'Unable to add the selected quantity. Please check available stock.'
+      );
+      return;
+    }
+
+    this.closeAddBagConfirmation();
+    this.closeProduct();
+
+    this.router.navigate(['/home-cust/add2cart']);
+  }
 
   // =========================================
   // ORDER NOW
   // =========================================
 
   orderSelectedProduct(): void {
+    if (!this.selectedProduct) return;
 
-    if (!this.selectedProduct) {
-
-      return;
-
-    }
-
-
-    const user =
-      this.authService.currentUser;
-
+    const user = this.authService.currentUser;
 
     if (!user) {
-
       this.openRegisterPopup(
         this.selectedProduct,
         this.selectedQuantity,
         'order-now'
       );
-
       return;
-
     }
 
-
-    const saved =
-      this.saveOrder(
-        this.selectedProduct,
-        this.selectedQuantity
-      );
-
-
-    if (!saved) {
-
-      return;
-
-    }
-
-
-    this.closeProduct();
-
-
-    this.router.navigate([
-      '/home-cust/order'
-    ]);
-
+    this.openOrderConfirmation(
+      this.selectedProduct,
+      this.selectedQuantity
+    );
   }
 
-
   // =========================================
-  // SAVE ORDER
+  // OPEN ORDER CONFIRMATION
   // =========================================
 
-  saveOrder(
+  openOrderConfirmation(
     product: Product,
     quantity: number
-  ): boolean {
+  ): void {
+    if (this.orderSaving) return;
 
-    // =====================================
-    // CURRENT FIREBASE USER
-    // =====================================
-
-    const currentUser =
-      this.authService.currentUser;
-
-
-    // =====================================
-    // DO NOT SAVE AS GUEST
-    // =====================================
-
-    if (!currentUser) {
-
-      console.warn(
-        'Order was not saved because there is no authenticated user.'
-      );
-
-      return false;
-
-    }
-
-
-    // =====================================
-    // READ EXISTING ORDERS
-    // =====================================
-
-    const savedOrders =
-      localStorage.getItem(
-        'silkOrders'
-      );
-
-
-    let orders: any[] = [];
-
-
-    if (savedOrders) {
-
-      try {
-
-        orders =
-          JSON.parse(
-            savedOrders
-          );
-
-
-        if (!Array.isArray(orders)) {
-
-          orders = [];
-
-        }
-
-
-      } catch {
-
-        orders = [];
-
-      }
-
-    }
-
-
-    // =====================================
-    // CREATE ORDER
-    // =====================================
-
-    const order = {
-
-      id:
-        Date.now(),
-
-
-      // ===================================
-      // IMPORTANT:
-      // FIREBASE ACCOUNT OWNER
-      // ===================================
-
-      userId:
-        currentUser.uid,
-
-
-      name:
-        product.name,
-
-
-      category:
-        product.category,
-
-
-      price:
-        product.price,
-
-
-      quantity:
-        quantity,
-
-
-      total:
-        product.price *
-        quantity,
-
-
-      stock:
-        product.stock,
-
-
-      status:
-        'Processing',
-
-
-      orderDate:
-        new Date()
-          .toLocaleDateString(),
-
-
-      artClass:
-        product.artClass
-
-    };
-
-
-    // =====================================
-    // SAVE ORDER
-    // =====================================
-
-    orders.push(
-      order
-    );
-
-
-    localStorage.setItem(
-      'silkOrders',
-      JSON.stringify(
-        orders
-      )
-    );
-
-
-    return true;
-
+    this.confirmationOrderProduct = product;
+    this.confirmationOrderQuantity = quantity;
+    this.preferredDeliveryDate = '';
+    this.minDeliveryDate = this.getEarliestDeliveryDate();
+    this.showOrderConfirmation = true;
   }
 
+  // =========================================
+  // CLOSE ORDER CONFIRMATION
+  // =========================================
+
+  closeOrderConfirmation(): void {
+    if (this.orderSaving) return;
+
+    this.showOrderConfirmation = false;
+    this.confirmationOrderProduct = null;
+    this.confirmationOrderQuantity = 1;
+    this.preferredDeliveryDate = '';
+  }
 
   // =========================================
-  // FIND YOUR PIECE BUTTON
+  // MINIMUM DELIVERY DATE
+  // =========================================
+
+  getEarliestDeliveryDate(): string {
+    const date = new Date();
+
+    date.setDate(date.getDate() + 1);
+
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+
+    return `${year}-${month}-${day}`;
+  }
+
+  // =========================================
+  // CONFIRM ORDER NOW -> FIREBASE
+  // =========================================
+
+  async confirmOrderNow(): Promise<void> {
+    if (this.orderSaving || !this.confirmationOrderProduct) {
+      return;
+    }
+
+    this.minDeliveryDate = this.getEarliestDeliveryDate();
+
+    if (
+      !this.preferredDeliveryDate ||
+      !/^\d{4}-\d{2}-\d{2}$/.test(this.preferredDeliveryDate) ||
+      this.preferredDeliveryDate < this.minDeliveryDate
+    ) {
+      alert('Please select a valid future delivery date.');
+      return;
+    }
+
+    const product = this.confirmationOrderProduct;
+    const quantity = this.confirmationOrderQuantity;
+    const date = this.preferredDeliveryDate;
+
+    this.orderSaving = true;
+
+    try {
+      await this.saveOrder(product, quantity, date);
+
+      // Close only after Firestore confirms the save.
+      this.showOrderConfirmation = false;
+      this.confirmationOrderProduct = null;
+      this.confirmationOrderQuantity = 1;
+      this.preferredDeliveryDate = '';
+
+      this.closeProduct();
+
+      // Customer Orders will be connected to
+      // Firebase in the next step.
+      await this.router.navigate(['/home-cust/order']);
+
+    } catch (error: any) {
+      console.error('Firebase order error:', error);
+
+      let message =
+        error?.message ||
+        'Unable to place your order. Please try again.';
+
+      if (error?.code === 'permission-denied') {
+        message =
+          'Firebase denied the order. Check your Firestore rules and customer login.';
+      }
+
+      if (error?.code === 'unavailable') {
+        message =
+          'Firebase is currently unavailable. Please check your connection.';
+      }
+
+      alert(message);
+
+    } finally {
+      this.orderSaving = false;
+    }
+  }
+
+  // =========================================
+  // SAVE PURCHASE TO FIRESTORE
+  // =========================================
+
+  async saveOrder(
+    product: Product,
+    quantity: number,
+    preferredDeliveryDate: string
+  ): Promise<string> {
+
+    const currentUser = this.authService.currentUser;
+
+    if (!currentUser) {
+      throw new Error('Please sign in before placing an order.');
+    }
+
+    if (
+      !Number.isInteger(quantity) ||
+      quantity < 1 ||
+      quantity > product.stock
+    ) {
+      throw new Error(
+        'Invalid quantity or insufficient available stock.'
+      );
+    }
+
+    // This uses the shared Firestore OrderServ.
+    // OrderServ obtains the customer's name,
+    // email, phone, and address from their
+    // Firebase users/{uid} profile.
+    return await this.orderService.createOrder({
+      items: [
+        {
+          name: product.name,
+          category: product.category,
+          price: product.price,
+          quantity,
+          image: '',
+          artClass: product.artClass
+        }
+      ],
+      preferredDeliveryDate,
+      deliveryFee: 0,
+      notes: ''
+    });
+  }
+
+  // =========================================
+  // FIND YOUR PIECE
   // =========================================
 
   scrollToCollection(): void {
-
     window.scrollTo({
-
       top: 0,
-
       behavior: 'smooth'
-
     });
-
   }
 
-
   // =========================================
-  // TRACK ORDER BUTTON
+  // TRACK ORDER
   // =========================================
 
   trackOrder(): void {
-
-    console.log(
-      'Track an order clicked'
-    );
-
+    this.router.navigate(['/home-cust/order']);
   }
-
 }

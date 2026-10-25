@@ -1,0 +1,998 @@
+
+<div class="cust-orders-page">
+
+  <!-- HEADER -->
+  <header class="orders-header">
+    <span class="eyebrow">ORDER MANAGEMENT</span>
+    <h1>Customer Orders</h1>
+    <p>
+      Review customer purchases, confirm orders,
+      and coordinate delivery schedules.
+    </p>
+  </header>
+
+  <!-- SUMMARY -->
+  <section class="orders-summary">
+
+    <div class="summary-card">
+      <div class="summary-icon total-icon">▣</div>
+      <div>
+        <span>Total Orders</span>
+        <strong>{{ totalOrders }}</strong>
+        <small>All customer orders</small>
+      </div>
+    </div>
+
+    <div class="summary-card">
+      <div class="summary-icon pending-icon">◷</div>
+      <div>
+        <span>Pending Confirmation</span>
+        <strong>{{ pendingOrders }}</strong>
+        <small>Awaiting your decision</small>
+      </div>
+    </div>
+
+    <div class="summary-card">
+      <div class="summary-icon confirmed-icon">✓</div>
+      <div>
+        <span>Confirmed</span>
+        <strong>{{ confirmedOrders }}</strong>
+        <small>Accepted orders</small>
+      </div>
+    </div>
+
+    <div class="summary-card">
+      <div class="summary-icon rejected-icon">×</div>
+      <div>
+        <span>Rejected</span>
+        <strong>{{ rejectedOrders }}</strong>
+        <small>Declined orders</small>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- MAIN LAYOUT -->
+  <div class="orders-layout">
+
+    <!-- LEFT: CUSTOMER ORDERS -->
+    <section class="orders-main">
+
+      <div class="orders-toolbar">
+
+        <label class="search-field">
+          <span>⌕</span>
+          <input
+            type="search"
+            placeholder="Search customer, order ID, or product..."
+            [(ngModel)]="search">
+        </label>
+
+        <select [(ngModel)]="statusFilter">
+          <option value="All">All Status</option>
+          <option value="Pending">Pending</option>
+          <option value="Confirmed">Confirmed</option>
+          <option value="Rejected">Rejected</option>
+          <option value="Cancelled">Cancelled</option>
+          <option value="Delivered">Delivered</option>
+        </select>
+
+        <select [(ngModel)]="sortOrder">
+          <option value="latest">Latest First</option>
+          <option value="oldest">Oldest First</option>
+          <option value="name">Customer Name</option>
+        </select>
+
+      </div>
+
+      <!-- RESULTS -->
+      <div class="result-heading">
+        <span>
+          {{ filteredOrders.length }} orders found
+        </span>
+
+        <button
+          type="button"
+          (click)="loadOrders()"
+          [disabled]="loadingOrders">
+          ↻ Refresh
+        </button>
+      </div>
+
+      <!-- FIREBASE LOADING -->
+      <div
+        class="orders-empty"
+        *ngIf="loadingOrders">
+        <div class="empty-icon">◷</div>
+        <h3>Loading customer orders...</h3>
+        <p>Getting the latest purchases from Firebase.</p>
+      </div>
+
+      <!-- FIREBASE ERROR -->
+      <div
+        class="orders-empty"
+        *ngIf="!loadingOrders && orderError">
+        <div class="empty-icon">!</div>
+        <h3>Unable to load orders</h3>
+        <p>{{ orderError }}</p>
+        <button type="button" (click)="loadOrders()">
+          Try Again
+        </button>
+      </div>
+
+      <!-- ORDER CARDS -->
+      <div
+        class="orders-list"
+        *ngIf="!loadingOrders && !orderError">
+
+        <article
+          class="order-card"
+          *ngFor="let order of visibleOrders; trackBy: trackOrder"
+          [class.order-selected]="selectedOrder?.id === order.id">
+
+          <!-- CLICKABLE ORDER INFORMATION -->
+          <button
+            type="button"
+            class="order-card-content"
+            (click)="selectOrder(order)">
+
+            <div class="order-product-image">
+
+              <img
+                *ngIf="getFirstItem(order).image"
+                [src]="getFirstItem(order).image"
+                alt="Ordered product">
+
+              <span
+                *ngIf="!getFirstItem(order).image">
+                ▧
+              </span>
+
+            </div>
+
+            <div class="order-customer-info">
+
+              <strong class="order-number">
+                #{{ order.id }}
+              </strong>
+
+              <h3>
+                {{ order.customer.name }}
+              </h3>
+
+              <span class="customer-address">
+                ⌖ {{
+                  order.customer.address ||
+                  'No address provided'
+                }}
+              </span>
+
+            </div>
+
+            <div class="order-product-info">
+
+              <h3>
+                {{ getFirstItem(order).name }}
+              </h3>
+
+              <p *ngIf="order.items.length > 1">
+                + {{ order.items.length - 1 }}
+                more products
+              </p>
+
+              <div class="order-mini-details">
+
+                <div>
+                  <small>Quantity</small>
+                  <strong>
+                    {{ getOrderQuantity(order) }}
+                  </strong>
+                </div>
+
+                <div>
+                  <small>Total</small>
+                  <strong>
+                    {{
+                      order.total |
+                      currency:'PHP':'symbol':'1.2-2'
+                    }}
+                  </strong>
+                </div>
+
+                <div>
+                  <small>Preferred Delivery</small>
+                  <strong>
+                    {{ formatDate(order.preferredDate) }}
+                  </strong>
+                </div>
+
+                <div>
+                  <small>Date Ordered</small>
+                  <strong>
+                    {{ formatDate(order.orderedAt) }}
+                  </strong>
+                </div>
+
+              </div>
+
+            </div>
+
+          </button>
+
+          <!-- ORDER ACTIONS -->
+          <div class="order-actions">
+
+            <span
+              class="status-badge"
+              [ngClass]="getStatusClass(order.status)">
+              {{ order.status }}
+            </span>
+
+            <div class="order-action-buttons">
+
+              <button
+                type="button"
+                class="confirm-button"
+                [disabled]="
+                  order.status !== 'Pending' ||
+                  !!updatingOrderId
+                "
+                (click)="confirmOrder(order)">
+
+                ✓ Confirm
+              </button>
+
+              <button
+                type="button"
+                class="reject-button"
+                [disabled]="
+                  order.status !== 'Pending' ||
+                  !!updatingOrderId
+                "
+                (click)="rejectOrder(order)">
+
+                × Reject
+              </button>
+
+            </div>
+
+            <!-- VIEW ORDER -->
+            <button
+              type="button"
+              class="view-order-button"
+              (click)="openOrderDetails(order)">
+
+              ▤ View Order
+            </button>
+
+            <!-- MESSAGE CUSTOMER -->
+            <button
+              type="button"
+              class="message-link"
+              (click)="openChat(order)">
+
+              ▤ Message Customer
+            </button>
+
+          </div>
+
+        </article>
+
+        <!-- VIEW ALL / SHOW LESS -->
+        <div
+          class="view-all-container"
+          *ngIf="filteredOrders.length > 2">
+
+          <button
+            type="button"
+            class="view-all-orders-button"
+            (click)="toggleOrders()">
+
+            <span>
+              {{ showAllOrders ? '↑' : '↓' }}
+            </span>
+
+            {{
+              showAllOrders
+                ? 'Show Less'
+                : 'View All Orders'
+            }}
+
+            <span class="orders-count">
+              {{ filteredOrders.length }}
+            </span>
+
+          </button>
+
+        </div>
+
+        <!-- EMPTY STATE -->
+        <div
+          class="orders-empty"
+          *ngIf="filteredOrders.length === 0">
+
+          <div class="empty-icon">▣</div>
+
+          <h3>
+            {{
+              orders.length === 0
+                ? 'No customer orders yet'
+                : 'No matching orders'
+            }}
+          </h3>
+
+          <p>
+            {{
+              orders.length === 0
+                ? 'New purchases will appear automatically from Firebase.'
+                : 'Try another search or filter.'
+            }}
+          </p>
+
+          <button
+            type="button"
+            *ngIf="orders.length > 0"
+            (click)="
+              search = '';
+              statusFilter = 'All';
+              showAllOrders = false
+            ">
+
+            Clear Filters
+          </button>
+
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- RIGHT: CUSTOMER PROFILE -->
+    <aside class="orders-sidebar">
+
+      <section class="side-card customer-profile-card">
+
+        <div class="side-card-heading">
+          <h2>Customer Profile</h2>
+        </div>
+
+        <ng-container *ngIf="selectedOrder as selected">
+
+          <div class="customer-profile-intro">
+
+            <div class="customer-avatar">
+              {{ getInitials(selected.customer.name) }}
+            </div>
+
+            <div>
+              <h3>{{ selected.customer.name }}</h3>
+              <span>SilkMart Customer</span>
+            </div>
+
+          </div>
+
+          <div class="profile-contact-list">
+
+            <div>
+              <span class="contact-icon">✉</span>
+              <span>
+                {{
+                  selected.customer.email ||
+                  'Email not provided'
+                }}
+              </span>
+            </div>
+
+            <div>
+              <span class="contact-icon">☎</span>
+              <span>
+                {{
+                  selected.customer.phone ||
+                  'Phone not provided'
+                }}
+              </span>
+            </div>
+
+            <div>
+              <span class="contact-icon">⌖</span>
+              <span>
+                {{
+                  selected.customer.address ||
+                  'Address not provided'
+                }}
+              </span>
+            </div>
+
+          </div>
+
+          <div class="customer-stats">
+
+            <div>
+              <strong>
+                {{ customerOrderCount }}
+              </strong>
+              <small>Total Orders</small>
+            </div>
+
+            <div>
+              <strong>
+                {{ customerConfirmedCount }}
+              </strong>
+              <small>Accepted</small>
+            </div>
+
+            <div>
+              <strong>
+                {{
+                  customerTotalSpent |
+                  currency:'PHP':'symbol':'1.0-0'
+                }}
+              </strong>
+              <small>Order Value</small>
+            </div>
+
+          </div>
+
+          <button
+            type="button"
+            class="profile-message-button"
+            (click)="openChat()">
+
+            ▤ Message Customer
+          </button>
+
+        </ng-container>
+
+        <div
+          class="side-empty"
+          *ngIf="!selectedOrder">
+
+          <div class="side-empty-icon">♙</div>
+
+          <p>
+            Select an order to view
+            the customer profile.
+          </p>
+
+        </div>
+
+      </section>
+
+    </aside>
+
+  </div>
+
+</div>
+
+<!-- ======================================
+     ORDER DETAILS MODAL
+     ====================================== -->
+
+<div
+  class="order-detail-backdrop"
+  *ngIf="showOrderDetails && detailOrder"
+  (click)="closeOrderDetails()">
+
+  <section
+    class="order-detail-modal"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="order-detail-title"
+    (click)="$event.stopPropagation()">
+
+    <div class="modal-topbar">
+
+      <div>
+        <span class="modal-eyebrow">
+          SILKMART ORDER
+        </span>
+        <h2 id="order-detail-title">
+          Order Details
+        </h2>
+      </div>
+
+      <button
+        type="button"
+        class="modal-close"
+        aria-label="Close order details"
+        (click)="closeOrderDetails()">
+        ×
+      </button>
+
+    </div>
+
+    <div class="order-detail-scroll">
+
+      <!-- ORDER STATUS -->
+      <div class="detail-topline">
+
+        <div>
+          <strong>
+            #{{ detailOrder!.id }}
+          </strong>
+
+          <small>
+            Placed on
+            {{ formatDate(detailOrder!.orderedAt) }}
+            {{ formatTime(detailOrder!.orderedAt) }}
+          </small>
+        </div>
+
+        <span
+          class="status-badge"
+          [ngClass]="getStatusClass(detailOrder!.status)">
+
+          {{ detailOrder!.status }}
+        </span>
+
+      </div>
+
+      <!-- PRODUCT LIST -->
+      <div class="modal-section">
+
+        <h3>Ordered Products</h3>
+
+        <div
+          class="modal-product"
+          *ngFor="let item of detailOrder!.items">
+
+          <div class="modal-product-image">
+
+            <img
+              *ngIf="item.image"
+              [src]="item.image"
+              alt="Ordered product">
+
+            <span *ngIf="!item.image">
+              ▧
+            </span>
+
+          </div>
+
+          <div class="modal-product-info">
+
+            <strong>
+              {{ item.name }}
+            </strong>
+
+            <small>
+              Quantity: {{ item.quantity }}
+            </small>
+
+            <small>
+              Unit Price:
+              {{
+                item.price |
+                currency:'PHP':'symbol':'1.2-2'
+              }}
+            </small>
+
+          </div>
+
+          <strong class="modal-product-total">
+            {{
+              item.price * item.quantity |
+              currency:'PHP':'symbol':'1.2-2'
+            }}
+          </strong>
+
+        </div>
+
+      </div>
+
+      <!-- CUSTOMER / DELIVERY -->
+      <div class="modal-section">
+
+        <h3>
+          Customer & Delivery Information
+        </h3>
+
+        <div class="order-info-grid">
+
+          <div>
+            <span>Customer Name</span>
+            <strong>
+              {{ detailOrder!.customer.name }}
+            </strong>
+          </div>
+
+          <div>
+            <span>Contact Number</span>
+            <strong>
+              {{
+                detailOrder!.customer.phone ||
+                'Not provided'
+              }}
+            </strong>
+          </div>
+
+          <div>
+            <span>Email Address</span>
+            <strong>
+              {{
+                detailOrder!.customer.email ||
+                'Not provided'
+              }}
+            </strong>
+          </div>
+
+          <div>
+            <span>Delivery Address</span>
+            <strong>
+              {{
+                detailOrder!.customer.address ||
+                'Not provided'
+              }}
+            </strong>
+          </div>
+
+          <div>
+            <span>Preferred Delivery Date</span>
+            <strong>
+              {{
+                formatDate(detailOrder!.preferredDate)
+              }}
+            </strong>
+          </div>
+
+          <div>
+            <span>Date Ordered</span>
+            <strong>
+              {{ formatDate(detailOrder!.orderedAt) }}
+            </strong>
+          </div>
+
+          <div>
+            <span>Payment Method</span>
+            <strong>
+              {{ detailOrder!.paymentMethod }}
+            </strong>
+          </div>
+
+          <div>
+            <span>Order Status</span>
+            <strong>
+              {{ detailOrder!.status }}
+            </strong>
+          </div>
+
+        </div>
+
+        <div
+          class="customer-notes"
+          *ngIf="detailOrder!.notes">
+
+          <span>Customer Notes</span>
+          <p>{{ detailOrder!.notes }}</p>
+
+        </div>
+
+        <div
+          class="customer-notes"
+          *ngIf="detailOrder!.cancelReason">
+
+          <span>Cancellation Reason</span>
+          <p>{{ detailOrder!.cancelReason }}</p>
+
+        </div>
+
+      </div>
+
+      <!-- PAYMENT BREAKDOWN -->
+      <div class="modal-section payment-section">
+
+        <h3>Payment Summary</h3>
+
+        <div class="payment-row">
+
+          <span>Number of Items</span>
+
+          <strong>
+            {{ getOrderQuantity(detailOrder!) }}
+          </strong>
+
+        </div>
+
+        <div class="payment-row">
+
+          <span>Products Subtotal</span>
+
+          <strong>
+            {{
+              getOrderSubtotal(detailOrder!) |
+              currency:'PHP':'symbol':'1.2-2'
+            }}
+          </strong>
+
+        </div>
+
+        <div class="payment-row">
+
+          <span>Recorded Delivery Fee</span>
+
+          <strong
+            *ngIf="detailOrder!.deliveryFee !== null">
+            {{
+              detailOrder!.deliveryFee |
+              currency:'PHP':'symbol':'1.2-2'
+            }}
+          </strong>
+
+          <strong
+            *ngIf="detailOrder!.deliveryFee === null">
+            Not recorded
+          </strong>
+
+        </div>
+
+        <div
+          class="payment-row"
+          *ngIf="
+            detailOrder!.deliveryFee !== null &&
+            getOrderAdjustment(detailOrder!) !== 0
+          ">
+
+          <span>
+            Other Charges / Discounts (Difference)
+          </span>
+
+          <strong>
+            {{
+              getOrderAdjustment(detailOrder!) |
+              currency:'PHP':'symbol':'1.2-2'
+            }}
+          </strong>
+
+        </div>
+
+        <div class="payment-total">
+
+          <span>Recorded Order Total</span>
+
+          <strong>
+            {{
+              detailOrder!.total |
+              currency:'PHP':'symbol':'1.2-2'
+            }}
+          </strong>
+
+        </div>
+
+        <p class="payment-note">
+          Cash on Delivery amounts are recorded
+          in Firebase. Any additional delivery
+          charge must be confirmed separately.
+        </p>
+
+      </div>
+
+    </div>
+
+    <div class="order-detail-footer">
+
+      <button
+        type="button"
+        class="contact-from-order"
+        (click)="contactFromDetails()">
+
+        ▤ Contact Customer
+      </button>
+
+      <button
+        type="button"
+        class="close-order-button"
+        (click)="closeOrderDetails()">
+
+        Close
+      </button>
+
+    </div>
+
+  </section>
+
+</div>
+
+<!-- ======================================
+     REAL-TIME MESSAGE CUSTOMER MODAL
+     ====================================== -->
+
+<div
+  class="chat-backdrop"
+  *ngIf="showChat && selectedOrder"
+  (click)="closeChat()">
+
+  <section
+    class="chat-modal"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="chat-title"
+    (click)="$event.stopPropagation()">
+
+    <div class="chat-header">
+
+      <div>
+        <span class="chat-eyebrow">
+          SILKMART MESSAGES
+        </span>
+
+        <h2 id="chat-title">
+          Message Customer
+        </h2>
+      </div>
+
+      <button
+        type="button"
+        class="chat-close"
+        aria-label="Close chat"
+        [disabled]="chatSending"
+        (click)="closeChat()">
+
+        ×
+      </button>
+
+    </div>
+
+    <div class="chat-recipient">
+
+      <div class="chat-avatar">
+        {{
+          getInitials(selectedOrder!.customer.name)
+        }}
+      </div>
+
+      <div class="chat-recipient-text">
+
+        <strong>
+          {{ selectedOrder!.customer.name }}
+        </strong>
+
+        <span>
+          Order #{{ selectedOrder!.id }}
+        </span>
+
+      </div>
+
+      <span class="chat-role-tag">
+        Customer
+      </span>
+
+    </div>
+
+    <!-- CHAT MESSAGES -->
+    <div class="chat-messages">
+
+      <div
+        class="chat-empty"
+        *ngIf="chatLoading">
+
+        <div class="chat-empty-icon">◷</div>
+        <h3>Loading conversation...</h3>
+      </div>
+
+      
+<div
+  class="chat-empty"
+  *ngIf="
+    !chatLoading &&
+    !chatError &&
+    messages.length === 0
+  ">
+
+
+        <div class="chat-empty-icon">▤</div>
+        <h3>Start a conversation</h3>
+
+        <p>
+          Discuss the order, answer questions,
+          or propose another delivery date.
+        </p>
+
+        <button
+          type="button"
+          class="template-button"
+          (click)="useDeliveryTemplate()">
+
+          Suggest Delivery Reschedule
+        </button>
+
+      </div>
+
+      <div
+        class="chat-message"
+        *ngFor="let message of messages; trackBy: trackMessage"
+        [class.chat-outgoing]="message.senderRole === 'staff'"
+        [class.chat-incoming]="message.senderRole === 'customer'">
+
+        <div class="message-bubble">
+
+          <p>
+            {{ message.text }}
+          </p>
+
+          <div class="message-meta">
+
+            <span>
+              {{
+                message.senderRole === 'staff'
+                  ? 'Staff'
+                  : 'Customer'
+              }}
+            </span>
+
+            <span>
+              {{ formatTime(message.createdAt) }}
+            </span>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- MESSAGE COMPOSER -->
+    <div class="chat-composer">
+
+      <div class="chat-compose-top">
+
+        <span>
+          Send a message about this order
+        </span>
+
+        <button
+          type="button"
+          class="quick-template-link"
+          (click)="useDeliveryTemplate()">
+
+          + Reschedule Template
+        </button>
+
+      </div>
+
+      <p
+        class="cart-error"
+        *ngIf="chatError"
+        role="alert">
+
+        {{ chatError }}
+      </p>
+
+      <div class="message-input-row">
+
+        <textarea
+          [(ngModel)]="messageInput"
+          placeholder="Type your message..."
+          rows="2"
+          maxlength="1000"
+          [disabled]="chatSending">
+        </textarea>
+
+        <button
+          type="button"
+          class="send-button"
+          [disabled]="
+            chatSending ||
+            !messageInput.trim()
+          "
+          (click)="sendMessage()">
+
+          {{
+            chatSending
+              ? 'Sending...'
+              : '➤ Send'
+          }}
+        </button>
+
+      </div>
+
+      <p class="chat-footer-note">
+        Messages are saved to Firebase and shared
+        with the customer in real time.
+      </p>
+
+    </div>
+
+  </section>
+
+</div>

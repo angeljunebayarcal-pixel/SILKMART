@@ -1,0 +1,672 @@
+
+/* =========================================
+   SILKMART ADMIN TOPBAR
+   ========================================= */
+
+:host {
+  display: block;
+  width: 100%;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* =========================================
+   MAIN TOPBAR
+   ========================================= */
+
+.topbar-adm {
+  position: fixed;
+  top: 0;
+  left: 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  width: 100%;
+  height: 82px;
+  padding: 0 22px;
+
+  background: #faf9f2;
+  border-bottom: 1px solid rgba(104, 126, 113, 0.18);
+  box-shadow: 0 2px 10px rgba(35, 67, 51, 0.04);
+
+  font-family: 'DM Sans', Arial, sans-serif;
+
+  z-index: 1000;
+
+  animation:
+    topbarAdmSlideDown 0.7s
+    cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* =========================================
+   BRAND AREA
+   ========================================= */
+
+.brand-area {
+  position: relative;
+
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+
+  min-width: 270px;
+}
+
+.brand-adm {
+  display: flex;
+  align-items: center;
+
+  gap: 10px;
+  min-width: 270px;
+
+  transform: translateY(-7px);
+
+  animation:
+    topbarAdmSlideLeft 0.7s
+    cubic-bezier(0.22, 1, 0.36, 1)
+    0.1s both;
+}
+
+/* =========================================
+   BRAND LOGO
+   ========================================= */
+
+.brand-logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+
+  border-radius: 50%;
+
+  background: #2f7054;
+  color: #ffffff;
+}
+
+.brand-logo svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* =========================================
+   BRAND TEXT
+   ========================================= */
+
+.brand-text {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.brand-name {
+  color: #315344;
+
+  font-family: 'Instrument Serif', Georgia, serif;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.brand-subtitle {
+  margin-top: 4px;
+
+  color: #718176;
+
+  font-size: 7px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  line-height: 1;
+}
+
+/* =========================================
+   MENU BUTTON
+   ========================================= */
+
+.brand-menu-button {
+  position: absolute;
+
+  top: 31px;
+  left: -2px;
+
+  display: flex;
+  align-items: center;
+
+  gap: 6px;
+  padding: 5px 7px;
+
+  border: 0;
+  border-radius: 6px;
+
+  background: transparent;
+  color: #65796e;
+
+  font-family: 'DM Sans', Arial, sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition:
+    background 0.25s ease,
+    color 0.25s ease;
+}
+
+.brand-menu-button:hover {
+  background: #eef2e9;
+  color: #315d49;
+}
+
+/* =========================================
+   MENU TEXT
+   ========================================= */
+
+.menu-text {
+  font-size: 10px;
+  font-weight: 600;
+}
+
+/* =========================================
+   HAMBURGER ICON
+   ========================================= */
+
+.menu-lines {
+  display: flex;
+  flex-direction: column;
+
+  width: 11px;
+  gap: 2px;
+}
+
+.menu-lines span {
+  display: block;
+
+  width: 11px;
+  height: 1px;
+
+  border-radius: 2px;
+  background: currentColor;
+
+  transition:
+    transform 0.3s ease,
+    opacity 0.3s ease;
+}
+
+/* HAMBURGER TO X */
+
+.brand-menu-button.active
+.menu-lines span:nth-child(1) {
+  transform: translateY(3px) rotate(45deg);
+}
+
+.brand-menu-button.active
+.menu-lines span:nth-child(2) {
+  opacity: 0;
+}
+
+.brand-menu-button.active
+.menu-lines span:nth-child(3) {
+  transform: translateY(-3px) rotate(-45deg);
+}
+
+/* =========================================
+   MENU ARROW
+   ========================================= */
+
+.menu-arrow {
+  display: inline-block;
+
+  font-size: 13px;
+  transform: rotate(90deg);
+
+  transition: transform 0.3s ease;
+}
+
+.brand-menu-button.active .menu-arrow {
+  transform: rotate(-90deg);
+}
+
+/* =========================================
+   DROPDOWN NAVIGATION
+   ========================================= */
+
+.brand-dropdown {
+  position: absolute;
+
+  top: 64px;
+  left: 0;
+
+  display: flex;
+  flex-direction: column;
+
+  width: 190px;
+
+  /* Allow all navigation links to fit */
+  height: auto;
+  max-height: none;
+
+  padding: 7px;
+
+  border: 1px solid rgba(104, 126, 113, 0.18);
+  border-radius: 12px;
+
+  background: #faf9f2;
+
+  box-shadow:
+    0 12px 35px rgba(35, 67, 51, 0.12);
+
+  opacity: 0;
+  visibility: hidden;
+
+  transform: translateY(-12px) scale(0.96);
+  transform-origin: top left;
+
+  pointer-events: none;
+
+  overflow: visible;
+
+  transition:
+    opacity 0.3s ease,
+    transform 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+    visibility 0.3s ease;
+}
+
+/* =========================================
+   OPEN DROPDOWN
+   ========================================= */
+
+.brand-dropdown.open {
+  opacity: 1;
+  visibility: visible;
+
+  transform: translateY(0) scale(1);
+
+  pointer-events: auto;
+
+  height: auto;
+  max-height: none;
+  overflow: visible;
+}
+
+/* =========================================
+   DROPDOWN LINKS
+   ========================================= */
+
+.brand-dropdown a {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  width: 100%;
+  min-height: 40px;
+
+  padding: 11px 12px;
+
+  flex-shrink: 0;
+
+  border-radius: 8px;
+
+  color: #60736a;
+  text-decoration: none;
+
+  font-family: 'DM Sans', Arial, sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+
+  /* Closed state */
+  opacity: 0;
+  transform: translateX(-10px);
+
+  transition:
+    background 0.25s ease,
+    color 0.25s ease,
+    transform 0.35s ease,
+    opacity 0.35s ease;
+}
+
+/* =========================================
+   FIX: SHOW ALL DROPDOWN LINKS
+   ========================================= */
+
+/*
+  Previously, only the first two links
+  were given opacity: 1.
+
+  This rule applies to ALL links,
+  including Customer Orders and any
+  new links you add in the future.
+*/
+
+.brand-dropdown.open a {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+/* =========================================
+   STAGGERED ANIMATIONS
+   ========================================= */
+
+/* Inventory */
+.brand-dropdown.open a:nth-child(1) {
+  transition-delay: 0.05s;
+}
+
+/* Product Management */
+.brand-dropdown.open a:nth-child(2) {
+  transition-delay: 0.1s;
+}
+
+/* Customer Orders */
+.brand-dropdown.open a:nth-child(3) {
+  transition-delay: 0.15s;
+}
+
+/* Additional menu items */
+.brand-dropdown.open a:nth-child(4) {
+  transition-delay: 0.2s;
+}
+
+.brand-dropdown.open a:nth-child(5) {
+  transition-delay: 0.25s;
+}
+
+/* =========================================
+   HOVER AND ACTIVE
+   ========================================= */
+
+.brand-dropdown a:hover {
+  background: #eef2e9;
+  color: #245d43;
+}
+
+.brand-dropdown a.active {
+  background: #e7eee4;
+  color: #245d43;
+}
+
+/* =========================================
+   DROPDOWN ARROW
+   ========================================= */
+
+.dropdown-arrow {
+  font-size: 15px;
+
+  transition: transform 0.25s ease;
+}
+
+.brand-dropdown a:hover .dropdown-arrow {
+  transform: translateX(3px);
+}
+
+/* =========================================
+   RIGHT ACTIONS
+   ========================================= */
+
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+
+  min-width: 150px;
+  gap: 10px;
+
+  animation:
+    topbarAdmSlideRight 0.7s
+    cubic-bezier(0.22, 1, 0.36, 1)
+    0.3s both;
+}
+
+/* =========================================
+   NOTIFICATION BUTTON
+   ========================================= */
+
+.notification-button {
+  position: relative;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 36px;
+  height: 36px;
+  padding: 0;
+
+  border: 0;
+  border-radius: 50%;
+
+  background: transparent;
+  color: #486256;
+
+  cursor: pointer;
+
+  transition:
+    background 0.25s ease,
+    transform 0.25s ease;
+}
+
+.notification-button:hover {
+  background: #eef2e9;
+  transform: translateY(-2px);
+}
+
+/* SAME BELL SIZE AS CUSTOMER */
+
+.notification-button svg {
+  width: 23px;
+  height: 23px;
+}
+
+/* =========================================
+   NOTIFICATION BADGE
+   ========================================= */
+
+.notification-dot {
+  position: absolute;
+
+  top: 3px;
+  right: 1px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  min-width: 15px;
+  height: 15px;
+
+  padding: 0 4px;
+
+  border: 2px solid #faf9f2;
+  border-radius: 50px;
+
+  background: #b95d4d;
+  color: #ffffff;
+
+  font-size: 7px;
+  font-weight: 700;
+}
+
+/* =========================================
+   PROFILE BUTTON
+   ========================================= */
+
+.profile-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 36px;
+  height: 36px;
+  padding: 0;
+
+  border: 0;
+  background: transparent;
+
+  cursor: pointer;
+}
+
+/* =========================================
+   PROFILE CIRCLE
+   ========================================= */
+
+.profile-circle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 30px;
+  height: 30px;
+
+  overflow: hidden;
+
+  border: 1px solid #b7c5b8;
+  border-radius: 50%;
+
+  background: #eef2e9;
+  color: #315d49;
+
+  font-size: 10px;
+  font-weight: 700;
+
+  transition:
+    transform 0.25s ease,
+    background 0.25s ease,
+    box-shadow 0.25s ease;
+}
+
+/* PROFILE IMAGE */
+
+.profile-circle-image {
+  display: block;
+
+  width: 100%;
+  height: 100%;
+
+  border-radius: 50%;
+  object-fit: cover;
+  object-position: center;
+}
+
+/* PROFILE INITIAL */
+
+.profile-circle-letter {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 100%;
+  height: 100%;
+}
+
+.profile-button:hover .profile-circle {
+  transform: translateY(-2px);
+
+  background: #e1eade;
+
+  box-shadow:
+    0 5px 12px rgba(49, 93, 73, 0.14);
+}
+
+/* =========================================
+   RESPONSIVE
+   ========================================= */
+
+@media (max-width: 800px) {
+
+  .topbar-adm {
+    padding: 0 15px;
+  }
+
+  .brand-area,
+  .brand-adm {
+    min-width: auto;
+  }
+
+  .topbar-actions {
+    min-width: auto;
+  }
+}
+
+@media (max-width: 650px) {
+
+  .brand-subtitle {
+    display: none;
+  }
+
+  .brand-name {
+    font-size: 16px;
+  }
+
+  .brand-menu-button {
+    left: -2px;
+    font-size: 10px;
+  }
+
+  .brand-dropdown {
+    left: 0;
+  }
+}
+
+/* =========================================
+   LOAD ANIMATIONS
+   ========================================= */
+
+@keyframes topbarAdmSlideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-25px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes topbarAdmSlideLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-35px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes topbarAdmSlideRight {
+  from {
+    opacity: 0;
+    transform: translateX(35px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* =========================================
+   ACCESSIBILITY
+   ========================================= */
+
+@media (prefers-reduced-motion: reduce) {
+
+  .topbar-adm,
+  .brand-adm,
+  .topbar-actions {
+    animation: none;
+  }
+
+  .brand-dropdown,
+  .brand-dropdown a {
+    transition: none;
+  }
+}

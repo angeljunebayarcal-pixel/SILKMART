@@ -1,0 +1,843 @@
+
+<div class="products-page">
+
+  <!-- PAGE HEADER -->
+  <header class="products-header">
+    <div class="header-text">
+      <span class="eyebrow">PRODUCT MANAGEMENT</span>
+      <h1>Product Management</h1>
+      <p>
+        Manage your silk product catalog.
+        Add, edit, and publish products for your customers.
+      </p>
+    </div>
+  </header>
+
+  <!-- SUMMARY CARDS -->
+  <section class="product-summary">
+
+    <!-- TOTAL PRODUCTS -->
+    <div class="summary-card">
+      <div class="summary-icon total-icon">
+        <svg
+          viewBox="0 0 24 24"
+          width="27"
+          height="27"
+          fill="none"
+          stroke="#28785b"
+          stroke-width="1.8"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true">
+          <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/>
+          <path d="m3.3 7 8.7 5 8.7-5"/>
+          <path d="M12 22V12"/>
+          <path d="m7.5 4.3 9 5.2"/>
+        </svg>
+      </div>
+
+      <div>
+        <strong>{{ totalProducts }}</strong>
+        <h3>Total Products</h3>
+        <p>All catalog items</p>
+      </div>
+    </div>
+
+    <!-- PUBLISHED -->
+    <div class="summary-card">
+      <div class="summary-icon published-icon">
+        <svg
+          viewBox="0 0 24 24"
+          width="27"
+          height="27"
+          fill="none"
+          stroke="#28785b"
+          stroke-width="1.8"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true">
+          <circle cx="12" cy="12" r="9"/>
+          <path d="m8 12 2.7 2.7L16.5 9"/>
+        </svg>
+      </div>
+
+      <div>
+        <strong>{{ publishedProducts }}</strong>
+        <h3>Published</h3>
+        <p>Available to customers</p>
+      </div>
+    </div>
+
+    <!-- DRAFTS -->
+    <div class="summary-card">
+      <div class="summary-icon draft-icon">
+        <svg
+          viewBox="0 0 24 24"
+          width="27"
+          height="27"
+          fill="none"
+          stroke="#a77931"
+          stroke-width="1.8"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/>
+          <path d="M14 2v6h6"/>
+          <path d="M8 13h8"/>
+          <path d="M8 17h5"/>
+        </svg>
+      </div>
+
+      <div>
+        <strong>{{ draftProducts }}</strong>
+        <h3>Drafts</h3>
+        <p>Not yet published</p>
+      </div>
+    </div>
+
+    <!-- OUT OF STOCK -->
+    <div class="summary-card">
+      <div class="summary-icon stock-icon">
+        <svg
+          viewBox="0 0 24 24"
+          width="27"
+          height="27"
+          fill="none"
+          stroke="#c25d50"
+          stroke-width="1.8"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true">
+          <path d="m3 7 9-5 9 5v10l-9 5-9-5Z"/>
+          <path d="m3 7 9 5 9-5"/>
+          <path d="M12 12v10"/>
+          <path d="m9 15 6 5"/>
+          <path d="m15 15-6 5"/>
+        </svg>
+      </div>
+
+      <div>
+        <strong>{{ outOfStockProducts }}</strong>
+        <h3>Out of Stock</h3>
+        <p>Unavailable for purchase</p>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- MAIN LAYOUT -->
+  <div class="products-layout">
+
+    <!-- PRODUCT CATALOG -->
+    <section class="catalog-card">
+
+      <div class="catalog-heading">
+        <div>
+          <h2>Product Catalog</h2>
+          <p>Manage all silk products in your store.</p>
+        </div>
+
+        <div class="catalog-heading-actions">
+          <button
+            type="button"
+            class="create-listing-btn"
+            (click)="createListing()">
+            <i class="pi pi-list"></i>
+            Create Listing
+          </button>
+
+          <button
+            type="button"
+            class="add-product-btn"
+            (click)="openAddProduct()">
+            <i class="pi pi-plus"></i>
+            Add Product
+          </button>
+        </div>
+      </div>
+
+      <!-- FILTERS -->
+      <div class="catalog-filters">
+
+        <label class="catalog-search">
+          <i class="pi pi-search"></i>
+          <input
+            type="search"
+            placeholder="Search products by name, category, or description..."
+            [(ngModel)]="searchTerm">
+        </label>
+
+        <select
+          [(ngModel)]="categoryFilter"
+          aria-label="Filter by category">
+          <option value="All Categories">All Categories</option>
+          <option
+            *ngFor="let category of categories"
+            [value]="category">
+            {{ category }}
+          </option>
+        </select>
+
+        <select
+          [(ngModel)]="statusFilter"
+          aria-label="Filter by publication status">
+          <option value="All">All Status</option>
+          <option value="Published">Published</option>
+          <option value="Draft">Draft</option>
+          <option value="Out of Stock">Out of Stock</option>
+        </select>
+
+        <select
+          [(ngModel)]="stockFilter"
+          aria-label="Filter by stock">
+          <option value="All Stock">All Stock</option>
+          <option value="In Stock">In Stock</option>
+          <option value="Low Stock">Low Stock</option>
+          <option value="Out of Stock">Out of Stock</option>
+        </select>
+
+        <select
+          [(ngModel)]="sortBy"
+          aria-label="Sort products">
+          <option value="newest">Newest First</option>
+          <option value="oldest">Oldest First</option>
+          <option value="name">Product Name</option>
+          <option value="priceLow">Price: Low to High</option>
+          <option value="priceHigh">Price: High to Low</option>
+          <option value="stockLow">Lowest Stock</option>
+        </select>
+
+      </div>
+
+      <!-- RESULTS -->
+      <div class="catalog-result-bar">
+        <span>
+          {{ filteredProducts.length }} products found
+        </span>
+
+        <button
+          type="button"
+          [disabled]="loading"
+          (click)="loadProducts()">
+          <i class="pi pi-refresh"></i>
+          Refresh
+        </button>
+      </div>
+
+      <!-- LOADING -->
+      <div class="catalog-empty" *ngIf="loading">
+        <i class="pi pi-spin pi-spinner"></i>
+        <h3>Loading products...</h3>
+        <p>Getting your latest catalog from Firebase.</p>
+      </div>
+
+      <!-- ERROR -->
+      <div
+        class="catalog-empty"
+        *ngIf="!loading && errorMessage">
+        <i class="pi pi-exclamation-circle"></i>
+        <h3>Unable to load products</h3>
+        <p>{{ errorMessage }}</p>
+
+        <button
+          type="button"
+          (click)="loadProducts()">
+          Try Again
+        </button>
+      </div>
+
+      <!-- PRODUCT LIST -->
+      <div
+        class="product-list"
+        *ngIf="!loading && !errorMessage">
+
+        <article
+          class="product-row"
+          *ngFor="
+            let product of filteredProducts;
+            trackBy: trackProduct
+          "
+          [class.selected]="selectedProduct?.id === product.id">
+
+          <!-- PRODUCT MAIN DETAILS -->
+          <button
+            type="button"
+            class="product-row-main"
+            (click)="selectProduct(product)">
+
+            <div class="product-thumb">
+              <img
+                *ngIf="product.imageUrl"
+                [src]="product.imageUrl"
+                [alt]="product.name">
+
+              <div
+                class="product-placeholder"
+                *ngIf="!product.imageUrl">
+                <i class="pi pi-box"></i>
+              </div>
+            </div>
+
+            <div class="product-name-cell">
+              <h3>{{ product.name }}</h3>
+              <small>#{{ product.id }}</small>
+
+              <span class="category-pill">
+                {{ product.category }}
+              </span>
+            </div>
+
+            <div class="product-data-cell">
+              <span>Price</span>
+              <strong>
+                {{
+                  product.price |
+                  currency:'PHP':'symbol':'1.2-2'
+                }}
+              </strong>
+            </div>
+
+            <div class="product-data-cell">
+              <span>Stock</span>
+              <strong [class.stock-zero]="product.stock <= 0">
+                {{ product.stock }}
+                {{ getStockUnit(product) }}
+              </strong>
+            </div>
+
+            <div class="product-status-cell">
+              <span
+                class="status-pill"
+                [ngClass]="getStatusClass(product)">
+
+                <span class="status-dot"></span>
+                {{ getStatusText(product) }}
+              </span>
+
+              <small>
+                {{
+                  product.stock <= 0
+                    ? 'Unavailable for purchase'
+                    : product.published
+                      ? 'Available to customers'
+                      : 'Not yet published'
+                }}
+              </small>
+            </div>
+
+          </button>
+
+          <!-- PRODUCT ACTIONS -->
+          <div class="product-row-actions">
+
+            <button
+              type="button"
+              class="edit-row-btn"
+              (click)="openEditProduct(product)">
+              <i class="pi pi-pencil"></i>
+              Edit
+            </button>
+
+            <button
+              *ngIf="!product.published"
+              type="button"
+              class="publish-row-btn"
+              [disabled]="saving || product.stock <= 0"
+              (click)="togglePublish(product)">
+              <i class="pi pi-upload"></i>
+              Publish
+            </button>
+
+            <button
+              *ngIf="product.published"
+              type="button"
+              class="unpublish-row-btn"
+              [disabled]="saving"
+              (click)="togglePublish(product)">
+              Unpublish
+            </button>
+
+            <button
+              type="button"
+              class="more-row-btn"
+              [attr.aria-label]="'View details for ' + product.name"
+              (click)="selectProduct(product)">
+              <i class="pi pi-ellipsis-h"></i>
+            </button>
+
+          </div>
+        </article>
+
+        <!-- EMPTY RESULTS -->
+        <div
+          class="catalog-empty"
+          *ngIf="filteredProducts.length === 0">
+
+          <i class="pi pi-box"></i>
+
+          <h3>
+            {{
+              products.length === 0
+                ? 'No products yet'
+                : 'No matching products'
+            }}
+          </h3>
+
+          <p>
+            {{
+              products.length === 0
+                ? 'Add your first silk product to begin building the catalog.'
+                : 'Try adjusting your search or filters.'
+            }}
+          </p>
+
+          <button
+            type="button"
+            *ngIf="products.length === 0"
+            (click)="openAddProduct()">
+            + Add Product
+          </button>
+
+          <button
+            type="button"
+            *ngIf="products.length > 0"
+            (click)="resetFilters()">
+            Clear Filters
+          </button>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- PRODUCT DETAILS -->
+    <aside class="product-details-card">
+
+      <div class="details-heading">
+        <h2>Product Details</h2>
+        <p>View and manage product information.</p>
+      </div>
+
+      <ng-container *ngIf="selectedProduct as selected">
+
+        <!-- PRODUCT IMAGE -->
+        <div class="details-image">
+          <img
+            *ngIf="selected.imageUrl"
+            [src]="selected.imageUrl"
+            [alt]="selected.name">
+
+          <div
+            class="details-image-placeholder"
+            *ngIf="!selected.imageUrl">
+            <i class="pi pi-box"></i>
+            <span>{{ getProductInitials(selected.name) }}</span>
+          </div>
+        </div>
+
+        <h3 class="details-product-name">
+          {{ selected.name }}
+        </h3>
+
+        <small class="details-product-id">
+          #{{ selected.id }}
+        </small>
+
+        <!-- STATUS -->
+        <div class="details-status">
+          <span
+            class="status-pill"
+            [ngClass]="getStatusClass(selected)">
+            <span class="status-dot"></span>
+            {{ getStatusText(selected) }}
+          </span>
+
+          <small>
+            {{
+              selected.published && selected.stock > 0
+                ? 'Available to customers'
+                : 'Not available for purchase'
+            }}
+          </small>
+        </div>
+
+        <!-- PRODUCT INFORMATION -->
+        <div class="details-information">
+
+          <div>
+            <span>
+              <i class="pi pi-tag"></i>
+              Category
+            </span>
+            <strong>{{ selected.category }}</strong>
+          </div>
+
+          <div>
+            <span>
+              <i class="pi pi-money-bill"></i>
+              Price
+            </span>
+            <strong>
+              {{
+                selected.price |
+                currency:'PHP':'symbol':'1.2-2'
+              }}
+            </strong>
+          </div>
+
+          <div>
+            <span>
+              <i class="pi pi-box"></i>
+              Stock Quantity
+            </span>
+            <strong>
+              {{ selected.stock }}
+              {{ getStockUnit(selected) }}
+            </strong>
+          </div>
+
+          <div>
+            <span>
+              <i class="pi pi-calendar"></i>
+              Date Added
+            </span>
+            <strong>{{ formatDate(selected.createdAt) }}</strong>
+          </div>
+
+          <div>
+            <span>
+              <i class="pi pi-refresh"></i>
+              Last Updated
+            </span>
+            <strong>{{ formatDate(selected.updatedAt) }}</strong>
+          </div>
+
+        </div>
+
+        <!-- DESCRIPTION -->
+        <div
+          class="product-description"
+          *ngIf="selected.description">
+          <h4>Description</h4>
+          <p>{{ selected.description }}</p>
+        </div>
+
+        <!-- FEATURED -->
+        <div class="product-featured-label">
+          <i class="pi pi-star"></i>
+          {{
+            selected.featured
+              ? 'Featured product'
+              : 'Standard product'
+          }}
+        </div>
+
+        <!-- PUBLISH CONTROL -->
+        <div class="details-publish-control">
+
+          <div>
+            <h4>Visible to Customers</h4>
+            <p>
+              {{
+                selected.published && selected.stock > 0
+                  ? 'Customers can see this listing when ShopSilk is connected.'
+                  : 'This item is currently unavailable in the customer catalog.'
+              }}
+            </p>
+          </div>
+
+          <button
+            type="button"
+            class="publish-switch"
+            role="switch"
+            [attr.aria-checked]="selected.published"
+            [class.on]="selected.published"
+            [disabled]="saving || (!selected.published && selected.stock <= 0)"
+            (click)="togglePublish(selected)">
+            <span></span>
+          </button>
+
+        </div>
+
+        <!-- DETAILS BUTTONS -->
+        <button
+          type="button"
+          class="details-update-button"
+          (click)="openEditProduct(selected)">
+          <i class="pi pi-pencil"></i>
+          Update Product
+        </button>
+
+        <button
+          type="button"
+          class="details-delete-button"
+          [disabled]="saving"
+          (click)="deleteProduct(selected)">
+          <i class="pi pi-trash"></i>
+          Delete Product
+        </button>
+
+      </ng-container>
+
+      <!-- NOTHING SELECTED -->
+      <div class="details-empty" *ngIf="!selectedProduct">
+        <i class="pi pi-box"></i>
+        <h3>Select a product</h3>
+        <p>
+          Click a product from the catalog
+          to view its information and settings.
+        </p>
+      </div>
+
+    </aside>
+  </div>
+</div>
+
+<!-- ADD / EDIT PRODUCT MODAL -->
+<div
+  class="product-modal-backdrop"
+  *ngIf="showProductModal"
+  (click)="closeProductModal()">
+
+  <section
+    class="product-modal"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="product-modal-title"
+    (click)="$event.stopPropagation()">
+
+    <header class="product-modal-header">
+      <div>
+        <span class="eyebrow">SILKMART CATALOG</span>
+        <h2 id="product-modal-title">
+          {{
+            editingProductId
+              ? 'Edit Product'
+              : 'Add New Product'
+          }}
+        </h2>
+      </div>
+
+      <button
+        type="button"
+        class="modal-close-button"
+        [disabled]="saving"
+        (click)="closeProductModal()">
+        <i class="pi pi-times"></i>
+      </button>
+    </header>
+
+    <form
+      class="product-form"
+      (ngSubmit)="saveProduct()">
+
+      <div class="product-form-scroll">
+
+        <!-- PRODUCT NAME -->
+        <div class="form-field">
+          <label for="productName">
+            Product Name
+            <span>*</span>
+          </label>
+
+          <input
+            id="productName"
+            name="productName"
+            type="text"
+            maxlength="120"
+            placeholder="e.g. Mulberry Silk Scarf"
+            [(ngModel)]="productForm.name"
+            [disabled]="saving"
+            required>
+        </div>
+
+        <!-- CATEGORY AND PRICE -->
+        <div class="form-grid">
+
+          <div class="form-field">
+            <label for="productCategory">
+              Category
+            </label>
+
+            <select
+              id="productCategory"
+              name="productCategory"
+              [(ngModel)]="productForm.category"
+              [disabled]="saving">
+
+              <option
+                *ngFor="let category of categories"
+                [value]="category">
+                {{ category }}
+              </option>
+            </select>
+          </div>
+
+          <div class="form-field">
+            <label for="productPrice">
+              Selling Price (PHP)
+              <span>*</span>
+            </label>
+
+            <input
+              id="productPrice"
+              name="productPrice"
+              type="number"
+              min="0"
+              step="0.01"
+              placeholder="0.00"
+              [(ngModel)]="productForm.price"
+              [disabled]="saving"
+              required>
+          </div>
+
+        </div>
+
+        <!-- STOCK AND IMAGE -->
+        <div class="form-grid">
+
+          <div class="form-field">
+            <label for="productStock">
+              Available Stock
+              ({{ getStockUnit(productForm) }})
+              <span>*</span>
+            </label>
+
+            <input
+              id="productStock"
+              name="productStock"
+              type="number"
+              min="0"
+              step="1"
+              placeholder="0"
+              [(ngModel)]="productForm.stock"
+              [disabled]="saving"
+              required>
+          </div>
+
+          <div class="form-field">
+            <label for="productImage">
+              Image URL (optional)
+            </label>
+
+            <input
+              id="productImage"
+              name="productImage"
+              type="text"
+              placeholder="Image URL or saved Base64 image"
+              [(ngModel)]="productForm.imageUrl"
+              [disabled]="saving">
+          </div>
+
+        </div>
+
+        <!-- IMAGE PREVIEW -->
+        <div
+          class="form-image-preview"
+          *ngIf="productForm.imageUrl">
+
+          <img
+            [src]="productForm.imageUrl"
+            alt="Product preview">
+
+          <span>Product image preview</span>
+        </div>
+
+        <!-- DESCRIPTION -->
+        <div class="form-field">
+          <label for="productDescription">
+            Product Description
+          </label>
+
+          <textarea
+            id="productDescription"
+            name="productDescription"
+            rows="4"
+            maxlength="2000"
+            placeholder="Describe the silk product, silkworm species, or cocoons..."
+            [(ngModel)]="productForm.description"
+            [disabled]="saving">
+          </textarea>
+        </div>
+
+        <!-- FEATURED -->
+        <label class="form-checkbox">
+          <input
+            type="checkbox"
+            name="featured"
+            [(ngModel)]="productForm.featured"
+            [disabled]="saving">
+
+          <span>
+            <strong>Featured Product</strong>
+            <small>
+              Highlight this item in the customer collection.
+            </small>
+          </span>
+        </label>
+
+        <!-- PUBLISH -->
+        <label class="form-checkbox">
+          <input
+            type="checkbox"
+            name="published"
+            [(ngModel)]="productForm.published"
+            [disabled]="saving">
+
+          <span>
+            <strong>Publish Product</strong>
+            <small>
+              Make the product eligible to appear in ShopSilk.
+              Uncheck to save as draft.
+            </small>
+          </span>
+        </label>
+
+        <!-- VALIDATION ERROR -->
+        <div
+          class="form-error"
+          *ngIf="formError"
+          role="alert">
+          <i class="pi pi-exclamation-circle"></i>
+          {{ formError }}
+        </div>
+
+      </div>
+
+      <!-- MODAL FOOTER -->
+      <footer class="product-modal-footer">
+
+        <button
+          type="button"
+          class="modal-cancel-button"
+          [disabled]="saving"
+          (click)="closeProductModal()">
+          Cancel
+        </button>
+
+        <button
+          type="submit"
+          class="modal-save-button"
+          [disabled]="saving">
+
+          <i
+            class="pi"
+            [ngClass]="
+              saving
+                ? 'pi-spin pi-spinner'
+                : 'pi-check'
+            ">
+          </i>
+
+          {{
+            saving
+              ? 'Saving Product...'
+              : editingProductId
+                ? 'Save Changes'
+                : 'Add Product'
+          }}
+        </button>
+
+      </footer>
+    </form>
+  </section>
+</div>

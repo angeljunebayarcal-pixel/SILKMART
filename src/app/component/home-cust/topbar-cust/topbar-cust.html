@@ -93,7 +93,6 @@
         </svg>
       </div>
 
-
       <div class="brand-text">
 
         <div class="brand-name">
@@ -173,14 +172,14 @@
       </a>
 
 
-      <!-- STAFF VIEW -->
+      <!-- ADD TO CART -->
       <a
-        routerLink="/staff-view"
+        routerLink="/home-cust/add2cart"
         routerLinkActive="active"
         (click)="closeMenu()"
       >
         <span>
-          Staff view
+          Add to cart
         </span>
 
         <span class="dropdown-arrow">
@@ -245,26 +244,23 @@
 
       <span class="profile-circle">
 
-  <!-- PROFILE PICTURE -->
+        <!-- PROFILE PICTURE -->
+        <img
+          *ngIf="profileImageUrl"
+          [src]="profileImageUrl"
+          alt="Profile picture"
+          class="profile-circle-image"
+        />
 
-  <img
-    *ngIf="profileImageUrl"
-    [src]="profileImageUrl"
-    alt="Profile picture"
-    class="profile-circle-image"
-  />
+        <!-- PROFILE INITIAL -->
+        <span
+          *ngIf="!profileImageUrl"
+          class="profile-circle-letter"
+        >
+          {{ profileInitial }}
+        </span>
 
-
-  <!-- PROFILE INITIAL -->
-
-  <span
-    *ngIf="!profileImageUrl"
-    class="profile-circle-letter"
-  >
-    {{ profileInitial }}
-  </span>
-
-</span>
+      </span>
 
     </button>
 

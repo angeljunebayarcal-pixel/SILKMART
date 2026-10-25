@@ -1,0 +1,1611 @@
+
+<div class="inventory-page">
+
+  <!-- PAGE HEADER -->
+  <header class="page-heading">
+    <div>
+      <div class="eyebrow">INVENTORY MANAGEMENT</div>
+      <h1>Inventory</h1>
+      <p>Manage silkworm stocks, cocoons, and silk products.</p>
+    </div>
+
+    <button
+      type="button"
+      class="outline-button production-statistics-button"
+      (click)="openProductionStatistics()"
+      title="Daily and Monthly Production Statistics">
+
+      <svg
+        viewBox="0 0 24 24"
+        width="18"
+        height="18"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.8"
+        stroke-linecap="round"
+        aria-hidden="true">
+        <path d="M4 20V12"/>
+        <path d="M10 20V7"/>
+        <path d="M16 20V4"/>
+        <path d="M22 20H2"/>
+      </svg>
+
+      Production Statistics
+    </button>
+  </header>
+
+  <!-- FIREBASE STATUS -->
+  <div class="inventory-loading" *ngIf="loading">
+    Loading your inventory from Firebase...
+  </div>
+
+  <div class="inventory-error" *ngIf="errorMessage">
+    <span>{{ errorMessage }}</span>
+    <button type="button" (click)="reload()">
+      Retry
+    </button>
+  </div>
+
+  <!-- FIVE SUMMARY CARDS -->
+  <section class="summary-grid">
+
+    <div class="summary-card">
+      <div class="summary-icon">
+        <svg
+          viewBox="0 0 48 48"
+          width="30"
+          height="30"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.4"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true">
+          <path d="M8 28C7 19 14 13 21 13c8 0 13 5 12 11-1 5-8 8-11 12"/>
+          <path d="M11 20l7 5M19 14l5 7M28 15l1 7M11 29l7 1"/>
+          <circle cx="36" cy="23" r="6"/>
+          <circle cx="38" cy="21" r="1" fill="currentColor" stroke="none"/>
+        </svg>
+      </div>
+
+      <div>
+        <span>Total Silkworms</span>
+        <strong>{{ totalSilkworms | number }}</strong>
+        <small>Across all batches</small>
+      </div>
+    </div>
+
+    <div class="summary-card">
+      <div class="summary-icon">◈</div>
+
+      <div>
+        <span>Active Species</span>
+        <strong>{{ species.length }}</strong>
+        <small>Species / batches tracked</small>
+      </div>
+    </div>
+
+    <div class="summary-card">
+      <div class="summary-icon">
+        <svg
+          viewBox="0 0 48 48"
+          width="29"
+          height="29"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.2"
+          aria-hidden="true">
+          <ellipse
+            cx="16"
+            cy="23"
+            rx="9"
+            ry="14"
+            transform="rotate(-16 16 23)"/>
+          <ellipse
+            cx="32"
+            cy="26"
+            rx="9"
+            ry="13"
+            transform="rotate(18 32 26)"/>
+          <path
+            d="M11 17l9 11M27 21l9 10"
+            stroke-width="1.5"/>
+        </svg>
+      </div>
+
+      <div>
+        <span>Available Cocoons</span>
+        <strong>{{ availableCocoons | number }}</strong>
+        <small>Good-quality, unreserved</small>
+      </div>
+    </div>
+
+    <div class="summary-card">
+      <div class="summary-icon">▤</div>
+
+      <div>
+        <span>Silk Products</span>
+        <strong>{{ totalSilkProducts | number }}</strong>
+        <small>Total units in product catalog stock</small>
+      </div>
+    </div>
+
+    <button
+      type="button"
+      class="summary-card alert-summary"
+      (click)="showAlerts()">
+
+      <div class="summary-icon alert-icon">!</div>
+
+      <div>
+        <span>Low Stock Alerts</span>
+        <strong>{{ lowStockCount }}</strong>
+        <small>Records requiring attention</small>
+      </div>
+    </button>
+
+  </section>
+
+  <!-- MAIN INVENTORY LAYOUT -->
+  <div class="inventory-layout">
+
+    <div class="inventory-main">
+
+      <!-- SILKWORM SPECIES -->
+      <section class="inventory-card">
+
+        <div class="card-heading">
+          <div class="heading-title">
+            <div class="section-icon">
+              <svg
+                viewBox="0 0 48 48"
+                width="30"
+                height="30"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.4"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true">
+                <path d="M8 28C7 19 14 13 21 13c8 0 13 5 12 11-1 5-8 8-11 12"/>
+                <path d="M11 20l7 5M19 14l5 7M28 15l1 7M11 29l7 1"/>
+                <circle cx="36" cy="23" r="6"/>
+                <circle cx="38" cy="21" r="1" fill="currentColor" stroke="none"/>
+              </svg>
+            </div>
+
+            <div>
+              <h2>Silkworm Species</h2>
+              <p>
+                Monitor silkworm quantities,
+                varieties, and lifecycle stages.
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            class="primary-button"
+            (click)="openAddSpecies()">
+            + Add Species
+          </button>
+        </div>
+
+        <div class="table-toolbar">
+          <label class="search-box">
+            <span>⌕</span>
+            <input
+              type="search"
+              placeholder="Search silkworms..."
+              [(ngModel)]="searchSpecies">
+          </label>
+
+          <span class="record-count">
+            {{ filteredSpecies.length }} records
+          </span>
+        </div>
+
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Species / Batch</th>
+                <th>Lifecycle Stage</th>
+                <th>Quantity</th>
+                <th>Condition</th>
+                <th>Availability</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+
+            <tbody>
+
+              <tr *ngFor="let item of filteredSpecies">
+
+                <td>
+                  <div class="item-name">
+                    <div class="item-avatar worm-avatar">
+                      <img
+                        *ngIf="item.imageUrl"
+                        [src]="item.imageUrl"
+                        [alt]="item.name"
+                        class="inventory-item-image">
+
+                      <span *ngIf="!item.imageUrl">
+                        ♧
+                      </span>
+                    </div>
+
+                    <div>
+                      <strong>{{ item.name }}</strong>
+                      <small>
+                        {{
+                          item.scientificName ||
+                          'No description'
+                        }}
+                      </small>
+                    </div>
+                  </div>
+                </td>
+
+                <td>
+                  <span class="stage-badge">
+                    {{ item.stage }}
+                  </span>
+                </td>
+
+                <td class="quantity-cell">
+                  {{ item.quantity | number }}
+                </td>
+
+                <td>
+                  <span
+                    class="condition-dot"
+                    [class.condition-monitoring]="item.condition === 'Monitoring'"
+                    [class.condition-quarantined]="item.condition === 'Quarantined'">
+                  </span>
+
+                  {{ item.condition }}
+                </td>
+
+                <td>
+                  <span
+                    class="stock-badge"
+                    [ngClass]="getStockClass(item.quantity, item.threshold)">
+                    {{
+                      getStockLabel(
+                        item.quantity,
+                        item.threshold
+                      )
+                    }}
+                  </span>
+                </td>
+
+                <td>
+                  <div class="action-group">
+
+                    <!-- NEW: ADD SPECIES TO PRODUCTS -->
+                    <button
+                      type="button"
+                      class="table-action sell-species-action"
+                      [class.already-listed]="isSpeciesInProducts(item)"
+                      [disabled]="saving || item.quantity <= 0 || isSpeciesInProducts(item)"
+                      (click)="addSpeciesToProducts(item)"
+                      [title]="isSpeciesInProducts(item) ? 'Already added to Product Management' : 'Add this species for sale'">
+
+                      {{
+                        isSpeciesInProducts(item)
+                          ? 'Listed'
+                          : '+ Add to Products'
+                      }}
+                    </button>
+
+                    <button
+                      type="button"
+                      class="table-action"
+                      [disabled]="saving"
+                      (click)="adjustSpecies(item)">
+                      Stock
+                    </button>
+
+                    <button
+                      type="button"
+                      class="table-action"
+                      [disabled]="saving"
+                      (click)="openEditSpecies(item)">
+                      Edit
+                    </button>
+
+                    <button
+                      type="button"
+                      class="table-action delete-action"
+                      [disabled]="saving"
+                      (click)="deleteSpecies(item)">
+                      Delete
+                    </button>
+                  </div>
+                </td>
+
+              </tr>
+
+              <tr *ngIf="filteredSpecies.length === 0">
+                <td colspan="6" class="empty-table">
+                  No silkworms added yet.
+                  Click Add Species to create a record.
+                </td>
+              </tr>
+
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- PRODUCTS INVENTORY -->
+      <section class="inventory-card">
+
+        <div class="card-heading">
+          <div class="heading-title">
+            <div class="section-icon">▤</div>
+
+            <div>
+              <h2>Silk Products Inventory</h2>
+              <p>
+                Shared with Product Management in Firebase.
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            class="primary-button"
+            (click)="openAddProduct()">
+            + Add Product
+          </button>
+        </div>
+
+        <div class="table-toolbar">
+          <label class="search-box">
+            <span>⌕</span>
+            <input
+              type="search"
+              placeholder="Search products, silkworms, cocoons..."
+              [(ngModel)]="searchProducts">
+          </label>
+
+          <select
+            class="filter-select"
+            [(ngModel)]="productFilter">
+
+            <option value="All">
+              All Categories
+            </option>
+
+            <option
+              *ngFor="let category of productCategoryOptions"
+              [value]="category">
+              {{ category }}
+            </option>
+          </select>
+        </div>
+
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Product</th>
+                <th>Category</th>
+                <th>Stock Quantity</th>
+                <th>Price</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+
+            <tbody>
+
+              <tr *ngFor="let item of filteredProducts">
+                <td>
+                  <div class="item-name">
+                    <div class="item-avatar product-avatar">
+                      <img
+                        *ngIf="item.imageUrl"
+                        [src]="item.imageUrl"
+                        [alt]="item.name"
+                        class="inventory-item-image">
+
+                      <span *ngIf="!item.imageUrl">
+                        ▤
+                      </span>
+                    </div>
+
+                    <div>
+                      <strong>{{ item.name }}</strong>
+                      <small>
+                        {{
+                          item.description ||
+                          'No description'
+                        }}
+                      </small>
+                    </div>
+                  </div>
+                </td>
+
+                <td>
+                  <span class="category-badge">
+                    {{ item.category }}
+                  </span>
+                </td>
+
+                <td class="quantity-cell">
+                  {{ item.quantity | number }}
+                  <small>{{ item.unit }}</small>
+                </td>
+
+                <td>
+                  {{
+                    item.price |
+                    currency:'PHP':'symbol':'1.2-2'
+                  }}
+                </td>
+
+                <td>
+                  <span
+                    class="stock-badge"
+                    [ngClass]="getStockClass(item.quantity, item.threshold)">
+                    {{
+                      getStockLabel(
+                        item.quantity,
+                        item.threshold
+                      )
+                    }}
+                  </span>
+
+                  <small
+                    class="published-label"
+                    *ngIf="item.published">
+                    Published
+                  </small>
+
+                  <small
+                    class="draft-label"
+                    *ngIf="!item.published">
+                    Draft
+                  </small>
+                </td>
+
+                <td>
+                  <div class="action-group">
+                    <button
+                      type="button"
+                      class="table-action"
+                      [disabled]="saving"
+                      (click)="adjustProduct(item)">
+                      Stock
+                    </button>
+
+                    <button
+                      type="button"
+                      class="table-action"
+                      [disabled]="saving"
+                      (click)="openEditProduct(item)">
+                      Edit
+                    </button>
+
+                    <button
+                      type="button"
+                      class="table-action delete-action"
+                      [disabled]="saving"
+                      (click)="deleteProduct(item)">
+                      Delete
+                    </button>
+                  </div>
+                </td>
+              </tr>
+
+              <tr *ngIf="filteredProducts.length === 0">
+                <td colspan="6" class="empty-table">
+                  No products added yet.
+                  Click Add Product to create one.
+                </td>
+              </tr>
+
+            </tbody>
+          </table>
+        </div>
+
+        <div class="inventory-footer-action">
+          <button
+            type="button"
+            class="outline-button"
+            (click)="goToProductManagement()">
+            Open Product Management ↗
+          </button>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- RIGHT SIDE -->
+    <aside class="inventory-sidebar">
+
+      <!-- COCOON INVENTORY -->
+      <section class="inventory-card cocoon-card">
+
+        <div class="card-heading">
+          <div class="heading-title">
+
+            <button
+              type="button"
+              class="section-icon cocoon-icon-button"
+              title="Add or update cocoon inventory"
+              aria-label="Add or update cocoons"
+              (click)="openCocoonEditor()">
+
+              <img
+                *ngIf="cocoons.imageUrl"
+                [src]="cocoons.imageUrl"
+                alt="Cocoons"
+                class="cocoon-icon-image">
+
+              <span *ngIf="!cocoons.imageUrl">
+                <svg
+                  viewBox="0 0 48 48"
+                  width="29"
+                  height="29"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.2"
+                  aria-hidden="true">
+                  <ellipse
+                    cx="16"
+                    cy="23"
+                    rx="9"
+                    ry="14"
+                    transform="rotate(-16 16 23)"/>
+                  <ellipse
+                    cx="32"
+                    cy="26"
+                    rx="9"
+                    ry="13"
+                    transform="rotate(18 32 26)"/>
+                </svg>
+              </span>
+            </button>
+
+            <div>
+              <h2>Cocoon Inventory</h2>
+              <p>Track production and quality.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="cocoon-metrics">
+
+          <div class="metric-tile">
+            <span>Total Cocoons</span>
+            <strong>{{ totalCocoons | number }}</strong>
+            <small>All recorded cocoons</small>
+          </div>
+
+          <div class="metric-tile">
+            <span>Good Quality</span>
+            <strong>{{ cocoons.good | number }}</strong>
+            <small>
+              {{ cocoonQualityPercent }}% of stock
+            </small>
+          </div>
+
+          <div class="metric-tile">
+            <span>Reserved</span>
+            <strong>{{ cocoons.reserved | number }}</strong>
+            <small>Good-quality cocoons</small>
+          </div>
+
+        </div>
+
+        <div class="quality-progress">
+          <div
+            class="quality-progress-fill"
+            [style.width.%]="cocoonQualityPercent">
+          </div>
+        </div>
+
+        <div class="quality-percent">
+          Good-quality cocoons
+          <strong>
+            {{ cocoonQualityPercent }}%
+          </strong>
+        </div>
+
+        <div class="quality-chart-panel">
+          <h3>Cocoon Quality Distribution</h3>
+
+          <div class="chart-area">
+
+            <div
+              class="donut-chart"
+              [style.--chart-fill]="cocoonChartStyle"
+              role="img"
+              [attr.aria-label]="
+                'Good: ' + cocoons.good +
+                ', Minor: ' + cocoons.minor +
+                ', Unusable: ' + cocoons.unusable
+              ">
+
+              <div class="donut-center">
+                <strong>{{ totalCocoons | number }}</strong>
+                <small>Total</small>
+              </div>
+            </div>
+
+            <div class="chart-legend">
+
+              <div>
+                <span class="legend-dot good"></span>
+                <span>Good Quality</span>
+                <strong>
+                  {{ cocoons.good | number }}
+                </strong>
+              </div>
+
+              <div>
+                <span class="legend-dot minor"></span>
+                <span>Minor Defects</span>
+                <strong>
+                  {{ cocoons.minor | number }}
+                </strong>
+              </div>
+
+              <div>
+                <span class="legend-dot unusable"></span>
+                <span>Not Usable</span>
+                <strong>
+                  {{ cocoons.unusable | number }}
+                </strong>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        <div class="cocoon-actions">
+          <button
+            type="button"
+            class="primary-button"
+            (click)="openCocoonEditor()">
+            + Update Cocoons
+          </button>
+
+          <button
+            type="button"
+            class="outline-button"
+            (click)="updateReservations()">
+            Manage Reserved
+          </button>
+        </div>
+
+      </section>
+
+      <!-- RECENT ACTIVITY -->
+      <section class="inventory-card activity-card">
+
+        <div class="card-heading">
+          <div class="heading-title">
+            <div class="section-icon">◷</div>
+
+            <div>
+              <h2>Recent Activity</h2>
+              <p>Latest inventory changes.</p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            class="activity-view-all"
+            (click)="openAllActivity()">
+            View All
+          </button>
+        </div>
+
+        <div class="activity-list">
+
+          <div
+            class="activity-item"
+            *ngFor="let activity of recentActivities">
+
+            <div
+              class="activity-symbol"
+              [ngClass]="'activity-' + activity.type">
+              {{
+                activity.type === 'remove'
+                  ? '−'
+                  : activity.type === 'edit'
+                    ? '✎'
+                    : '+'
+              }}
+            </div>
+
+            <div class="activity-text">
+              <strong>{{ activity.message }}</strong>
+              <small>{{ activity.detail }}</small>
+              <span>
+                {{ formatDate(activity.createdAt) }}
+              </span>
+            </div>
+          </div>
+
+          <div
+            class="no-activity"
+            *ngIf="recentActivities.length === 0">
+            No inventory activity yet.
+          </div>
+
+        </div>
+      </section>
+
+      <!-- LOW STOCK -->
+      <section
+        class="inventory-card alert-list-card"
+        *ngIf="stockAlerts.length > 0">
+
+        <div class="card-heading">
+          <div class="heading-title">
+            <div class="section-icon warning-icon">
+              !
+            </div>
+
+            <div>
+              <h2>Needs Attention</h2>
+              <p>Products and species with low stock.</p>
+            </div>
+          </div>
+        </div>
+
+        <div
+          class="alert-list-item"
+          *ngFor="let item of stockAlerts">
+          <div>
+            <strong>{{ item.name }}</strong>
+            <small>
+              Threshold:
+              {{ item.threshold }}
+              {{ item.unit }}
+            </small>
+          </div>
+
+          <span>{{ item.quantity }} left</span>
+        </div>
+
+      </section>
+
+    </aside>
+  </div>
+
+  <!-- ADD / EDIT SPECIES OR PRODUCT -->
+  <div
+    class="modal-backdrop"
+    *ngIf="showEditor"
+    (click)="closeEditor()">
+
+    <section
+      class="editor-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="inventory-editor-title"
+      (click)="$event.stopPropagation()">
+
+      <div class="modal-heading">
+        <div>
+          <div class="eyebrow">INVENTORY RECORD</div>
+
+          <h2 id="inventory-editor-title">
+            {{ editingId ? 'Edit' : 'Add' }}
+            {{
+              editorKind === 'species'
+                ? 'Silkworm Species'
+                : 'Product'
+            }}
+          </h2>
+
+          <p>
+            Information is saved in Firebase Firestore.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          class="close-modal"
+          [disabled]="saving || processingImage"
+          (click)="closeEditor()">
+          ×
+        </button>
+      </div>
+
+      <!-- SPECIES FORM -->
+      <form
+        *ngIf="editorKind === 'species'"
+        (ngSubmit)="saveEditor()">
+
+        <div class="form-grid">
+
+          <label class="full-field">
+            Species / Batch Name
+            <input
+              type="text"
+              name="speciesName"
+              [(ngModel)]="speciesForm.name"
+              maxlength="100"
+              required>
+          </label>
+
+          <label class="full-field">
+            Scientific Name / Description
+            <input
+              type="text"
+              name="scientificName"
+              [(ngModel)]="speciesForm.scientificName"
+              maxlength="150">
+          </label>
+
+          <div class="full-field image-upload-field">
+
+            <label for="speciesImageUpload">
+              Silkworm Image
+            </label>
+
+            <input
+              id="speciesImageUpload"
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              [disabled]="saving || processingImage"
+              (change)="onImageSelected($event, 'species')">
+
+            <small>
+              JPG, PNG, or WebP.
+              Compressed and saved in Firestore.
+            </small>
+
+            <div
+              class="inventory-form-preview"
+              *ngIf="speciesForm.imageUrl">
+
+              <img
+                [src]="speciesForm.imageUrl"
+                alt="Silkworm preview">
+
+              <button
+                type="button"
+                class="remove-image-button"
+                [disabled]="saving || processingImage"
+                (click)="removeImage('species')">
+                Remove Image
+              </button>
+            </div>
+          </div>
+
+          <label>
+            Lifecycle Stage
+            <select
+              name="speciesStage"
+              [(ngModel)]="speciesForm.stage">
+
+              <option
+                *ngFor="let stage of stages"
+                [value]="stage">
+                {{ stage }}
+              </option>
+            </select>
+          </label>
+
+          <label>
+            Condition
+            <select
+              name="speciesCondition"
+              [(ngModel)]="speciesForm.condition">
+
+              <option
+                *ngFor="let condition of conditions"
+                [value]="condition">
+                {{ condition }}
+              </option>
+            </select>
+          </label>
+
+          <label>
+            Current Quantity
+            <input
+              type="number"
+              name="speciesQuantity"
+              [(ngModel)]="speciesForm.quantity"
+              min="0"
+              step="1"
+              required>
+          </label>
+
+          <label>
+            Low Stock Alert Threshold
+            <input
+              type="number"
+              name="speciesThreshold"
+              [(ngModel)]="speciesForm.threshold"
+              min="0"
+              step="1"
+              required>
+          </label>
+
+        </div>
+
+        <div
+          class="image-processing"
+          *ngIf="processingImage">
+          Compressing image...
+        </div>
+
+        <div
+          class="image-error"
+          *ngIf="imageError">
+          {{ imageError }}
+        </div>
+
+        <div class="modal-actions">
+
+          <button
+            type="button"
+            class="outline-button"
+            [disabled]="saving || processingImage"
+            (click)="closeEditor()">
+            Cancel
+          </button>
+
+          <button
+            type="submit"
+            class="primary-button"
+            [disabled]="saving || processingImage">
+            {{
+              processingImage
+                ? 'Processing Image...'
+                : saving
+                  ? 'Saving...'
+                  : editingId
+                    ? 'Save Changes'
+                    : 'Add Species'
+            }}
+          </button>
+
+        </div>
+      </form>
+
+      <!-- PRODUCT FORM -->
+      <form
+        *ngIf="editorKind === 'product'"
+        (ngSubmit)="saveEditor()">
+
+        <div class="form-grid">
+
+          <label class="full-field">
+            Product Name
+            <input
+              type="text"
+              name="productName"
+              [(ngModel)]="productForm.name"
+              maxlength="120"
+              placeholder="Silk product, silkworm, or cocoons"
+              required>
+          </label>
+
+          <label class="full-field">
+            Description
+            <textarea
+              name="productDescription"
+              [(ngModel)]="productForm.description"
+              maxlength="2000"
+              rows="3">
+            </textarea>
+          </label>
+
+          <div class="full-field image-upload-field">
+
+            <label for="productImageUpload">
+              Product Image
+            </label>
+
+            <input
+              id="productImageUpload"
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              [disabled]="saving || processingImage"
+              (change)="onImageSelected($event, 'product')">
+
+            <small>
+              Compressed and saved as Base64
+              in Firestore.
+            </small>
+
+            <div
+              class="inventory-form-preview"
+              *ngIf="productForm.imageUrl">
+
+              <img
+                [src]="productForm.imageUrl"
+                alt="Product preview">
+
+              <button
+                type="button"
+                class="remove-image-button"
+                [disabled]="saving || processingImage"
+                (click)="removeImage('product')">
+                Remove Image
+              </button>
+            </div>
+          </div>
+
+          <label>
+            Category
+            <select
+              name="productCategory"
+              [(ngModel)]="productForm.category">
+
+              <option
+                *ngFor="let category of productCategories"
+                [value]="category">
+                {{ category }}
+              </option>
+            </select>
+          </label>
+
+          <label>
+            Selling Price (₱)
+            <input
+              type="number"
+              name="productPrice"
+              [(ngModel)]="productForm.price"
+              min="0"
+              step="0.01"
+              required>
+          </label>
+
+          <label>
+            Stock Quantity
+            <input
+              type="number"
+              name="productQuantity"
+              [(ngModel)]="productForm.quantity"
+              min="0"
+              step="1"
+              required>
+          </label>
+
+          <label class="full-field inventory-check-row">
+            <input
+              type="checkbox"
+              name="productPublished"
+              [(ngModel)]="productForm.published">
+
+            Publish this product
+          </label>
+        </div>
+
+        <div
+          class="image-processing"
+          *ngIf="processingImage">
+          Compressing image...
+        </div>
+
+        <div
+          class="image-error"
+          *ngIf="imageError">
+          {{ imageError }}
+        </div>
+
+        <div class="modal-actions">
+
+          <button
+            type="button"
+            class="outline-button"
+            [disabled]="saving || processingImage"
+            (click)="closeEditor()">
+            Cancel
+          </button>
+
+          <button
+            type="submit"
+            class="primary-button"
+            [disabled]="saving || processingImage">
+            {{
+              processingImage
+                ? 'Processing Image...'
+                : saving
+                  ? 'Saving...'
+                  : editingId
+                    ? 'Save Changes'
+                    : 'Add Product'
+            }}
+          </button>
+
+        </div>
+      </form>
+    </section>
+  </div>
+
+  <!-- COCOON EDITOR -->
+  <div
+    class="modal-backdrop"
+    *ngIf="showCocoonEditor"
+    (click)="closeCocoonEditor()">
+
+    <section
+      class="editor-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="cocoon-editor-title"
+      (click)="$event.stopPropagation()">
+
+      <div class="modal-heading">
+        <div>
+          <div class="eyebrow">
+            COCOON INVENTORY
+          </div>
+
+          <h2 id="cocoon-editor-title">
+            Add / Update Cocoons
+          </h2>
+
+          <p>
+            Enter all three quality quantities
+            in one form.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          class="close-modal"
+          [disabled]="saving || processingImage"
+          (click)="closeCocoonEditor()">
+          ×
+        </button>
+      </div>
+
+      <form (ngSubmit)="saveCocoonChanges()">
+
+        <div class="form-grid">
+
+          <label class="full-field">
+            Good Quality
+            <input
+              type="number"
+              name="cocoonGoodChange"
+              [(ngModel)]="cocoonGoodChange"
+              step="1"
+              required>
+
+            <small>
+              Current: {{ cocoons.good | number }}.
+              Positive adds, negative deducts.
+            </small>
+          </label>
+
+          <label class="full-field">
+            Minor Defects
+            <input
+              type="number"
+              name="cocoonMinorChange"
+              [(ngModel)]="cocoonMinorChange"
+              step="1"
+              required>
+
+            <small>
+              Current: {{ cocoons.minor | number }}.
+              Positive adds, negative deducts.
+            </small>
+          </label>
+
+          <label class="full-field">
+            Not Usable
+            <input
+              type="number"
+              name="cocoonUnusableChange"
+              [(ngModel)]="cocoonUnusableChange"
+              step="1"
+              required>
+
+            <small>
+              Current: {{ cocoons.unusable | number }}.
+              Positive adds, negative deducts.
+            </small>
+          </label>
+
+          <div class="full-field image-upload-field">
+
+            <label for="cocoonImageUpload">
+              Cocoon Image
+            </label>
+
+            <input
+              id="cocoonImageUpload"
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              [disabled]="saving || processingImage"
+              (change)="onImageSelected($event, 'cocoon')">
+
+            <small>
+              Compressed and saved as Base64
+              in Firestore.
+            </small>
+
+            <div
+              class="inventory-form-preview"
+              *ngIf="cocoonImageUrl">
+
+              <img
+                [src]="cocoonImageUrl"
+                alt="Cocoon preview">
+
+              <button
+                type="button"
+                class="remove-image-button"
+                [disabled]="saving || processingImage"
+                (click)="removeImage('cocoon')">
+                Remove Image
+              </button>
+            </div>
+          </div>
+
+        </div>
+
+        <div
+          class="image-processing"
+          *ngIf="processingImage">
+          Compressing image...
+        </div>
+
+        <div
+          class="image-error"
+          *ngIf="imageError">
+          {{ imageError }}
+        </div>
+
+        <div class="modal-actions">
+
+          <button
+            type="button"
+            class="outline-button"
+            [disabled]="saving || processingImage"
+            (click)="closeCocoonEditor()">
+            Cancel
+          </button>
+
+          <button
+            type="submit"
+            class="primary-button"
+            [disabled]="saving || processingImage">
+            {{
+              processingImage
+                ? 'Processing Image...'
+                : saving
+                  ? 'Saving...'
+                  : 'Save to Firebase'
+            }}
+          </button>
+
+        </div>
+      </form>
+    </section>
+  </div>
+
+  <!-- VIEW ALL ACTIVITY -->
+  <div
+    class="modal-backdrop"
+    *ngIf="showAllActivity"
+    (click)="closeAllActivity()">
+
+    <section
+      class="editor-modal all-activity-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="all-activity-title"
+      (click)="$event.stopPropagation()">
+
+      <div class="modal-heading">
+        <div>
+          <div class="eyebrow">
+            INVENTORY HISTORY
+          </div>
+
+          <h2 id="all-activity-title">
+            All Activity
+          </h2>
+
+          <p>
+            Recorded actions from Firebase.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          class="close-modal"
+          (click)="closeAllActivity()">
+          ×
+        </button>
+      </div>
+
+      <div class="all-activity-list">
+
+        <div
+          class="activity-item"
+          *ngFor="let activity of allActivities">
+
+          <div
+            class="activity-symbol"
+            [ngClass]="'activity-' + activity.type">
+            {{
+              activity.type === 'remove'
+                ? '−'
+                : activity.type === 'edit'
+                  ? '✎'
+                  : '+'
+            }}
+          </div>
+
+          <div class="activity-text">
+            <strong>{{ activity.message }}</strong>
+            <small>{{ activity.detail }}</small>
+            <span>
+              {{ formatDate(activity.createdAt) }}
+            </span>
+          </div>
+        </div>
+
+        <div
+          class="no-activity"
+          *ngIf="allActivities.length === 0">
+          No activity recorded yet.
+        </div>
+
+      </div>
+
+      <div class="modal-actions">
+        <button
+          type="button"
+          class="primary-button"
+          (click)="closeAllActivity()">
+          Close
+        </button>
+      </div>
+    </section>
+  </div>
+
+  <!-- PRODUCTION STATISTICS LINE GRAPH -->
+  <div
+    class="modal-backdrop"
+    *ngIf="showProductionStatistics"
+    (click)="closeProductionStatistics()">
+
+    <section
+      class="editor-modal production-statistics-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="production-statistics-title"
+      (click)="$event.stopPropagation()">
+
+      <div class="modal-heading">
+        <div>
+          <div class="eyebrow">
+            INVENTORY ANALYTICS
+          </div>
+
+          <h2 id="production-statistics-title">
+            Production Statistics
+          </h2>
+
+          <p>{{ productionPeriodLabel }}</p>
+        </div>
+
+        <button
+          type="button"
+          class="close-modal"
+          (click)="closeProductionStatistics()">
+          ×
+        </button>
+      </div>
+
+      <!-- DAILY / MONTHLY -->
+      <div class="production-period-tabs">
+
+        <button
+          type="button"
+          [class.active]="productionPeriod === 'daily'"
+          (click)="setProductionPeriod('daily')">
+          Daily
+        </button>
+
+        <button
+          type="button"
+          [class.active]="productionPeriod === 'monthly'"
+          (click)="setProductionPeriod('monthly')">
+          Monthly
+        </button>
+
+      </div>
+
+      <div class="production-graph-heading">
+        <div>
+          <h3>Inventory Addition Trends</h3>
+          <p>
+            {{
+              productionPeriod === 'daily'
+                ? 'Last 7 days'
+                : 'Last 6 months'
+            }}
+          </p>
+        </div>
+
+        <span class="graph-live-label">
+          Firebase Data
+        </span>
+      </div>
+
+      <!-- GRAPH LEGEND -->
+      <div class="production-line-legend">
+
+        <div *ngFor="let line of productionLines">
+          <span
+            class="production-legend-line"
+            [style.background]="line.color">
+          </span>
+          {{ line.name }}
+        </div>
+
+      </div>
+
+      <!-- SVG LINE CHART -->
+      <div class="production-line-chart">
+
+        <svg
+          viewBox="0 0 740 310"
+          preserveAspectRatio="xMidYMid meet"
+          role="img"
+          aria-label="Inventory additions by date for silkworms, products, and cocoons">
+
+          <!-- GRID -->
+          <g *ngFor="let tick of graphTicks">
+            <line
+              [attr.x1]="graphLeft"
+              [attr.x2]="graphRight"
+              [attr.y1]="tick.y"
+              [attr.y2]="tick.y"
+              class="production-grid-line">
+            </line>
+
+            <text
+              [attr.x]="graphLeft - 13"
+              [attr.y]="tick.y + 4"
+              text-anchor="end"
+              class="production-axis-text">
+              {{ formatGraphNumber(tick.value) }}
+            </text>
+          </g>
+
+          <!-- AXES -->
+          <line
+            [attr.x1]="graphLeft"
+            [attr.x2]="graphLeft"
+            [attr.y1]="graphTop"
+            [attr.y2]="graphBottom"
+            class="production-axis-line">
+          </line>
+
+          <line
+            [attr.x1]="graphLeft"
+            [attr.x2]="graphRight"
+            [attr.y1]="graphBottom"
+            [attr.y2]="graphBottom"
+            class="production-axis-line">
+          </line>
+
+          <!-- DATES -->
+          <g *ngFor="let point of graphData">
+            <text
+              [attr.x]="point.x"
+              y="286"
+              text-anchor="middle"
+              class="production-axis-text">
+              {{ point.label }}
+            </text>
+          </g>
+
+          <!-- LINES -->
+          <g *ngFor="let line of graphSeries">
+            <polyline
+              [attr.points]="line.points"
+              [attr.stroke]="line.color"
+              class="production-svg-line">
+            </polyline>
+          </g>
+
+          <!-- DATA POINTS -->
+          <g *ngFor="let line of productionLines">
+
+            <circle
+              *ngFor="let point of graphData"
+              [attr.cx]="point.x"
+              [attr.cy]="graphY(point[line.key])"
+              [attr.stroke]="line.color"
+              r="5"
+              class="production-svg-point">
+
+              <title>
+                {{ line.name }}:
+                {{ point[line.key] | number }}
+                on {{ point.label }}
+              </title>
+
+            </circle>
+          </g>
+
+        </svg>
+
+        <div
+          class="production-graph-empty"
+          *ngIf="!graphHasData">
+          No recorded inventory additions
+          in this period.
+        </div>
+      </div>
+
+      <!-- TREND CARDS -->
+      <div class="production-trends">
+
+        <div
+          class="production-trend-card"
+          *ngFor="let item of currentProductionTrend">
+
+          <strong>{{ item.name }}</strong>
+
+          <span>
+            {{ item.current | number }}
+          </span>
+
+          <small
+            [class.trend-up]="item.direction === 'up'"
+            [class.trend-down]="item.direction === 'down'">
+
+            <ng-container
+              *ngIf="item.direction === 'up'">
+              ↑ Increased
+            </ng-container>
+
+            <ng-container
+              *ngIf="item.direction === 'down'">
+              ↓ Decreased
+            </ng-container>
+
+            <ng-container
+              *ngIf="item.direction === 'same'">
+              — No change
+            </ng-container>
+
+          </small>
+        </div>
+
+      </div>
+
+      <p class="production-statistics-note">
+        This graph displays positive inventory additions
+        recorded in Firebase Recent Activity.
+        It does not represent verified production
+        measurements or unrecorded quantities.
+      </p>
+
+      <div class="modal-actions">
+        <button
+          type="button"
+          class="primary-button"
+          (click)="closeProductionStatistics()">
+          Close
+        </button>
+      </div>
+
+    </section>
+  </div>
+
+</div>

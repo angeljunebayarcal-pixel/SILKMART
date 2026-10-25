@@ -1,0 +1,611 @@
+<p>profile-adm works!</p>
+
+<div class="profile-page">
+
+  <!-- HEADER -->
+  <section class="profile-heading">
+    <div>
+      <div class="profile-eyebrow">
+        SILKMART STAFF ACCOUNT
+      </div>
+
+      <h1>My Profile</h1>
+
+      <p>
+        Manage your account information
+        and access your SilkMart work areas.
+      </p>
+    </div>
+  </section>
+
+  <!-- LOADING AUTH -->
+  <div
+    class="profile-loading"
+    *ngIf="!authResolved">
+
+    <i class="pi pi-spin pi-spinner"></i>
+    Checking your account...
+  </div>
+
+  <!-- NOT SIGNED IN -->
+  <section
+    class="profile-card access-card"
+    *ngIf="authResolved && !isSignedIn">
+
+    <div class="access-icon">
+      <i class="pi pi-lock"></i>
+    </div>
+
+    <h2>Staff Sign-in Required</h2>
+
+    <p>
+      Sign in using an authorized SilkMart
+      Admin or Staff account to view this page.
+    </p>
+
+    <div class="profile-message error" *ngIf="errorMessage">
+      {{ errorMessage }}
+    </div>
+  </section>
+
+  <!-- LOADING PROFILE -->
+  <div
+    class="profile-loading"
+    *ngIf="isSignedIn && profileLoading">
+
+    <i class="pi pi-spin pi-spinner"></i>
+    Loading your staff information...
+  </div>
+
+  <!-- UNAUTHORIZED ROLE -->
+  <section
+    class="profile-card access-card"
+    *ngIf="
+      isSignedIn &&
+      !profileLoading &&
+      !isAuthorized
+    ">
+
+    <div class="access-icon">
+      <i class="pi pi-shield"></i>
+    </div>
+
+    <h2>Access Restricted</h2>
+
+    <p>
+      This profile is available only to
+      authorized SilkMart Admin and Staff accounts.
+    </p>
+
+    <div class="profile-message error" *ngIf="errorMessage">
+      {{ errorMessage }}
+    </div>
+
+    <button
+      type="button"
+      class="save-button"
+      (click)="loadProfile()">
+      Try Again
+    </button>
+  </section>
+
+  <!-- AUTHORIZED PROFILE -->
+  <div
+    class="profile-layout"
+    *ngIf="
+      authResolved &&
+      isSignedIn &&
+      !profileLoading &&
+      isAuthorized
+    ">
+
+    <!-- LEFT SIDEBAR -->
+    <aside class="profile-sidebar">
+
+      <div class="sidebar-decoration"></div>
+
+      <!-- AVATAR -->
+      <div class="profile-avatar">
+        <span>{{ profileInitial }}</span>
+      </div>
+
+      <h2>{{ displayName }}</h2>
+
+      <div class="profile-role">
+        <i
+          class="pi"
+          [ngClass]="
+            isAdministrator
+              ? 'pi-shield'
+              : 'pi-id-card'
+          ">
+        </i>
+
+        {{ roleLabel }}
+      </div>
+
+      <div class="profile-contact">
+
+        <div class="contact-item">
+          <i class="pi pi-envelope"></i>
+          <span>{{ email }}</span>
+        </div>
+
+        <div class="contact-item">
+          <i class="pi pi-phone"></i>
+          <span>
+            {{
+              mobileNumber ||
+              'No mobile number provided'
+            }}
+          </span>
+        </div>
+
+        <div class="contact-item">
+          <i class="pi pi-map-marker"></i>
+          <span>
+            {{
+              completeAddress ||
+              'No address provided'
+            }}
+          </span>
+        </div>
+
+      </div>
+
+      <!-- STAFF NAVIGATION -->
+      <nav class="profile-menu" aria-label="Staff navigation">
+
+        <div class="sidebar-menu-heading">
+          MY ACCOUNT
+        </div>
+
+        <button
+          type="button"
+          class="profile-menu-item active">
+          <span class="menu-icon">
+            <i class="pi pi-user"></i>
+          </span>
+
+          <span>My Profile</span>
+
+          <i class="pi pi-angle-right"></i>
+        </button>
+
+        <div class="sidebar-menu-heading operations-heading">
+          OPERATIONS
+        </div>
+
+        <button
+          type="button"
+          class="profile-menu-item"
+          (click)="goToInventory()">
+
+          <span class="menu-icon">
+            <i class="pi pi-box"></i>
+          </span>
+
+          <span>Inventory</span>
+
+          <i class="pi pi-angle-right"></i>
+        </button>
+
+        <button
+          type="button"
+          class="profile-menu-item"
+          (click)="goToProducts()">
+
+          <span class="menu-icon">
+            <i class="pi pi-shopping-bag"></i>
+          </span>
+
+          <span>Product Management</span>
+
+          <i class="pi pi-angle-right"></i>
+        </button>
+
+        <button
+          type="button"
+          class="profile-menu-item"
+          (click)="goToCustomerOrders()">
+
+          <span class="menu-icon">
+            <i class="pi pi-list"></i>
+          </span>
+
+          <span>Customer Orders</span>
+
+          <i class="pi pi-angle-right"></i>
+        </button>
+
+        <button
+          type="button"
+          class="profile-menu-item logout"
+          [disabled]="loggingOut"
+          (click)="logout()">
+
+          <span class="menu-icon">
+            <i class="pi pi-sign-out"></i>
+          </span>
+
+          <span>
+            {{ loggingOut ? 'Logging out...' : 'Logout' }}
+          </span>
+        </button>
+      </nav>
+
+      <div class="sidebar-quote">
+        <span>Timeless Silk,</span>
+        <span>Naturally Woven.</span>
+      </div>
+
+    </aside>
+
+    <!-- RIGHT CONTENT -->
+    <main class="profile-content">
+
+      <!-- PERSONAL INFORMATION -->
+      <section class="profile-card">
+
+        <div class="card-header">
+          <div class="card-title-group">
+            <div class="card-icon">
+              <i class="pi pi-user"></i>
+            </div>
+
+            <div>
+              <h2>Personal Information</h2>
+              <p>
+                Keep your personal and contact
+                information up to date.
+              </p>
+            </div>
+          </div>
+
+          <button
+            *ngIf="!editMode"
+            type="button"
+            class="edit-button"
+            (click)="enableEdit()">
+
+            <i class="pi pi-pencil"></i>
+            Edit Information
+          </button>
+        </div>
+
+        <div class="information-grid">
+
+          <div class="info-field">
+            <label for="staffFullName">Full Name</label>
+
+            <div class="display-field" *ngIf="!editMode">
+              {{ fullName || 'Not provided' }}
+            </div>
+
+            <input
+              *ngIf="editMode"
+              id="staffFullName"
+              type="text"
+              maxlength="120"
+              [(ngModel)]="editFullName">
+          </div>
+
+          <div class="info-field">
+            <label for="staffMobile">Mobile Number</label>
+
+            <div class="display-field" *ngIf="!editMode">
+              {{ mobileNumber || 'Not provided' }}
+            </div>
+
+            <input
+              *ngIf="editMode"
+              id="staffMobile"
+              type="tel"
+              maxlength="30"
+              [(ngModel)]="editMobileNumber">
+          </div>
+
+          <div class="info-field">
+            <label>Email Address</label>
+
+            <div class="display-field disabled-field">
+              {{ email }}
+            </div>
+
+            <small>
+              Linked to Firebase Authentication.
+            </small>
+          </div>
+
+          <div class="info-field">
+            <label>Account Type</label>
+
+            <div class="display-field disabled-field">
+              {{ roleLabel }}
+            </div>
+
+            <small>
+              Account roles cannot be changed here.
+            </small>
+          </div>
+
+        </div>
+
+        <div class="edit-actions" *ngIf="editMode">
+
+          <button
+            type="button"
+            class="cancel-button"
+            [disabled]="saving"
+            (click)="cancelEdit()">
+
+            <i class="pi pi-times"></i>
+            Cancel
+          </button>
+
+          <button
+            type="button"
+            class="save-button"
+            [disabled]="saving"
+            (click)="saveProfile()">
+
+            <i
+              class="pi"
+              [ngClass]="
+                saving
+                  ? 'pi-spin pi-spinner'
+                  : 'pi-check'
+              ">
+            </i>
+
+            {{ saving ? 'Saving...' : 'Save Changes' }}
+          </button>
+        </div>
+
+        <div
+          class="profile-message success"
+          role="status"
+          *ngIf="successMessage">
+
+          <i class="pi pi-check-circle"></i>
+          {{ successMessage }}
+        </div>
+
+        <div
+          class="profile-message error"
+          role="alert"
+          *ngIf="errorMessage">
+
+          <i class="pi pi-exclamation-circle"></i>
+          {{ errorMessage }}
+        </div>
+
+      </section>
+
+      <!-- WORKPLACE INFORMATION -->
+      <section class="profile-card">
+
+        <div class="card-header">
+          <div class="card-title-group">
+            <div class="card-icon">
+              <i class="pi pi-building"></i>
+            </div>
+
+            <div>
+              <h2>Work Information</h2>
+              <p>
+                Your access to the SilkMart management system.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="information-grid">
+
+          <div class="info-field">
+            <label>System</label>
+            <div class="display-field disabled-field">
+              SilkMart
+            </div>
+          </div>
+
+          <div class="info-field">
+            <label>System Role</label>
+            <div class="display-field disabled-field">
+              {{ roleLabel }}
+            </div>
+          </div>
+
+          <div class="info-field full-width-field">
+            <label>Management Access</label>
+            <div class="display-field disabled-field">
+              Inventory, Product Management,
+              and Customer Orders
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ADDRESS INFORMATION -->
+      <section class="profile-card">
+
+        <div class="card-header">
+          <div class="card-title-group">
+            <div class="card-icon">
+              <i class="pi pi-map-marker"></i>
+            </div>
+
+            <div>
+              <h2>Address Details</h2>
+              <p>
+                Contact address associated with your staff profile.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="address-box">
+          <label class="address-label" for="staffAddress">
+            Complete Address
+          </label>
+
+          <div class="display-field" *ngIf="!editMode">
+            {{ completeAddress || 'No address provided yet.' }}
+          </div>
+
+          <textarea
+            *ngIf="editMode"
+            id="staffAddress"
+            [(ngModel)]="editCompleteAddress"
+            maxlength="500"
+            rows="4"
+            placeholder="Enter your complete address">
+          </textarea>
+        </div>
+
+        <p class="address-help" *ngIf="editMode">
+          Save your changes using the button in
+          Personal Information above.
+        </p>
+      </section>
+
+      <!-- ACCOUNT INFORMATION -->
+      <section class="profile-card account-card">
+
+        <div class="card-header">
+          <div class="card-title-group">
+            <div class="card-icon">
+              <i class="pi pi-shield"></i>
+            </div>
+
+            <div>
+              <h2>Account Information</h2>
+              <p>
+                Your staff account and security details.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="account-row">
+          <span>Account Role</span>
+          <strong>{{ roleLabel }}</strong>
+        </div>
+
+        <div class="account-row">
+          <span>Member Since</span>
+          <strong>{{ memberSince }}</strong>
+        </div>
+
+        <div class="account-row">
+          <span>Last Profile Update</span>
+          <strong>{{ lastUpdated }}</strong>
+        </div>
+
+        <div class="account-row">
+          <span>Staff Profile Access</span>
+
+          <div class="status-badge">
+            <span class="status-dot"></span>
+            {{ accountStatus }}
+          </div>
+        </div>
+
+        <div class="account-row">
+          <span>Firebase Authentication</span>
+
+          <div class="status-badge">
+            <span class="status-dot"></span>
+            Signed In
+          </div>
+        </div>
+
+      </section>
+
+      <!-- QUICK ACCESS -->
+      <section class="profile-card">
+
+        <div class="card-header">
+          <div class="card-title-group">
+            <div class="card-icon">
+              <i class="pi pi-th-large"></i>
+            </div>
+
+            <div>
+              <h2>Staff Quick Access</h2>
+              <p>
+                Open the management areas you use.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="quick-access-grid">
+
+          <button
+            type="button"
+            class="quick-access-item"
+            (click)="goToInventory()">
+
+            <div class="quick-access-icon">
+              <i class="pi pi-box"></i>
+            </div>
+
+            <strong>Inventory</strong>
+            <small>
+              Silkworms, cocoons, stock, and production records
+            </small>
+
+            <span class="quick-access-link">
+              Open Inventory
+              <i class="pi pi-arrow-right"></i>
+            </span>
+          </button>
+
+          <button
+            type="button"
+            class="quick-access-item"
+            (click)="goToProducts()">
+
+            <div class="quick-access-icon">
+              <i class="pi pi-shopping-bag"></i>
+            </div>
+
+            <strong>Product Management</strong>
+            <small>
+              Catalog listings, product prices, and publishing
+            </small>
+
+            <span class="quick-access-link">
+              Manage Products
+              <i class="pi pi-arrow-right"></i>
+            </span>
+          </button>
+
+          <button
+            type="button"
+            class="quick-access-item"
+            (click)="goToCustomerOrders()">
+
+            <div class="quick-access-icon">
+              <i class="pi pi-list"></i>
+            </div>
+
+            <strong>Customer Orders</strong>
+            <small>
+              Customer requests, order statuses, and messages
+            </small>
+
+            <span class="quick-access-link">
+              View Orders
+              <i class="pi pi-arrow-right"></i>
+            </span>
+          </button>
+
+        </div>
+      </section>
+
+    </main>
+  </div>
+</div>
