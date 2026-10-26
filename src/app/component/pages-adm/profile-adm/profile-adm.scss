@@ -739,3 +739,340 @@
     transition: none;
   }
 }
+
+
+/* =========================================
+   SILKMART ADMIN / STAFF PROFILE ANIMATIONS
+   ========================================= */
+
+/* PAGE ENTRANCE */
+
+@keyframes adminProfileFadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+.profile-page {
+  animation: adminProfileFadeIn 0.5s ease-out both;
+}
+
+/* HEADER ENTRANCE */
+
+@keyframes adminProfileHeaderIn {
+  from {
+    opacity: 0;
+    transform: translateY(-14px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.profile-heading {
+  animation: adminProfileHeaderIn 0.6s ease-out both;
+}
+
+/* SIDEBAR ENTRANCE */
+
+@keyframes adminProfileSidebarIn {
+  from {
+    opacity: 0;
+    transform: translateX(-25px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.profile-sidebar {
+  animation: adminProfileSidebarIn 0.65s ease-out both;
+}
+
+/* PROFILE AVATAR */
+
+@keyframes adminAvatarPopIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.75);
+  }
+
+  65% {
+    opacity: 1;
+    transform: scale(1.06);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.profile-avatar {
+  animation: adminAvatarPopIn 0.7s
+    cubic-bezier(0.2, 0.8, 0.2, 1) 0.1s both;
+
+  transition:
+    transform 0.25s ease,
+    box-shadow 0.25s ease;
+}
+
+.profile-avatar:hover {
+  transform: scale(1.05);
+
+  box-shadow:
+    0 12px 28px rgba(40, 113, 86, 0.17);
+}
+
+/* ROLE BADGE */
+
+.profile-role {
+  transition:
+    background-color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.profile-role:hover {
+  transform: translateY(-2px);
+  background-color: #d3e6d2;
+}
+
+/* INFORMATION CARD ENTRANCE */
+
+@keyframes adminProfileCardIn {
+  from {
+    opacity: 0;
+    transform: translateY(22px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.profile-content > .profile-card {
+  animation: adminProfileCardIn 0.6s ease-out both;
+}
+
+.profile-content > .profile-card:nth-child(1) {
+  animation-delay: 0.1s;
+}
+
+.profile-content > .profile-card:nth-child(2) {
+  animation-delay: 0.18s;
+}
+
+.profile-content > .profile-card:nth-child(3) {
+  animation-delay: 0.26s;
+}
+
+.profile-content > .profile-card:nth-child(4) {
+  animation-delay: 0.34s;
+}
+
+.profile-content > .profile-card:nth-child(5) {
+  animation-delay: 0.42s;
+}
+
+/* ICON HOVER */
+
+.card-icon {
+  transition:
+    transform 0.25s ease,
+    background-color 0.25s ease;
+}
+
+.profile-card:hover .card-icon {
+  transform: scale(1.08);
+  background-color: #d9ead9;
+}
+
+/* SIDEBAR NAVIGATION */
+
+.profile-menu-item {
+  transition:
+    transform 0.22s ease,
+    background-color 0.22s ease,
+    color 0.22s ease;
+}
+
+.profile-menu-item:hover:not(:disabled) {
+  transform: translateX(4px);
+}
+
+.profile-menu-item:active:not(:disabled) {
+  transform: translateX(2px) scale(0.99);
+}
+
+/* FORM FIELD APPEARANCE */
+
+@keyframes adminInputAppear {
+  from {
+    opacity: 0;
+    transform: translateY(7px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.info-field input,
+.address-box textarea {
+  animation: adminInputAppear 0.25s ease-out both;
+
+  transition:
+    border-color 0.22s ease,
+    box-shadow 0.22s ease,
+    background-color 0.22s ease;
+}
+
+.info-field input:focus,
+.address-box textarea:focus {
+  border-color: #287156;
+
+  background-color: #ffffff;
+
+  box-shadow:
+    0 0 0 3px rgba(40, 113, 86, 0.1);
+}
+
+/* BUTTON HOVER */
+
+.edit-button,
+.save-button,
+.cancel-button {
+  transition:
+    transform 0.22s ease,
+    background-color 0.22s ease,
+    border-color 0.22s ease;
+}
+
+.edit-button:hover:not(:disabled),
+.save-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+}
+
+.cancel-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+}
+
+.edit-button:active:not(:disabled),
+.save-button:active:not(:disabled),
+.cancel-button:active:not(:disabled) {
+  transform: translateY(0) scale(0.98);
+}
+
+/* QUICK ACCESS CARDS */
+
+.quick-access-item {
+  transition:
+    transform 0.25s ease,
+    border-color 0.25s ease,
+    background-color 0.25s ease,
+    box-shadow 0.25s ease;
+}
+
+.quick-access-item:hover {
+  transform: translateY(-5px);
+
+  box-shadow:
+    0 10px 24px rgba(40, 113, 86, 0.09);
+}
+
+.quick-access-icon {
+  transition:
+    transform 0.25s ease,
+    background-color 0.25s ease;
+}
+
+.quick-access-item:hover .quick-access-icon {
+  transform: scale(1.08);
+  background-color: #d6e8d5;
+}
+
+.quick-access-link i {
+  transition: transform 0.2s ease;
+}
+
+.quick-access-item:hover .quick-access-link i {
+  transform: translateX(4px);
+}
+
+/* SUCCESS / ERROR NOTIFICATIONS */
+
+@keyframes adminProfileMessageIn {
+  from {
+    opacity: 0;
+    transform: translateY(-7px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.profile-message {
+  animation: adminProfileMessageIn 0.3s ease-out both;
+}
+
+/* MOBILE ANIMATION ADJUSTMENTS */
+
+@media (max-width: 720px) {
+  .profile-sidebar {
+    animation-name: adminProfileCardIn;
+  }
+
+  .profile-content > .profile-card {
+    animation-duration: 0.45s;
+  }
+}
+
+/* ACCESSIBILITY: REDUCED MOTION */
+
+@media (prefers-reduced-motion: reduce) {
+  .profile-page,
+  .profile-heading,
+  .profile-sidebar,
+  .profile-avatar,
+  .profile-content > .profile-card,
+  .info-field input,
+  .address-box textarea,
+  .profile-message {
+    animation: none !important;
+  }
+
+  .profile-avatar,
+  .profile-role,
+  .card-icon,
+  .profile-menu-item,
+  .edit-button,
+  .save-button,
+  .cancel-button,
+  .quick-access-item,
+  .quick-access-icon,
+  .quick-access-link i {
+    transition: none !important;
+  }
+
+  .profile-avatar:hover,
+  .profile-role:hover,
+  .profile-card:hover .card-icon,
+  .profile-menu-item:hover,
+  .quick-access-item:hover,
+  .quick-access-item:hover .quick-access-icon,
+  .quick-access-item:hover .quick-access-link i {
+    transform: none !important;
+  }
+}

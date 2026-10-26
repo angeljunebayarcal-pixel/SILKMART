@@ -1,20 +1,51 @@
 
 import { CommonModule } from '@angular/common';
-import { Component } from '@angular/core';
+import {
+  ChangeDetectorRef,
+  Component,
+  Injector,
+  NgZone,
+  OnDestroy,
+  OnInit,
+  runInInjectionContext
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
+import {
+  Firestore,
+  collection,
+  collectionData,
+  query,
+  where
+} from '@angular/fire/firestore';
+import { Subscription } from 'rxjs';
 
 import { AuthServ } from '../../../services/auth.serv';
 import { UserServ } from '../../../services/user.serv';
 import { OrderServ } from '../../../services/order.serv';
 
+interface ProductColorStock {
+  name: string;
+  quantity: number;
+}
+
 interface Product {
+  id: string;
   name: string;
   category: string;
+  description: string;
+  imageUrl: string;
   price: number;
   stock: number;
   featured: boolean;
   artClass: string;
+  colorStocks: ProductColorStock[];
+}
+
+interface ProductColor {
+  name: string;
+  hex: string;
+  quantity: number;
 }
 
 type PendingAction =
@@ -28,36 +59,45 @@ type PendingAction =
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './shopsilk.html',
-  styleUrl: './shopsilk.scss',
+  styleUrl: './shopsilk.scss'
 })
-export class Shopsilk {
+export class Shopsilk implements OnInit, OnDestroy {
+  products: Product[] = [];
+  loadingProducts = true;
+  productsError = '';
 
-  // =========================================
-  // SEARCH / FILTER / SORT
-  // =========================================
+  private productsSubscription: Subscription | null = null;
 
   searchTerm = '';
   selectedCategory = 'All pieces';
   sortOption = 'featured';
 
-  // =========================================
-  // PRODUCT POPUP
-  // =========================================
-
   selectedProduct: Product | null = null;
   selectedQuantity = 1;
 
-  // =========================================
-  // ADD TO BAG CONFIRMATION
-  // =========================================
+  private readonly colorPalette = [
+    { name: 'White', hex: '#ffffff' },
+    { name: 'Black', hex: '#242424' },
+    { name: 'Red', hex: '#cc4e4e' },
+    { name: 'Pink', hex: '#ed9eb9' },
+    { name: 'Orange', hex: '#e99b56' },
+    { name: 'Yellow', hex: '#eacb59' },
+    { name: 'Green', hex: '#679e75' },
+    { name: 'Blue', hex: '#679acf' },
+    { name: 'Purple', hex: '#9875b5' },
+    { name: 'Brown', hex: '#98765d' },
+    { name: 'Beige', hex: '#d6bfa1' },
+    { name: 'Gray', hex: '#a5a8a8' }
+  ];
+
+  selectedColors: string[] = [];
+  confirmationColors: string[] = [];
+  confirmationOrderColors: string[] = [];
+  pendingColors: string[] = [];
 
   showAddBagConfirmation = false;
   confirmationProduct: Product | null = null;
   confirmationQuantity = 1;
-
-  // =========================================
-  // ORDER NOW CONFIRMATION
-  // =========================================
 
   showOrderConfirmation = false;
   confirmationOrderProduct: Product | null = null;
@@ -65,23 +105,12 @@ export class Shopsilk {
 
   preferredDeliveryDate = '';
   minDeliveryDate = this.getEarliestDeliveryDate();
-
-  // Prevent duplicate Firebase purchases.
   orderSaving = false;
-
-  // =========================================
-  // ADD SUCCESS POPUP
-  // =========================================
 
   addSuccessPopup = false;
   addedProduct: Product | null = null;
 
-  // =========================================
-  // REGISTER
-  // =========================================
-
   showRegisterPopup = false;
-
   fullName = '';
   registerEmail = '';
   mobileNumber = '';
@@ -91,13 +120,8 @@ export class Shopsilk {
 
   showRegisterPassword = false;
   showConfirmPassword = false;
-
   registerError = '';
   registerLoading = false;
-
-  // =========================================
-  // PENDING ACTION
-  // =========================================
 
   pendingProduct: Product | null = null;
   pendingQuantity = 1;
@@ -107,75 +131,174 @@ export class Shopsilk {
     private router: Router,
     private authService: AuthServ,
     private userService: UserServ,
-    private orderService: OrderServ
+    private orderService: OrderServ,
+    private firestore: Firestore,
+    private injector: Injector,
+    private zone: NgZone,
+    private cdr: ChangeDetectorRef
   ) {}
 
-  // =========================================
-  // PRODUCTS
-  // =========================================
+  ngOnInit(): void {
+    this.loadPublishedProducts();
+  }
 
-  products: Product[] = [
-    {
-      name: 'Luzon Mist Silk Scarf',
-      category: 'SCARVES',
-      price: 1450,
-      stock: 24,
-      featured: true,
-      artClass: 'scarf-art'
-    },
-    {
-      name: 'Mulberry Grove Silk Sleep Set',
-      category: 'HOME & SLEEP',
-      price: 3200,
-      stock: 11,
-      featured: true,
-      artClass: 'sleep-art'
-    },
-    {
-      name: 'Cocoon White Silk Ribbon',
-      category: 'RIBBONS & TRIM',
-      price: 680,
-      stock: 38,
-      featured: false,
-      artClass: 'ribbon-art'
-    },
-    {
-      name: 'Imelda Heritage Silk Throw',
-      category: 'HOME & SLEEP',
-      price: 4850,
-      stock: 7,
-      featured: false,
-      artClass: 'throw-art'
-    }
-  ];
+  ngOnDestroy(): void {
+    this.productsSubscription?.unsubscribe();
+  }
 
   // =========================================
-  // FILTERED PRODUCTS
+  // FIRESTORE PRODUCTS
   // =========================================
+
+  loadPublishedProducts(): void {
+    this.productsSubscription?.unsubscribe();
+
+    this.loadingProducts = true;
+    this.productsError = '';
+
+    this.productsSubscription = runInInjectionContext(
+      this.injector,
+      () => {
+        const productsRef = collection(
+          this.firestore,
+          'products'
+        );
+
+        const publishedProductsQuery = query(
+          productsRef,
+          where('published', '==', true),
+          where('stock', '>', 0)
+        );
+
+        return collectionData(
+          publishedProductsQuery,
+          { idField: 'id' }
+        ).subscribe({
+          next: (records: any[]) => this.zone.run(() => {
+            this.products = records.map(record => {
+              const colorStocks: ProductColorStock[] =
+                Array.isArray(record.colorStocks)
+                  ? record.colorStocks
+                      .filter((color: any) => {
+                        const quantity = Number(color?.quantity);
+
+                        return (
+                          typeof color?.name === 'string' &&
+                          color.name.trim().length > 0 &&
+                          Number.isInteger(quantity) &&
+                          quantity >= 0
+                        );
+                      })
+                      .map((color: any) => ({
+                        name: String(color.name),
+                        quantity: Number(color.quantity)
+                      }))
+                  : [];
+
+              return {
+                id: String(record.id || ''),
+                name: String(record.name || ''),
+                category: String(record.category || 'Other'),
+                description: String(record.description || ''),
+                imageUrl: String(record.imageUrl || ''),
+                price: Number(record.price || 0),
+                stock: Number(record.stock || 0),
+                featured: record.featured === true,
+                artClass: '',
+                colorStocks
+              };
+            });
+
+            if (this.selectedProduct) {
+              const selectedId = this.selectedProduct.id;
+
+              this.selectedProduct =
+                this.products.find(
+                  product => product.id === selectedId
+                ) || null;
+
+              if (this.selectedProduct) {
+                this.selectedColors =
+                  this.validSelectedColors(
+                    this.selectedProduct,
+                    this.selectedColors
+                  );
+
+                this.normalizeQuantity();
+              } else {
+                this.selectedColors = [];
+              }
+            }
+
+            if (
+              this.selectedCategory !== 'All pieces' &&
+              !this.categories.includes(this.selectedCategory)
+            ) {
+              this.selectedCategory = 'All pieces';
+            }
+
+            this.loadingProducts = false;
+            this.productsError = '';
+
+            this.cdr.detectChanges();
+          }),
+
+          error: (error: any) => this.zone.run(() => {
+            console.error('ShopSilk products error:', error);
+
+            if (error?.code === 'permission-denied') {
+              this.productsError =
+                'Firebase denied access to the product catalog.';
+            } else if (error?.code === 'failed-precondition') {
+              this.productsError =
+                'Firestore requires the published products index.';
+            } else {
+              this.productsError =
+                'Unable to load products. Please try again.';
+            }
+
+            this.loadingProducts = false;
+            this.cdr.detectChanges();
+          })
+        });
+      }
+    );
+  }
+
+  get categories(): string[] {
+    return [
+      'All pieces',
+      ...Array.from(
+        new Set(
+          this.products.map(product => product.category)
+        )
+      )
+    ];
+  }
+
+  getStockUnit(product: Product): string {
+    if (product.category === 'Silkworms') return 'worms';
+    if (product.category === 'Cocoons') return 'cocoons';
+
+    return 'pcs';
+  }
 
   get filteredProducts(): Product[] {
     let result = [...this.products];
 
     if (this.selectedCategory !== 'All pieces') {
-      const categoryMap: { [key: string]: string } = {
-        'Scarves': 'SCARVES',
-        'Home & sleep': 'HOME & SLEEP',
-        'Ribbons & trim': 'RIBBONS & TRIM'
-      };
-
       result = result.filter(
-        product =>
-          product.category === categoryMap[this.selectedCategory]
+        product => product.category === this.selectedCategory
       );
     }
 
-    if (this.searchTerm.trim()) {
-      const search = this.searchTerm.toLowerCase().trim();
+    const search = this.searchTerm.trim().toLowerCase();
 
-      result = result.filter(
-        product =>
-          product.name.toLowerCase().includes(search) ||
-          product.category.toLowerCase().includes(search)
+    if (search) {
+      result = result.filter(product =>
+        product.name.toLowerCase().includes(search) ||
+        product.category.toLowerCase().includes(search) ||
+        product.description.toLowerCase().includes(search)
       );
     }
 
@@ -192,21 +315,15 @@ export class Shopsilk {
         result.sort((a, b) => a.name.localeCompare(b.name));
         break;
 
-      case 'featured':
       default:
         result.sort(
-          (a, b) =>
-            Number(b.featured) - Number(a.featured)
+          (a, b) => Number(b.featured) - Number(a.featured)
         );
         break;
     }
 
     return result;
   }
-
-  // =========================================
-  // CATEGORY
-  // =========================================
 
   selectCategory(category: string): void {
     this.selectedCategory = category;
@@ -219,39 +336,234 @@ export class Shopsilk {
   openProduct(product: Product): void {
     this.selectedProduct = product;
     this.selectedQuantity = 1;
+    this.selectedColors = [];
   }
 
   closeProduct(): void {
     this.selectedProduct = null;
     this.selectedQuantity = 1;
+    this.selectedColors = [];
+  }
+
+  // =========================================
+  // ADMIN/STAFF COLOR INVENTORY
+  // =========================================
+
+  canChooseColors(product: Product | null): boolean {
+    if (!product) return false;
+
+    const category = product.category.trim().toLowerCase();
+
+    return (
+      category !== 'silkworms' &&
+      category !== 'cocoons' &&
+      product.colorStocks.length > 0
+    );
+  }
+
+  get availableColors(): ProductColor[] {
+    if (!this.selectedProduct) return [];
+
+    if (!this.canChooseColors(this.selectedProduct)) {
+      return [];
+    }
+
+    return this.selectedProduct.colorStocks
+      .filter(color => color.quantity > 0)
+      .map(color => {
+        const paletteColor = this.colorPalette.find(
+          item => item.name === color.name
+        );
+
+        return {
+          name: color.name,
+          hex: paletteColor?.hex || '#a5a8a8',
+          quantity: color.quantity
+        };
+      });
+  }
+
+  getColorQuantity(
+    product: Product,
+    colorName: string
+  ): number {
+    const color = product.colorStocks.find(
+      item => item.name === colorName
+    );
+
+    return color?.quantity || 0;
+  }
+
+  getSelectedColorStock(): number {
+    if (!this.selectedProduct) return 0;
+
+    if (!this.canChooseColors(this.selectedProduct)) {
+      return this.selectedProduct.stock;
+    }
+
+    const selectedColor = this.selectedColors[0];
+
+    if (!selectedColor) return 0;
+
+    return this.getColorQuantity(
+      this.selectedProduct,
+      selectedColor
+    );
+  }
+
+  get maximumQuantity(): number {
+    if (!this.selectedProduct) return 0;
+
+    return Math.min(
+      this.selectedProduct.stock,
+      this.getSelectedColorStock()
+    );
+  }
+
+  private validSelectedColors(
+    product: Product,
+    colors: string[]
+  ): string[] {
+    if (!this.canChooseColors(product)) return [];
+
+    const selectedName = colors[0];
+
+    if (!selectedName) return [];
+
+    return this.getColorQuantity(product, selectedName) > 0
+      ? [selectedName]
+      : [];
+  }
+
+  private isValidSelection(
+    product: Product,
+    quantity: number,
+    colors: string[]
+  ): boolean {
+    if (
+      !Number.isInteger(quantity) ||
+      quantity < 1 ||
+      quantity > product.stock
+    ) {
+      return false;
+    }
+
+    if (!this.canChooseColors(product)) {
+      return true;
+    }
+
+    if (colors.length !== 1) {
+      return false;
+    }
+
+    return (
+      this.getColorQuantity(product, colors[0]) >= quantity
+    );
+  }
+
+  isColorSelected(color: string): boolean {
+    return this.selectedColors.includes(color);
+  }
+
+  toggleColor(color: string): void {
+    if (!this.selectedProduct) return;
+
+    if (!this.canChooseColors(this.selectedProduct)) return;
+
+    const available = this.getColorQuantity(
+      this.selectedProduct,
+      color
+    );
+
+    if (available <= 0) return;
+
+    if (this.selectedColors.includes(color)) {
+      this.selectedColors = [];
+    } else {
+      this.selectedColors = [color];
+    }
+
+    this.selectedQuantity = 1;
+  }
+
+  clearColors(): void {
+    this.selectedColors = [];
+    this.selectedQuantity = 1;
+  }
+
+  get selectedColorsText(): string {
+    return this.selectedColors.join(', ');
+  }
+
+  // =========================================
+  // QUANTITY CONTROL
+  // =========================================
+
+  normalizeQuantity(): void {
+    if (!this.selectedProduct) return;
+
+    const maximum = this.maximumQuantity;
+
+    if (maximum < 1) {
+      this.selectedQuantity = 1;
+      return;
+    }
+
+    const quantity = Number(this.selectedQuantity);
+
+    if (!Number.isFinite(quantity) || quantity < 1) {
+      this.selectedQuantity = 1;
+      return;
+    }
+
+    this.selectedQuantity = Math.min(
+      Math.floor(quantity),
+      maximum
+    );
+  }
+
+  get quantityValid(): boolean {
+    if (!this.selectedProduct) return false;
+
+    return this.isValidSelection(
+      this.selectedProduct,
+      Number(this.selectedQuantity),
+      this.selectedColors
+    );
   }
 
   increaseQuantity(): void {
     if (!this.selectedProduct) return;
 
-    if (this.selectedQuantity < this.selectedProduct.stock) {
+    this.normalizeQuantity();
+
+    if (this.selectedQuantity < this.maximumQuantity) {
       this.selectedQuantity++;
     }
   }
 
   decreaseQuantity(): void {
+    this.normalizeQuantity();
+
     if (this.selectedQuantity > 1) {
       this.selectedQuantity--;
     }
   }
 
   // =========================================
-  // REGISTER POPUP
+  // REGISTRATION
   // =========================================
 
   openRegisterPopup(
     product: Product,
     quantity: number,
-    action: Exclude<PendingAction, null>
+    action: Exclude<PendingAction, null>,
+    colors: string[] = []
   ): void {
     this.pendingProduct = product;
     this.pendingQuantity = quantity;
     this.pendingAction = action;
+    this.pendingColors = [...colors];
 
     this.showRegisterPopup = true;
     this.registerError = '';
@@ -264,13 +576,13 @@ export class Shopsilk {
 
     this.showRegisterPopup = false;
     this.registerError = '';
-
     this.showRegisterPassword = false;
     this.showConfirmPassword = false;
 
     this.pendingProduct = null;
     this.pendingQuantity = 1;
     this.pendingAction = null;
+    this.pendingColors = [];
   }
 
   toggleRegisterPassword(): void {
@@ -280,10 +592,6 @@ export class Shopsilk {
   toggleConfirmPassword(): void {
     this.showConfirmPassword = !this.showConfirmPassword;
   }
-
-  // =========================================
-  // CREATE CUSTOMER ACCOUNT
-  // =========================================
 
   async createAccount(): Promise<void> {
     if (this.registerLoading) return;
@@ -359,12 +667,13 @@ export class Shopsilk {
 
         case 'auth/network-request-failed':
           this.registerError =
-            'Network error. Please check your internet connection.';
+            'Please check your internet connection.';
           break;
 
         case 'permission-denied':
+        case 'firestore/permission-denied':
           this.registerError =
-            'Firebase denied access to save your profile.';
+            'Firebase denied permission to save your profile.';
           break;
 
         default:
@@ -376,10 +685,6 @@ export class Shopsilk {
     }
   }
 
-  // =========================================
-  // CLEAR REGISTER FORM
-  // =========================================
-
   clearRegisterForm(): void {
     this.fullName = '';
     this.registerEmail = '';
@@ -387,59 +692,53 @@ export class Shopsilk {
     this.completeAddress = '';
     this.registerPassword = '';
     this.confirmPassword = '';
-
     this.showRegisterPassword = false;
     this.showConfirmPassword = false;
   }
 
-  // =========================================
-  // CONTINUE PENDING ACTION
-  // =========================================
-
   continuePendingOrder(): void {
-    if (!this.pendingProduct || !this.pendingAction) {
+    if (!this.pendingProduct || !this.pendingAction) return;
+
+    const latestProduct = this.products.find(
+      product => product.id === this.pendingProduct?.id
+    );
+
+    const product = latestProduct || this.pendingProduct;
+    const quantity = this.pendingQuantity;
+    const action = this.pendingAction;
+    const colors = [...this.pendingColors];
+
+    this.pendingProduct = null;
+    this.pendingQuantity = 1;
+    this.pendingAction = null;
+    this.pendingColors = [];
+
+    if (!this.isValidSelection(product, quantity, colors)) {
+      alert(
+        'The selected color or quantity is no longer available.'
+      );
       return;
     }
 
-    const product = this.pendingProduct;
-    const quantity = this.pendingQuantity;
-    const action = this.pendingAction;
-
     if (action === 'quick-add' || action === 'order-now') {
-      this.openOrderConfirmation(product, quantity);
+      this.openOrderConfirmation(product, quantity, colors);
     }
 
     if (action === 'add-bag') {
       this.confirmationProduct = product;
       this.confirmationQuantity = quantity;
+      this.confirmationColors = colors;
       this.showAddBagConfirmation = true;
     }
-
-    this.pendingProduct = null;
-    this.pendingQuantity = 1;
-    this.pendingAction = null;
   }
 
   // =========================================
-  // PRODUCT CARD QUICK BUTTON
+  // PRODUCT CARD
   // =========================================
 
   addToCart(product: Product): void {
-    const user = this.authService.currentUser;
-
-    if (!user) {
-      this.openRegisterPopup(product, 1, 'quick-add');
-      return;
-    }
-
-    // Preserve original behavior:
-    // This quick button opens Order Now.
-    this.openOrderConfirmation(product, 1);
+    this.openProduct(product);
   }
-
-  // =========================================
-  // ADD SUCCESS POPUP
-  // =========================================
 
   closeAddSuccessPopup(): void {
     this.addSuccessPopup = false;
@@ -458,19 +757,24 @@ export class Shopsilk {
   addSelectedProduct(): void {
     if (!this.selectedProduct) return;
 
-    const user = this.authService.currentUser;
+    this.normalizeQuantity();
 
-    if (!user) {
+    if (!this.quantityValid) return;
+
+    if (!this.authService.currentUser) {
       this.openRegisterPopup(
         this.selectedProduct,
         this.selectedQuantity,
-        'add-bag'
+        'add-bag',
+        this.selectedColors
       );
       return;
     }
 
     this.confirmationProduct = this.selectedProduct;
     this.confirmationQuantity = this.selectedQuantity;
+    this.confirmationColors = [...this.selectedColors];
+
     this.showAddBagConfirmation = true;
   }
 
@@ -478,25 +782,29 @@ export class Shopsilk {
     this.showAddBagConfirmation = false;
     this.confirmationProduct = null;
     this.confirmationQuantity = 1;
+    this.confirmationColors = [];
   }
-
-  // =========================================
-  // SAVE TO CART (NOT A PURCHASE)
-  // =========================================
 
   saveProductToBag(
     product: Product,
-    quantity: number
+    quantity: number,
+    colors: string[] = []
   ): boolean {
     const user = this.authService.currentUser;
 
     if (!user) return false;
 
-    if (
-      !Number.isInteger(quantity) ||
-      quantity < 1 ||
-      quantity > product.stock
-    ) {
+    const latestProduct = this.products.find(
+      item => item.id === product.id
+    );
+
+    if (!latestProduct) return false;
+
+    if (!this.isValidSelection(
+      latestProduct,
+      quantity,
+      colors
+    )) {
       return false;
     }
 
@@ -509,36 +817,62 @@ export class Shopsilk {
         cart = Array.isArray(parsed) ? parsed : [];
       }
 
-      const existingItem = cart.find(
-        item =>
-          item.userId === user.uid &&
-          item.name === product.name
-      );
+      const normalizedColors =
+        this.canChooseColors(latestProduct)
+          ? [...colors]
+          : [];
+
+      const existingItem = cart.find(item => {
+        if (item.userId !== user.uid) return false;
+
+        const sameProduct = item.productId
+          ? item.productId === latestProduct.id
+          : item.name === latestProduct.name;
+
+        const previousColors = Array.isArray(item.colors)
+          ? [...item.colors].sort()
+          : [];
+
+        return sameProduct &&
+          JSON.stringify(previousColors) ===
+          JSON.stringify([...normalizedColors].sort());
+      });
 
       if (existingItem) {
         const updatedQuantity =
           Number(existingItem.quantity) + quantity;
 
-        if (
-          !Number.isFinite(updatedQuantity) ||
-          updatedQuantity > product.stock
-        ) {
+        if (!this.isValidSelection(
+          latestProduct,
+          updatedQuantity,
+          normalizedColors
+        )) {
           return false;
         }
 
         existingItem.quantity = updatedQuantity;
-        existingItem.stock = product.stock;
+        existingItem.stock = latestProduct.stock;
+        existingItem.productId = latestProduct.id;
+        existingItem.imageUrl = latestProduct.imageUrl;
+        existingItem.image = latestProduct.imageUrl;
+        existingItem.description = latestProduct.description;
+        existingItem.colors = normalizedColors;
 
       } else {
         cart.push({
           id: Date.now(),
           userId: user.uid,
-          name: product.name,
-          category: product.category,
-          price: product.price,
+          productId: latestProduct.id,
+          name: latestProduct.name,
+          category: latestProduct.category,
+          price: latestProduct.price,
           quantity,
-          stock: product.stock,
-          artClass: product.artClass,
+          stock: latestProduct.stock,
+          imageUrl: latestProduct.imageUrl,
+          image: latestProduct.imageUrl,
+          description: latestProduct.description,
+          artClass: latestProduct.artClass,
+          colors: normalizedColors,
           selected: true
         });
       }
@@ -561,12 +895,13 @@ export class Shopsilk {
 
     const saved = this.saveProductToBag(
       this.confirmationProduct,
-      this.confirmationQuantity
+      this.confirmationQuantity,
+      this.confirmationColors
     );
 
     if (!saved) {
       alert(
-        'Unable to add the selected quantity. Please check available stock.'
+        'Unable to add this quantity. Please check the selected color and available stock.'
       );
       return;
     }
@@ -584,43 +919,64 @@ export class Shopsilk {
   orderSelectedProduct(): void {
     if (!this.selectedProduct) return;
 
-    const user = this.authService.currentUser;
+    this.normalizeQuantity();
 
-    if (!user) {
+    if (!this.quantityValid) return;
+
+    if (!this.authService.currentUser) {
       this.openRegisterPopup(
         this.selectedProduct,
         this.selectedQuantity,
-        'order-now'
+        'order-now',
+        this.selectedColors
       );
       return;
     }
 
     this.openOrderConfirmation(
       this.selectedProduct,
-      this.selectedQuantity
+      this.selectedQuantity,
+      this.selectedColors
     );
   }
 
-  // =========================================
-  // OPEN ORDER CONFIRMATION
-  // =========================================
-
   openOrderConfirmation(
     product: Product,
-    quantity: number
+    quantity: number,
+    colors: string[] = []
   ): void {
     if (this.orderSaving) return;
 
-    this.confirmationOrderProduct = product;
+    const latestProduct = this.products.find(
+      item => item.id === product.id
+    );
+
+    if (
+      !latestProduct ||
+      !this.isValidSelection(
+        latestProduct,
+        quantity,
+        colors
+      )
+    ) {
+      alert(
+        'The selected color or quantity is no longer available.'
+      );
+      return;
+    }
+
+    this.confirmationOrderProduct = latestProduct;
     this.confirmationOrderQuantity = quantity;
+
+    this.confirmationOrderColors =
+      this.canChooseColors(latestProduct)
+        ? [...colors]
+        : [];
+
     this.preferredDeliveryDate = '';
     this.minDeliveryDate = this.getEarliestDeliveryDate();
     this.showOrderConfirmation = true;
   }
-
-  // =========================================
-  // CLOSE ORDER CONFIRMATION
-  // =========================================
 
   closeOrderConfirmation(): void {
     if (this.orderSaving) return;
@@ -628,16 +984,12 @@ export class Shopsilk {
     this.showOrderConfirmation = false;
     this.confirmationOrderProduct = null;
     this.confirmationOrderQuantity = 1;
+    this.confirmationOrderColors = [];
     this.preferredDeliveryDate = '';
   }
 
-  // =========================================
-  // MINIMUM DELIVERY DATE
-  // =========================================
-
   getEarliestDeliveryDate(): string {
     const date = new Date();
-
     date.setDate(date.getDate() + 1);
 
     const year = date.getFullYear();
@@ -647,12 +999,11 @@ export class Shopsilk {
     return `${year}-${month}-${day}`;
   }
 
-  // =========================================
-  // CONFIRM ORDER NOW -> FIREBASE
-  // =========================================
-
   async confirmOrderNow(): Promise<void> {
-    if (this.orderSaving || !this.confirmationOrderProduct) {
+    if (
+      this.orderSaving ||
+      !this.confirmationOrderProduct
+    ) {
       return;
     }
 
@@ -669,23 +1020,27 @@ export class Shopsilk {
 
     const product = this.confirmationOrderProduct;
     const quantity = this.confirmationOrderQuantity;
-    const date = this.preferredDeliveryDate;
+    const preferredDeliveryDate = this.preferredDeliveryDate;
+    const colors = [...this.confirmationOrderColors];
 
     this.orderSaving = true;
 
     try {
-      await this.saveOrder(product, quantity, date);
+      await this.saveOrder(
+        product,
+        quantity,
+        preferredDeliveryDate,
+        colors
+      );
 
-      // Close only after Firestore confirms the save.
       this.showOrderConfirmation = false;
       this.confirmationOrderProduct = null;
       this.confirmationOrderQuantity = 1;
+      this.confirmationOrderColors = [];
       this.preferredDeliveryDate = '';
 
       this.closeProduct();
 
-      // Customer Orders will be connected to
-      // Firebase in the next step.
       await this.router.navigate(['/home-cust/order']);
 
     } catch (error: any) {
@@ -697,12 +1052,12 @@ export class Shopsilk {
 
       if (error?.code === 'permission-denied') {
         message =
-          'Firebase denied the order. Check your Firestore rules and customer login.';
+          'Firebase denied the order. Check your Firestore rules.';
       }
 
       if (error?.code === 'unavailable') {
         message =
-          'Firebase is currently unavailable. Please check your connection.';
+          'Firebase is unavailable. Check your internet connection.';
       }
 
       alert(message);
@@ -712,56 +1067,56 @@ export class Shopsilk {
     }
   }
 
-  // =========================================
-  // SAVE PURCHASE TO FIRESTORE
-  // =========================================
-
   async saveOrder(
     product: Product,
     quantity: number,
-    preferredDeliveryDate: string
+    preferredDeliveryDate: string,
+    colors: string[] = []
   ): Promise<string> {
-
-    const currentUser = this.authService.currentUser;
-
-    if (!currentUser) {
-      throw new Error('Please sign in before placing an order.');
-    }
-
-    if (
-      !Number.isInteger(quantity) ||
-      quantity < 1 ||
-      quantity > product.stock
-    ) {
+    if (!this.authService.currentUser) {
       throw new Error(
-        'Invalid quantity or insufficient available stock.'
+        'Please sign in before placing an order.'
       );
     }
 
-    // This uses the shared Firestore OrderServ.
-    // OrderServ obtains the customer's name,
-    // email, phone, and address from their
-    // Firebase users/{uid} profile.
+    const latestProduct = this.products.find(
+      item => item.id === product.id
+    );
+
+    if (
+      !latestProduct ||
+      !this.isValidSelection(
+        latestProduct,
+        quantity,
+        colors
+      )
+    ) {
+      throw new Error(
+        'The selected color or quantity is no longer available.'
+      );
+    }
+
+    const notes =
+      this.canChooseColors(latestProduct) && colors.length
+        ? `Selected product color: ${colors[0]}.`
+        : '';
+
     return await this.orderService.createOrder({
       items: [
         {
-          name: product.name,
-          category: product.category,
-          price: product.price,
+          name: latestProduct.name,
+          category: latestProduct.category,
+          price: latestProduct.price,
           quantity,
-          image: '',
-          artClass: product.artClass
+          image: latestProduct.imageUrl,
+          artClass: latestProduct.artClass
         }
       ],
       preferredDeliveryDate,
       deliveryFee: 0,
-      notes: ''
+      notes
     });
   }
-
-  // =========================================
-  // FIND YOUR PIECE
-  // =========================================
 
   scrollToCollection(): void {
     window.scrollTo({
@@ -769,10 +1124,6 @@ export class Shopsilk {
       behavior: 'smooth'
     });
   }
-
-  // =========================================
-  // TRACK ORDER
-  // =========================================
 
   trackOrder(): void {
     this.router.navigate(['/home-cust/order']);

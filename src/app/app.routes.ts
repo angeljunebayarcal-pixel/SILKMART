@@ -11,6 +11,8 @@ import { Inventory } from './component/pages-adm/inventory/inventory';
 import { CustOrder } from './component/pages-adm/cust-order/cust-order';
 import { Products } from './component/pages-adm/products/products';
 import { ProfileAdm } from './component/pages-adm/profile-adm/profile-adm';
+import { Delivery } from './component/pages-adm/delivery/delivery';
+import { NotfAdm } from './component/pages-adm/notf-adm/notf-adm';
 
 export const routes: Routes = [
   { path: '', component: Login },
@@ -39,6 +41,8 @@ export const routes: Routes = [
       { path: 'cust-order', component: CustOrder },
       { path: 'products', component: Products },
       { path: 'profile-adm', component: ProfileAdm },
+      { path: 'delivery', component: Delivery },
+      { path: 'notf-adm', component: NotfAdm },
 
 
 

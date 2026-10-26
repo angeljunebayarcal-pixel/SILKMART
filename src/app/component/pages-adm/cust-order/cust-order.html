@@ -5,13 +5,14 @@
   <header class="orders-header">
     <span class="eyebrow">ORDER MANAGEMENT</span>
     <h1>Customer Orders</h1>
+
     <p>
       Review customer purchases, confirm orders,
       and coordinate delivery schedules.
     </p>
   </header>
 
-  <!-- SUMMARY -->
+  <!-- SUMMARY CARDS -->
   <section class="orders-summary">
 
     <div class="summary-card">
@@ -55,13 +56,14 @@
   <!-- MAIN LAYOUT -->
   <div class="orders-layout">
 
-    <!-- LEFT: CUSTOMER ORDERS -->
+    <!-- ORDER LIST -->
     <section class="orders-main">
 
       <div class="orders-toolbar">
 
         <label class="search-field">
           <span>⌕</span>
+
           <input
             type="search"
             placeholder="Search customer, order ID, or product..."
@@ -85,7 +87,7 @@
 
       </div>
 
-      <!-- RESULTS -->
+      <!-- RESULT COUNT -->
       <div class="result-heading">
         <span>
           {{ filteredOrders.length }} orders found
@@ -99,22 +101,25 @@
         </button>
       </div>
 
-      <!-- FIREBASE LOADING -->
+      <!-- LOADING -->
       <div
         class="orders-empty"
         *ngIf="loadingOrders">
+
         <div class="empty-icon">◷</div>
         <h3>Loading customer orders...</h3>
         <p>Getting the latest purchases from Firebase.</p>
       </div>
 
-      <!-- FIREBASE ERROR -->
+      <!-- ERROR -->
       <div
         class="orders-empty"
         *ngIf="!loadingOrders && orderError">
+
         <div class="empty-icon">!</div>
         <h3>Unable to load orders</h3>
         <p>{{ orderError }}</p>
+
         <button type="button" (click)="loadOrders()">
           Try Again
         </button>
@@ -136,29 +141,28 @@
             class="order-card-content"
             (click)="selectOrder(order)">
 
+            <!-- PRODUCT IMAGE -->
             <div class="order-product-image">
 
               <img
                 *ngIf="getFirstItem(order).image"
                 [src]="getFirstItem(order).image"
-                alt="Ordered product">
+                [alt]="getFirstItem(order).name">
 
-              <span
-                *ngIf="!getFirstItem(order).image">
+              <span *ngIf="!getFirstItem(order).image">
                 ▧
               </span>
 
             </div>
 
+            <!-- CUSTOMER -->
             <div class="order-customer-info">
 
               <strong class="order-number">
                 #{{ order.id }}
               </strong>
 
-              <h3>
-                {{ order.customer.name }}
-              </h3>
+              <h3>{{ order.customer.name }}</h3>
 
               <span class="customer-address">
                 ⌖ {{
@@ -169,16 +173,30 @@
 
             </div>
 
+            <!-- PRODUCT INFORMATION -->
             <div class="order-product-info">
 
-              <h3>
-                {{ getFirstItem(order).name }}
-              </h3>
+              <h3>{{ getFirstItem(order).name }}</h3>
 
               <p *ngIf="order.items.length > 1">
-                + {{ order.items.length - 1 }}
-                more products
+                + {{ order.items.length - 1 }} more products
               </p>
+
+              <!-- CUSTOMER COLOR SELECTION -->
+              <div
+                class="customer-color-preview"
+                *ngIf="order.notes">
+
+                <span class="customer-color-preview-icon">
+                  <i class="pi pi-palette"></i>
+                </span>
+
+                <div>
+                  <strong>Customer Preferences</strong>
+                  <span>{{ order.notes }}</span>
+                </div>
+
+              </div>
 
               <div class="order-mini-details">
 
@@ -238,7 +256,6 @@
                   !!updatingOrderId
                 "
                 (click)="confirmOrder(order)">
-
                 ✓ Confirm
               </button>
 
@@ -250,27 +267,22 @@
                   !!updatingOrderId
                 "
                 (click)="rejectOrder(order)">
-
                 × Reject
               </button>
 
             </div>
 
-            <!-- VIEW ORDER -->
             <button
               type="button"
               class="view-order-button"
               (click)="openOrderDetails(order)">
-
               ▤ View Order
             </button>
 
-            <!-- MESSAGE CUSTOMER -->
             <button
               type="button"
               class="message-link"
               (click)="openChat(order)">
-
               ▤ Message Customer
             </button>
 
@@ -278,7 +290,7 @@
 
         </article>
 
-        <!-- VIEW ALL / SHOW LESS -->
+        <!-- VIEW ALL -->
         <div
           class="view-all-container"
           *ngIf="filteredOrders.length > 2">
@@ -337,17 +349,15 @@
               statusFilter = 'All';
               showAllOrders = false
             ">
-
             Clear Filters
           </button>
 
         </div>
 
       </div>
-
     </section>
 
-    <!-- RIGHT: CUSTOMER PROFILE -->
+    <!-- CUSTOMER PROFILE SIDEBAR -->
     <aside class="orders-sidebar">
 
       <section class="side-card customer-profile-card">
@@ -405,19 +415,29 @@
 
           </div>
 
+          <!-- CUSTOMER PREFERENCES IN SIDEBAR -->
+          <div
+            class="customer-preferences-sidebar"
+            *ngIf="selected.notes">
+
+            <div class="customer-preferences-label">
+              <i class="pi pi-palette"></i>
+              Customer Preferences
+            </div>
+
+            <p>{{ selected.notes }}</p>
+
+          </div>
+
           <div class="customer-stats">
 
             <div>
-              <strong>
-                {{ customerOrderCount }}
-              </strong>
+              <strong>{{ customerOrderCount }}</strong>
               <small>Total Orders</small>
             </div>
 
             <div>
-              <strong>
-                {{ customerConfirmedCount }}
-              </strong>
+              <strong>{{ customerConfirmedCount }}</strong>
               <small>Accepted</small>
             </div>
 
@@ -437,7 +457,6 @@
             type="button"
             class="profile-message-button"
             (click)="openChat()">
-
             ▤ Message Customer
           </button>
 
@@ -464,9 +483,9 @@
 
 </div>
 
-<!-- ======================================
+<!-- =========================================
      ORDER DETAILS MODAL
-     ====================================== -->
+     ========================================= -->
 
 <div
   class="order-detail-backdrop"
@@ -486,6 +505,7 @@
         <span class="modal-eyebrow">
           SILKMART ORDER
         </span>
+
         <h2 id="order-detail-title">
           Order Details
         </h2>
@@ -521,13 +541,12 @@
         <span
           class="status-badge"
           [ngClass]="getStatusClass(detailOrder!.status)">
-
           {{ detailOrder!.status }}
         </span>
 
       </div>
 
-      <!-- PRODUCT LIST -->
+      <!-- ORDERED PRODUCTS -->
       <div class="modal-section">
 
         <h3>Ordered Products</h3>
@@ -541,7 +560,7 @@
             <img
               *ngIf="item.image"
               [src]="item.image"
-              alt="Ordered product">
+              [alt]="item.name">
 
             <span *ngIf="!item.image">
               ▧
@@ -551,9 +570,7 @@
 
           <div class="modal-product-info">
 
-            <strong>
-              {{ item.name }}
-            </strong>
+            <strong>{{ item.name }}</strong>
 
             <small>
               Quantity: {{ item.quantity }}
@@ -580,12 +597,43 @@
 
       </div>
 
-      <!-- CUSTOMER / DELIVERY -->
+      <!-- CUSTOMER SELECTED COLORS -->
+      <div
+        class="modal-section customer-color-detail-section"
+        *ngIf="detailOrder!.notes">
+
+        <div class="customer-color-detail-heading">
+
+          <span class="customer-color-detail-icon">
+            <i class="pi pi-palette"></i>
+          </span>
+
+          <div>
+            <h3>Customer Selected Colors & Preferences</h3>
+
+            <p>
+              Preferences submitted by the customer
+              when placing this order.
+            </p>
+          </div>
+
+        </div>
+
+        <div class="customer-color-detail-content">
+          {{ detailOrder!.notes }}
+        </div>
+
+        <small class="customer-color-detail-note">
+          Please confirm color availability
+          with the customer before fulfillment.
+        </small>
+
+      </div>
+
+      <!-- CUSTOMER AND DELIVERY -->
       <div class="modal-section">
 
-        <h3>
-          Customer & Delivery Information
-        </h3>
+        <h3>Customer &amp; Delivery Information</h3>
 
         <div class="order-info-grid">
 
@@ -660,15 +708,6 @@
 
         <div
           class="customer-notes"
-          *ngIf="detailOrder!.notes">
-
-          <span>Customer Notes</span>
-          <p>{{ detailOrder!.notes }}</p>
-
-        </div>
-
-        <div
-          class="customer-notes"
           *ngIf="detailOrder!.cancelReason">
 
           <span>Cancellation Reason</span>
@@ -678,23 +717,20 @@
 
       </div>
 
-      <!-- PAYMENT BREAKDOWN -->
+      <!-- PAYMENT SUMMARY -->
       <div class="modal-section payment-section">
 
         <h3>Payment Summary</h3>
 
         <div class="payment-row">
-
           <span>Number of Items</span>
 
           <strong>
             {{ getOrderQuantity(detailOrder!) }}
           </strong>
-
         </div>
 
         <div class="payment-row">
-
           <span>Products Subtotal</span>
 
           <strong>
@@ -703,7 +739,6 @@
               currency:'PHP':'symbol':'1.2-2'
             }}
           </strong>
-
         </div>
 
         <div class="payment-row">
@@ -760,21 +795,21 @@
 
         <p class="payment-note">
           Cash on Delivery amounts are recorded
-          in Firebase. Any additional delivery
-          charge must be confirmed separately.
+          in Firebase. Any additional delivery charge
+          must be confirmed separately.
         </p>
 
       </div>
 
     </div>
 
+    <!-- MODAL FOOTER -->
     <div class="order-detail-footer">
 
       <button
         type="button"
         class="contact-from-order"
         (click)="contactFromDetails()">
-
         ▤ Contact Customer
       </button>
 
@@ -782,19 +817,17 @@
         type="button"
         class="close-order-button"
         (click)="closeOrderDetails()">
-
         Close
       </button>
 
     </div>
 
   </section>
-
 </div>
 
-<!-- ======================================
+<!-- =========================================
      REAL-TIME MESSAGE CUSTOMER MODAL
-     ====================================== -->
+     ========================================= -->
 
 <div
   class="chat-backdrop"
@@ -808,6 +841,7 @@
     aria-labelledby="chat-title"
     (click)="$event.stopPropagation()">
 
+    <!-- CHAT HEADER -->
     <div class="chat-header">
 
       <div>
@@ -826,12 +860,12 @@
         aria-label="Close chat"
         [disabled]="chatSending"
         (click)="closeChat()">
-
         ×
       </button>
 
     </div>
 
+    <!-- CHAT RECIPIENT -->
     <div class="chat-recipient">
 
       <div class="chat-avatar">
@@ -867,17 +901,16 @@
 
         <div class="chat-empty-icon">◷</div>
         <h3>Loading conversation...</h3>
+
       </div>
 
-      
-<div
-  class="chat-empty"
-  *ngIf="
-    !chatLoading &&
-    !chatError &&
-    messages.length === 0
-  ">
-
+      <div
+        class="chat-empty"
+        *ngIf="
+          !chatLoading &&
+          !chatError &&
+          messages.length === 0
+        ">
 
         <div class="chat-empty-icon">▤</div>
         <h3>Start a conversation</h3>
@@ -891,7 +924,6 @@
           type="button"
           class="template-button"
           (click)="useDeliveryTemplate()">
-
           Suggest Delivery Reschedule
         </button>
 
@@ -899,15 +931,16 @@
 
       <div
         class="chat-message"
-        *ngFor="let message of messages; trackBy: trackMessage"
+        *ngFor="
+          let message of messages;
+          trackBy: trackMessage
+        "
         [class.chat-outgoing]="message.senderRole === 'staff'"
         [class.chat-incoming]="message.senderRole === 'customer'">
 
         <div class="message-bubble">
 
-          <p>
-            {{ message.text }}
-          </p>
+          <p>{{ message.text }}</p>
 
           <div class="message-meta">
 
@@ -944,7 +977,6 @@
           type="button"
           class="quick-template-link"
           (click)="useDeliveryTemplate()">
-
           + Reschedule Template
         </button>
 
@@ -954,7 +986,6 @@
         class="cart-error"
         *ngIf="chatError"
         role="alert">
-
         {{ chatError }}
       </p>
 
@@ -965,8 +996,7 @@
           placeholder="Type your message..."
           rows="2"
           maxlength="1000"
-          [disabled]="chatSending">
-        </textarea>
+          [disabled]="chatSending"></textarea>
 
         <button
           type="button"
@@ -982,6 +1012,7 @@
               ? 'Sending...'
               : '➤ Send'
           }}
+
         </button>
 
       </div>
@@ -994,5 +1025,4 @@
     </div>
 
   </section>
-
 </div>

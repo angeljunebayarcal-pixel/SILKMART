@@ -5,7 +5,7 @@
   <header class="page-heading">
     <div>
       <div class="eyebrow">INVENTORY MANAGEMENT</div>
-      <h1>Inventory</h1>
+      <h1>Inventory Management</h1>
       <p>Manage silkworm stocks, cocoons, and silk products.</p>
     </div>
 
@@ -1064,16 +1064,111 @@
               required>
           </label>
 
+          
+          <!-- PRODUCT COLOR AVAILABILITY -->
+          <div
+            class="full-field inventory-color-stock"
+            *ngIf="canManageProductColors()">
+
+            <div class="inventory-color-heading">
+              <strong>Available Product Colors</strong>
+              <small>
+                Select the colors currently available
+                and enter the number of pieces for each.
+              </small>
+            </div>
+
+            <div class="inventory-color-options">
+
+              <button
+                type="button"
+                class="inventory-color-choice"
+                *ngFor="let color of availableProductColors"
+                [class.selected]="hasSelectedProductColor(color.name)"
+                [attr.aria-pressed]="hasSelectedProductColor(color.name)"
+                [disabled]="saving"
+                (click)="toggleProductColor(color.name)">
+
+                <span
+                  class="inventory-color-dot"
+                  [style.background-color]="color.hex">
+                </span>
+
+                <span>{{ color.name }}</span>
+
+                <span
+                  class="inventory-color-check"
+                  *ngIf="hasSelectedProductColor(color.name)">
+                  ✓
+                </span>
+
+              </button>
+
+            </div>
+
+            <div
+              class="inventory-color-stock-list"
+              *ngIf="productForm.colorStocks.length > 0">
+
+              <div
+                class="inventory-color-stock-row"
+                *ngFor="let color of productForm.colorStocks">
+
+                <span class="inventory-color-stock-name">
+                  {{ color.name }}
+                </span>
+
+                <label>
+                  <span>Available Pieces</span>
+
+                  <input
+                    type="number"
+                    [name]="'colorStock_' + color.name"
+                    [ngModel]="color.quantity"
+                    (ngModelChange)="setProductColorQuantity(color.name, $event)"
+                    min="1"
+                    step="1"
+                    required>
+                </label>
+
+              </div>
+
+              <div class="inventory-color-stock-total">
+                <span>Total Stock</span>
+
+                <strong>
+                  {{ productColorStockTotal | number }} pcs
+                </strong>
+              </div>
+
+            </div>
+
+            <p class="inventory-color-note">
+              Only these selected colors will be available
+              to customers after the ShopSilk integration.
+            </p>
+
+          </div>
+
+          
           <label>
-            Stock Quantity
+            {{
+              hasProductColorStock()
+                ? 'Total Stock (Calculated)'
+                : 'Stock Quantity'
+            }}
+
             <input
               type="number"
               name="productQuantity"
               [(ngModel)]="productForm.quantity"
+              [readonly]="hasProductColorStock()"
+              [class.inventory-readonly-stock]="hasProductColorStock()"
               min="0"
               step="1"
               required>
           </label>
+
 
           <label class="full-field inventory-check-row">
             <input

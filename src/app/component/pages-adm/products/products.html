@@ -138,13 +138,6 @@
         </div>
 
         <div class="catalog-heading-actions">
-          <button
-            type="button"
-            class="create-listing-btn"
-            (click)="createListing()">
-            <i class="pi pi-list"></i>
-            Create Listing
-          </button>
 
           <button
             type="button"
@@ -300,7 +293,7 @@
             <div class="product-data-cell">
               <span>Stock</span>
               <strong [class.stock-zero]="product.stock <= 0">
-                {{ product.stock }}
+                {{ product.stock | number }}
                 {{ getStockUnit(product) }}
               </strong>
             </div>
@@ -490,7 +483,7 @@
               Stock Quantity
             </span>
             <strong>
-              {{ selected.stock }}
+              {{ selected.stock | number }}
               {{ getStockUnit(selected) }}
             </strong>
           </div>
@@ -511,6 +504,54 @@
             <strong>{{ formatDate(selected.updatedAt) }}</strong>
           </div>
 
+        </div>
+
+        <!-- COLOR-SPECIFIC STOCK DETAILS -->
+        <div
+          class="product-color-details"
+          *ngIf="selected.colorStocks && selected.colorStocks.length > 0">
+
+          <h4>Available Colors</h4>
+
+          <p>
+            Inventory quantity for each available color.
+          </p>
+
+          <div class="product-color-details-list">
+
+            <div
+              class="product-color-details-row"
+              *ngFor="let color of selected.colorStocks">
+
+              <div class="product-color-details-name">
+                <span
+                  class="product-color-dot"
+                  [style.background-color]="
+                    color.name === 'White' ? '#ffffff' :
+                    color.name === 'Black' ? '#242424' :
+                    color.name === 'Red' ? '#cc4e4e' :
+                    color.name === 'Pink' ? '#ed9eb9' :
+                    color.name === 'Orange' ? '#e99b56' :
+                    color.name === 'Yellow' ? '#eacb59' :
+                    color.name === 'Green' ? '#679e75' :
+                    color.name === 'Blue' ? '#679acf' :
+                    color.name === 'Purple' ? '#9875b5' :
+                    color.name === 'Brown' ? '#98765d' :
+                    color.name === 'Beige' ? '#d6bfa1' :
+                    '#a5a8a8'
+                  ">
+                </span>
+
+                <span>{{ color.name }}</span>
+              </div>
+
+              <strong>
+                {{ color.quantity | number }} pcs
+              </strong>
+
+            </div>
+
+          </div>
         </div>
 
         <!-- DESCRIPTION -->
@@ -692,12 +733,102 @@
 
         </div>
 
+        <!-- COLOR-SPECIFIC PRODUCT INVENTORY -->
+        <div
+          class="product-color-stock"
+          *ngIf="canManageProductColors()">
+
+          <div class="product-color-stock-heading">
+            <strong>Available Product Colors</strong>
+            <small>
+              Select the available colors and enter
+              the number of pieces for each color.
+            </small>
+          </div>
+
+          <div class="product-color-options">
+
+            <button
+              type="button"
+              class="product-color-choice"
+              *ngFor="let color of availableProductColors"
+              [class.selected]="hasSelectedProductColor(color.name)"
+              [attr.aria-pressed]="hasSelectedProductColor(color.name)"
+              [disabled]="saving"
+              (click)="toggleProductColor(color.name)">
+
+              <span
+                class="product-color-dot"
+                [style.background-color]="color.hex">
+              </span>
+
+              <span>{{ color.name }}</span>
+
+              <span
+                class="product-color-check"
+                *ngIf="hasSelectedProductColor(color.name)">
+                ✓
+              </span>
+
+            </button>
+
+          </div>
+
+          <!-- QUANTITY FOR EACH SELECTED COLOR -->
+          <div
+            class="product-color-stock-list"
+            *ngIf="productForm.colorStocks.length > 0">
+
+            <div
+              class="product-color-stock-row"
+              *ngFor="let color of productForm.colorStocks">
+
+              <span class="product-color-stock-name">
+                {{ color.name }}
+              </span>
+
+              <label>
+                <span>Available Pieces</span>
+
+                <input
+                  type="number"
+                  [name]="'productColorStock_' + color.name"
+                  [ngModel]="color.quantity"
+                  (ngModelChange)="setProductColorQuantity(color.name, $event)"
+                  [disabled]="saving"
+                  min="1"
+                  step="1"
+                  required>
+              </label>
+
+            </div>
+
+            <div class="product-color-stock-total">
+              <span>Total Color Stock</span>
+              <strong>
+                {{ productColorStockTotal | number }} pcs
+              </strong>
+            </div>
+
+          </div>
+
+          <p class="product-color-note">
+            Only selected colors will be offered when
+            color selection is connected to ShopSilk.
+          </p>
+
+        </div>
+
         <!-- STOCK AND IMAGE -->
         <div class="form-grid">
 
           <div class="form-field">
             <label for="productStock">
-              Available Stock
+              {{
+                hasProductColorStock()
+                  ? 'Total Stock (Calculated)'
+                  : 'Available Stock'
+              }}
               ({{ getStockUnit(productForm) }})
               <span>*</span>
             </label>
@@ -710,6 +841,8 @@
               step="1"
               placeholder="0"
               [(ngModel)]="productForm.stock"
+              [readonly]="hasProductColorStock()"
+              [class.product-readonly-stock]="hasProductColorStock()"
               [disabled]="saving"
               required>
           </div>

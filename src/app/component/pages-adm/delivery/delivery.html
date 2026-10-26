@@ -1,0 +1,698 @@
+
+<div class="delivery-page">
+
+  <header class="page-header">
+    <div>
+      <div class="eyebrow">SILKMART · ADMIN / STAFF</div>
+      <h1>Delivery Management</h1>
+      <p>Schedule, prepare, and monitor customer deliveries.</p>
+    </div>
+  </header>
+
+  <section class="summary-grid">
+
+    <button
+      class="summary-card"
+      type="button"
+      (click)="filter = 'Ready to Schedule'"
+    >
+      <span class="summary-icon">
+        <i class="pi pi-calendar-plus"></i>
+      </span>
+
+      <div>
+        <span>Ready to Schedule</span>
+        <strong>{{ readyCount }}</strong>
+        <small>Confirmed orders awaiting schedule</small>
+      </div>
+    </button>
+
+    <button
+      class="summary-card"
+      type="button"
+      (click)="filter = 'Scheduled'"
+    >
+      <span class="summary-icon">
+        <i class="pi pi-calendar"></i>
+      </span>
+
+      <div>
+        <span>Scheduled Deliveries</span>
+        <strong>{{ scheduledCount }}</strong>
+        <small>Scheduled or preparing</small>
+      </div>
+    </button>
+
+    <button
+      class="summary-card"
+      type="button"
+      (click)="filter = 'Out for Delivery'"
+    >
+      <span class="summary-icon">
+        <i class="pi pi-truck"></i>
+      </span>
+
+      <div>
+        <span>Out for Delivery</span>
+        <strong>{{ outCount }}</strong>
+        <small>Currently dispatched</small>
+      </div>
+    </button>
+
+    <button
+      class="summary-card"
+      type="button"
+      (click)="filter = 'Delivered'"
+    >
+      <span class="summary-icon">
+        <i class="pi pi-check-circle"></i>
+      </span>
+
+      <div>
+        <span>Delivered</span>
+        <strong>{{ deliveredCount }}</strong>
+        <small>Completed deliveries</small>
+      </div>
+    </button>
+
+  </section>
+
+  <div class="delivery-layout">
+
+    <main class="delivery-main">
+
+      <div class="toolbar">
+
+        <label class="search-box">
+          <i class="pi pi-search"></i>
+
+          <input
+            type="search"
+            placeholder="Search orders, customers, or locations..."
+            [(ngModel)]="search"
+          />
+        </label>
+
+        <select
+          [(ngModel)]="areaFilter"
+          aria-label="Filter by delivery area"
+        >
+          <option
+            *ngFor="let area of availableAreas"
+            [value]="area"
+          >
+            {{ area }}
+          </option>
+        </select>
+
+      </div>
+
+      <div class="status-tabs">
+
+        <button
+          *ngFor="let status of statuses"
+          type="button"
+          [class.active]="filter === status"
+          (click)="filter = status"
+        >
+          {{ status === 'All' ? 'All Deliveries' : status }}
+        </button>
+
+      </div>
+
+      <div class="list-heading">
+        <div>
+          <h2>Delivery Orders</h2>
+          <p>{{ filteredOrders.length }} orders found</p>
+        </div>
+      </div>
+
+      <div
+        *ngIf="loading"
+        class="state-box"
+      >
+        <i class="pi pi-spin pi-spinner"></i>
+        Loading real-time delivery records...
+      </div>
+
+      <div
+        *ngIf="error && !loading"
+        class="state-box error"
+      >
+        {{ error }}
+      </div>
+
+      <div
+        *ngIf="!loading && !error && filteredOrders.length === 0"
+        class="state-box"
+      >
+        No deliveries match your current filters.
+      </div>
+
+      <div
+        class="table-scroll"
+        *ngIf="!loading && !error && filteredOrders.length"
+      >
+        <table class="delivery-table">
+
+          <thead>
+            <tr>
+              <th>Order</th>
+              <th>Customer</th>
+              <th>Items</th>
+              <th>Delivery Date</th>
+              <th>Location</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+
+          <tbody>
+
+            <tr *ngFor="let order of filteredOrders">
+
+              <td>
+                <strong>#{{ order.id }}</strong>
+              </td>
+
+              <td>
+                <strong>{{ order.customerName }}</strong>
+                <small>{{ order.phone || 'No phone provided' }}</small>
+              </td>
+
+              <td>
+                {{ getItemCount(order) }} pcs
+                <small>{{ order.items.length }} product types</small>
+              </td>
+
+              <td>
+                <strong>
+                  {{ formatDate(order.scheduledDate || order.preferredDate) }}
+                </strong>
+
+                <small>
+                  {{
+                    order.scheduledDate
+                      ? (order.timeSlot || 'Time not set')
+                      : 'Requested date'
+                  }}
+                </small>
+              </td>
+
+              <td>
+                <strong>{{ order.deliveryArea }}</strong>
+                <small class="address-text">
+                  {{ order.address }}
+                </small>
+              </td>
+
+              <td>
+                <span
+                  class="status-pill"
+                  [ngClass]="{
+                    'pending': order.deliveryStatus === 'Pending',
+                    'ready': order.deliveryStatus === 'Ready to Schedule',
+                    'scheduled': order.deliveryStatus === 'Scheduled',
+                    'preparing': order.deliveryStatus === 'Preparing',
+                    'dispatched': order.deliveryStatus === 'Out for Delivery',
+                    'delivered': order.deliveryStatus === 'Delivered',
+                    'cancelled': order.deliveryStatus === 'Cancelled'
+                  }"
+                >
+                  {{ order.deliveryStatus }}
+                </span>
+              </td>
+
+              <td>
+                <button
+                  class="view-button"
+                  type="button"
+                  (click)="openEditor(order)"
+                >
+                  Manage
+                  <i class="pi pi-arrow-right"></i>
+                </button>
+              </td>
+
+            </tr>
+
+          </tbody>
+
+        </table>
+      </div>
+
+      <section class="bottom-info">
+
+        <div class="info-icon">
+          <i class="pi pi-info-circle"></i>
+        </div>
+
+        <p>
+          Confirmed customer orders become ready for delivery scheduling.
+          Actual delivery dates must still be approved by Admin/Staff.
+        </p>
+
+      </section>
+
+    </main>
+
+    <aside class="delivery-sidebar">
+
+      <section class="side-card">
+
+        <div class="side-heading">
+
+          <h2>Delivery Calendar</h2>
+
+          <div class="month-controls">
+
+            <button
+              type="button"
+              (click)="changeMonth(-1)"
+              aria-label="Previous month"
+            >
+              <i class="pi pi-chevron-left"></i>
+            </button>
+
+            <span>{{ monthLabel }}</span>
+
+            <button
+              type="button"
+              (click)="changeMonth(1)"
+              aria-label="Next month"
+            >
+              <i class="pi pi-chevron-right"></i>
+            </button>
+
+          </div>
+
+        </div>
+
+        <div class="calendar">
+
+          <div
+            class="weekday"
+            *ngFor="let day of ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']"
+          >
+            {{ day }}
+          </div>
+
+          <div
+            class="calendar-cell"
+            *ngFor="let day of calendarCells"
+          >
+            <button
+              *ngIf="day"
+              type="button"
+              [class.today]="day === today"
+              [class.selected]="day === selectedCalendarDate"
+              [class.has-orders]="deliveriesOn(day) > 0"
+              (click)="selectCalendarDate(day)"
+            >
+              {{ day.slice(8) | number:'1.0-0' }}
+
+              <span
+                class="calendar-dot"
+                *ngIf="deliveriesOn(day) > 0"
+              ></span>
+
+            </button>
+          </div>
+
+        </div>
+
+        <div class="calendar-legend">
+
+          <span>
+            <i class="legend-dot green"></i>
+            Scheduled delivery
+          </span>
+
+          <span>
+            <i class="legend-dot dark"></i>
+            Selected day
+          </span>
+
+        </div>
+
+      </section>
+
+      <section class="side-card">
+
+        <div class="side-heading">
+          <h2>Selected Day</h2>
+          <small>{{ formatDate(selectedCalendarDate) }}</small>
+        </div>
+
+        <div
+          *ngIf="selectedDayOrders.length === 0"
+          class="empty-side"
+        >
+          No deliveries scheduled.
+        </div>
+
+        <button
+          class="today-order"
+          type="button"
+          *ngFor="let order of selectedDayOrders"
+          (click)="openEditor(order)"
+        >
+          <span class="small-icon">
+            <i class="pi pi-box"></i>
+          </span>
+
+          <span class="today-order-text">
+
+            <strong>#{{ order.id }}</strong>
+
+            <small>{{ order.customerName }}</small>
+
+            <small>{{ order.deliveryArea }}</small>
+
+          </span>
+
+          <span class="mini-status">
+            {{ order.deliveryStatus }}
+          </span>
+
+        </button>
+
+      </section>
+
+      <section class="side-card">
+
+        <div class="side-heading">
+          <h2>Delivery Summary</h2>
+        </div>
+
+        <div class="mini-summary">
+
+          <div>
+            <i class="pi pi-check-circle"></i>
+            <strong>{{ deliveredCount }}</strong>
+            <small>Delivered</small>
+          </div>
+
+          <div>
+            <i class="pi pi-clock"></i>
+            <strong>{{ awaitingCount }}</strong>
+            <small>Awaiting</small>
+          </div>
+
+          <div>
+            <i class="pi pi-calendar"></i>
+            <strong>{{ scheduledCount }}</strong>
+            <small>Scheduled</small>
+          </div>
+
+          <div>
+            <i class="pi pi-truck"></i>
+            <strong>{{ outCount }}</strong>
+            <small>On Route</small>
+          </div>
+
+        </div>
+
+      </section>
+
+    </aside>
+
+  </div>
+
+</div>
+
+<!-- FULL SCREEN OVERLAY: MOVED TO DOCUMENT BODY BY TYPESCRIPT -->
+<div
+  #deliveryOverlay
+  class="editor-backdrop"
+  [class.is-open]="showEditor"
+  [attr.aria-hidden]="!showEditor"
+  (click)="closeEditor()"
+>
+
+  <section
+    *ngIf="selectedOrder"
+    class="editor-modal"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="editor-title"
+    (click)="$event.stopPropagation()"
+  >
+
+    <header class="editor-header">
+
+      <div class="editor-heading-text">
+        <div class="eyebrow">DELIVERY DETAILS</div>
+
+        <h2 id="editor-title">
+          Order #{{ selectedOrder.id }}
+        </h2>
+
+        <p>{{ selectedOrder.customerName }}</p>
+      </div>
+
+      <button
+        type="button"
+        class="icon-btn"
+        [disabled]="saving"
+        aria-label="Close delivery details"
+        (click)="closeEditor()"
+      >
+        <i class="pi pi-times"></i>
+      </button>
+
+    </header>
+
+    <div class="editor-body">
+
+      <div class="order-summary">
+
+        <div>
+          <span>ORDER STATUS</span>
+          <strong>{{ selectedOrder.orderStatus }}</strong>
+        </div>
+
+        <div>
+          <span>DELIVERY STATUS</span>
+          <strong>{{ selectedOrder.deliveryStatus }}</strong>
+        </div>
+
+        <div>
+          <span>PAYMENT TOTAL</span>
+          <strong>
+            {{ selectedOrder.total | currency:'PHP':'symbol':'1.2-2' }}
+          </strong>
+        </div>
+
+      </div>
+
+      <div class="section-heading">
+        Customer & Products
+      </div>
+
+      <div class="detail-line">
+        <i class="pi pi-map-marker"></i>
+        <span>
+          {{ selectedOrder.address || 'Address unavailable' }}
+        </span>
+      </div>
+
+      <div class="detail-line">
+        <i class="pi pi-phone"></i>
+        <span>
+          {{ selectedOrder.phone || 'Phone unavailable' }}
+        </span>
+      </div>
+
+      <div class="product-list">
+
+        <div *ngFor="let item of selectedOrder.items">
+
+          <span>{{ item.name }}</span>
+
+          <strong>{{ item.quantity }} pcs</strong>
+
+        </div>
+
+      </div>
+
+      <div class="section-heading">
+        Delivery Schedule
+      </div>
+
+      <p
+        class="section-help"
+        *ngIf="selectedOrder.deliveryStatus === 'Ready to Schedule'"
+      >
+        This order is confirmed and ready to be scheduled.
+      </p>
+
+      <p
+        class="section-help warning-text"
+        *ngIf="selectedOrder.orderStatus === 'Pending'"
+      >
+        Confirm this order in Customer Orders before scheduling delivery.
+      </p>
+
+      <div class="field-grid">
+
+        <label>
+          Delivery Date
+
+          <input
+            type="date"
+            [(ngModel)]="editDate"
+            [min]="today"
+            [disabled]="isClosed(selectedOrder)"
+          />
+        </label>
+
+        <label>
+          Preferred Time
+
+          <select
+            [(ngModel)]="editTimeSlot"
+            [disabled]="isClosed(selectedOrder)"
+          >
+            <option
+              *ngFor="let slot of timeSlots"
+              [value]="slot"
+            >
+              {{ slot }}
+            </option>
+          </select>
+        </label>
+
+      </div>
+
+      <label class="full-field">
+
+        Delivery Area
+
+        <input
+          type="text"
+          [(ngModel)]="editArea"
+          placeholder="e.g. Cagayan de Oro"
+          maxlength="120"
+          [disabled]="isClosed(selectedOrder)"
+        />
+
+      </label>
+
+      <label class="full-field">
+
+        Delivery Notes
+
+        <textarea
+          [(ngModel)]="editNotes"
+          rows="2"
+          maxlength="1000"
+          placeholder="Staff instructions or delivery details"
+          [disabled]="isClosed(selectedOrder)"
+        ></textarea>
+
+      </label>
+
+      <button
+        class="primary-button"
+        type="button"
+        [disabled]="saving || isClosed(selectedOrder) || selectedOrder.orderStatus !== 'Confirmed'"
+        (click)="saveSchedule()"
+      >
+        <i class="pi pi-calendar-plus"></i>
+        Save Delivery Schedule
+      </button>
+
+      <div class="section-heading">
+        Preparation Checklist
+      </div>
+
+      <p class="section-help">
+        Verify quantity, packaging, and handling before dispatch.
+      </p>
+
+      <div class="checklist">
+
+        <label>
+          <input
+            type="checkbox"
+            [(ngModel)]="prepQuantity"
+            [disabled]="isClosed(selectedOrder)"
+          />
+          Correct products and quantities checked
+        </label>
+
+        <label>
+          <input
+            type="checkbox"
+            [(ngModel)]="prepPackaging"
+            [disabled]="isClosed(selectedOrder)"
+          />
+          Packaging checked and secured
+        </label>
+
+        <label>
+          <input
+            type="checkbox"
+            [(ngModel)]="prepHandling"
+            [disabled]="isClosed(selectedOrder)"
+          />
+          Handling and delivery instructions reviewed
+        </label>
+
+      </div>
+
+      <button
+        class="secondary-button"
+        type="button"
+        [disabled]="saving || isClosed(selectedOrder)"
+        (click)="savePreparation()"
+      >
+        Save Preparation Checklist
+      </button>
+
+      <div class="section-heading">
+        Delivery Actions
+      </div>
+
+      <div class="action-grid">
+
+        <button
+          type="button"
+          class="primary-button"
+          [disabled]="saving || isClosed(selectedOrder)"
+          (click)="dispatch()"
+        >
+          <i class="pi pi-truck"></i>
+          Dispatch Order
+        </button>
+
+        <button
+          type="button"
+          class="secondary-button"
+          [disabled]="saving || selectedOrder.deliveryStatus !== 'Out for Delivery'"
+          (click)="markDelivered()"
+        >
+          <i class="pi pi-check-circle"></i>
+          Confirm Delivered
+        </button>
+
+      </div>
+
+    </div>
+
+    <footer class="editor-footer">
+
+      <button
+        type="button"
+        [disabled]="saving"
+        (click)="closeEditor()"
+      >
+        Close
+      </button>
+
+    </footer>
+
+  </section>
+
+</div>

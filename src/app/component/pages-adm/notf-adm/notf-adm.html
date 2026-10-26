@@ -1,0 +1,238 @@
+
+<div class="notification-page">
+
+  <main class="notification-container">
+
+    <section class="notification-hero">
+      <div class="hero-main">
+        <span class="eyebrow">SILKMART · ADMIN / STAFF</span>
+
+        <h1>
+          Notifications,
+          <span>kept close.</span>
+        </h1>
+
+        <p>
+          Keep track of new customer orders, upcoming deliveries,
+          and messages from SilkMart customers.
+        </p>
+      </div>
+
+      <div class="hero-note">
+        <span class="hero-note-line"></span>
+        <p>
+          Every order matters.
+          <br />
+          Every delivery counts.
+        </p>
+      </div>
+    </section>
+
+    <section class="notification-toolbar">
+      <div class="notification-filters">
+
+        <button
+          type="button"
+          class="filter-button"
+          [class.active]="selectedFilter === 'all'"
+          (click)="setFilter('all')"
+        >
+          All ({{ notices.length }})
+        </button>
+
+        <button
+          type="button"
+          class="filter-button"
+          [class.active]="selectedFilter === 'unread'"
+          (click)="setFilter('unread')"
+        >
+          Unread ({{ unreadCount }})
+        </button>
+
+        <button
+          type="button"
+          class="filter-button"
+          [class.active]="selectedFilter === 'orders'"
+          (click)="setFilter('orders')"
+        >
+          <i class="pi pi-shopping-bag"></i>
+          Orders ({{ ordersCount }})
+        </button>
+
+        <button
+          type="button"
+          class="filter-button"
+          [class.active]="selectedFilter === 'delivery'"
+          (click)="setFilter('delivery')"
+        >
+          <i class="pi pi-truck"></i>
+          Delivery ({{ deliveryCount }})
+        </button>
+
+        <button
+          type="button"
+          class="filter-button"
+          [class.active]="selectedFilter === 'chat'"
+          (click)="setFilter('chat')"
+        >
+          <i class="pi pi-comments"></i>
+          Chat ({{ unreadChatCount }})
+        </button>
+
+      </div>
+
+      <button
+        type="button"
+        class="mark-all-button"
+        [disabled]="unreadCount === 0"
+        (click)="markAllAsRead()"
+      >
+        <i class="pi pi-check"></i>
+        Mark visible as read
+      </button>
+
+    </section>
+
+    <section class="notifications-card">
+
+      <div
+        class="notifications-empty"
+        *ngIf="!authResolved || loading"
+      >
+        <div class="empty-icon">
+          <i class="pi pi-spin pi-spinner"></i>
+        </div>
+        <h2>Loading notifications</h2>
+        <p>Checking SilkMart orders and conversations.</p>
+      </div>
+
+      <div
+        class="notifications-empty"
+        *ngIf="authResolved && !currentUserId && !loading"
+      >
+        <div class="empty-icon">
+          <i class="pi pi-user"></i>
+        </div>
+        <h2>Sign in to continue</h2>
+        <p>Use your authorized Admin or Staff account.</p>
+      </div>
+
+      <div
+        class="notifications-empty"
+        *ngIf="error && !loading"
+      >
+        <div class="empty-icon">
+          <i class="pi pi-exclamation-circle"></i>
+        </div>
+        <h2>Unable to load notifications</h2>
+        <p>{{ error }}</p>
+
+        <button
+          type="button"
+          class="notification-action"
+          (click)="loadNotifications()"
+        >
+          Try again
+        </button>
+      </div>
+
+      <ng-container
+        *ngIf="
+          authResolved &&
+          currentUserId &&
+          !loading &&
+          !error
+        "
+      >
+
+        <div
+          class="notifications-empty"
+          *ngIf="filteredNotifications.length === 0"
+        >
+          <div class="empty-icon">
+            <i class="pi pi-bell"></i>
+          </div>
+
+          <h2>You're all caught up.</h2>
+
+          <p>
+            There are no notifications in this section right now.
+          </p>
+        </div>
+
+        <article
+          class="notification-item"
+          *ngFor="let item of filteredNotifications"
+          [class.unread]="!item.read"
+          [class.delivery-reminder]="item.type === 'delivery'"
+        >
+
+          <div class="notification-dot-wrap">
+            <span
+              class="notification-dot"
+              *ngIf="!item.read"
+            ></span>
+          </div>
+
+          <div
+            class="notification-icon"
+            [ngClass]="item.type"
+          >
+            <i [class]="item.icon"></i>
+          </div>
+
+          <div class="notification-content">
+            <span class="notification-type">
+              {{
+                item.type === 'orders' ? 'CUSTOMER ORDER' :
+                item.type === 'delivery' ? 'DELIVERY UPDATE' :
+                'CUSTOMER MESSAGE'
+              }}
+            </span>
+
+            <h2>{{ item.title }}</h2>
+            <p>{{ item.message }}</p>
+            <small>Order #{{ item.orderId }}</small>
+          </div>
+
+          <div class="notification-side">
+            <span class="notification-time">
+              {{ item.time }}
+            </span>
+
+            <div class="notification-actions-row">
+              <button
+                type="button"
+                class="notification-action"
+                (click)="openNotification(item)"
+              >
+                {{ item.action }}
+                <i class="pi pi-arrow-right"></i>
+              </button>
+
+              <button
+                type="button"
+                class="notification-delete"
+                aria-label="Remove notification"
+                (click)="deleteNotification(item)"
+              >
+                <i class="pi pi-trash"></i>
+              </button>
+            </div>
+          </div>
+
+        </article>
+
+      </ng-container>
+
+    </section>
+
+    <p class="notification-footer-note">
+      Updates are synchronized with SilkMart Firebase records while
+      this page is open. Delivery reminders use the staff-confirmed
+      scheduled date.
+    </p>
+
+  </main>
+
+</div>

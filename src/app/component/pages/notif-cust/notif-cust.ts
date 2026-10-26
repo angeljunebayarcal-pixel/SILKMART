@@ -13,12 +13,7 @@ import {
 } from '@angular/core';
 
 import { Router } from '@angular/router';
-
-import {
-  Auth,
-  onAuthStateChanged
-} from '@angular/fire/auth';
-
+import { Auth, onAuthStateChanged } from '@angular/fire/auth';
 import { Subscription } from 'rxjs';
 
 import {
@@ -55,9 +50,21 @@ interface NotificationPreference {
   deleted: boolean;
 }
 
-// Each order stores IDs of staff messages
-// that this customer has already opened.
 type SeenChatMessages = Record<string, string[]>;
+
+interface OrderDeliveryFields {
+  deliveryStatus?: string;
+  scheduledDeliveryDate?: string;
+  deliveryTimeSlot?: string;
+  deliveryUpdatedAt?: any;
+  dispatchedAt?: any;
+  deliveredAt?: any;
+  deliveryPreparation?: {
+    quantityChecked?: boolean;
+    packagingChecked?: boolean;
+    handlingChecked?: boolean;
+  };
+}
 
 @Component({
   selector: 'app-notif-cust',
@@ -67,10 +74,6 @@ type SeenChatMessages = Record<string, string[]>;
   styleUrl: './notif-cust.scss'
 })
 export class NotifCust implements OnInit, OnDestroy {
-
-  // =========================================
-  // ACCOUNT
-  // =========================================
 
   currentUserId = '';
   authResolved = false;
@@ -83,18 +86,10 @@ export class NotifCust implements OnInit, OnDestroy {
   loadingNotifications = true;
   notificationError = '';
 
-  // =========================================
-  // DELETE NOTIFICATION
-  // =========================================
-
   deleteConfirmPopup = false;
 
   selectedDeleteNotification:
     CustomerNotification | null = null;
-
-  // =========================================
-  // CHAT
-  // =========================================
 
   showChatPopup = false;
 
@@ -107,10 +102,6 @@ export class NotifCust implements OnInit, OnDestroy {
   chatLoading = false;
   chatError = '';
 
-  // =========================================
-  // UNREAD CHAT COUNTS
-  // =========================================
-
   unreadChatsByOrder: Record<string, number> = {};
 
   private messagesByOrder:
@@ -118,23 +109,16 @@ export class NotifCust implements OnInit, OnDestroy {
 
   private seenChatMessages: SeenChatMessages = {};
 
-  private chatListeners = new Map<string, Subscription>();
+  private chatListeners =
+    new Map<string, Subscription>();
 
-  // =========================================
-  // SUBSCRIPTIONS
-  // =========================================
-
-  private stopAuthListener: (() => void) | null = null;
+  private stopAuthListener:
+    (() => void) | null = null;
 
   private ordersSub: Subscription | null = null;
-
   private chatSub: Subscription | null = null;
 
   private accountSession = 0;
-
-  // =========================================
-  // CONSTRUCTOR
-  // =========================================
 
   constructor(
     private router: Router,
@@ -163,13 +147,10 @@ export class NotifCust implements OnInit, OnDestroy {
             this.accountSession++;
 
             this.ordersSub?.unsubscribe();
-
             this.stopAllChatListeners();
-
             this.closeChat(true);
 
             this.authResolved = true;
-
             this.currentUserId = user?.uid ?? '';
 
             this.customerOrders = [];
@@ -190,7 +171,6 @@ export class NotifCust implements OnInit, OnDestroy {
             }
 
             this.loadNotifications();
-
             this.refreshUI();
           });
         },
@@ -218,12 +198,12 @@ export class NotifCust implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    this.ordersSub?.unsubscribe();
+    this.accountSession++;
 
+    this.ordersSub?.unsubscribe();
     this.stopAllChatListeners();
 
     this.chatSub?.unsubscribe();
-
     this.stopAuthListener?.();
 
     window.removeEventListener(
@@ -237,7 +217,7 @@ export class NotifCust implements OnInit, OnDestroy {
   }
 
   // =========================================
-  // FIRESTORE ORDERS
+  // FIREBASE CUSTOMER ORDERS
   // =========================================
 
   loadNotifications(): void {
@@ -276,17 +256,17 @@ export class NotifCust implements OnInit, OnDestroy {
               order => order.customerId === uid
             );
 
+            // Rebuild notifications whenever
+            // Firestore updates an order.
             this.rebuildNotifications();
 
-            // Start one live chat listener
-            // for each customer order.
+            // Keep order chats synchronized.
             this.syncChatListeners(session);
 
             this.loadingNotifications = false;
             this.notificationError = '';
 
             if (this.selectedChatOrder) {
-
               const updated = this.customerOrders.find(
                 order =>
                   order.id === this.selectedChatOrder?.id
@@ -305,6 +285,7 @@ export class NotifCust implements OnInit, OnDestroy {
 
         error: error => {
           this.zone.run(() => {
+
             console.error(
               'Notifications error:',
               error
@@ -325,7 +306,7 @@ export class NotifCust implements OnInit, OnDestroy {
   }
 
   // =========================================
-  // ORDER NOTIFICATIONS
+  // NOTIFICATION BUILDER
   // =========================================
 
   private rebuildNotifications(): void {
@@ -353,112 +334,246 @@ export class NotifCust implements OnInit, OnDestroy {
         order.updatedAt
       );
 
-      const placedId = `placed:${order.id}`;
+      const raw = order as SilkMartOrder &
+        OrderDeliveryFields;
 
-      results.push({
-        id: placedId,
-        type: 'order',
-        icon: 'pi pi-shopping-bag',
-        title: 'Order placed successfully',
-        message:
-          `Your order for ${count} item(s), including ` +
+      // Reusable notification creator.
+      const addNotification = (
+        id: string,
+        title: string,
+        message: string,
+        icon: string,
+        timestamp: any,
+        fallbackTime: number
+      ): void => {
+
+        if (preferences[id]?.deleted) {
+          return;
+        }
+
+        const actualTime =
+          this.toMillis(timestamp) || fallbackTime;
+
+        results.push({
+          id,
+          type: 'order',
+          icon,
+          title,
+          message,
+          time: actualTime
+            ? this.formatTimestamp(actualTime)
+            : 'Recently',
+          read: preferences[id]?.read === true,
+          actionLabel: 'View order',
+          sortTime: actualTime,
+          orderId: order.id
+        });
+      };
+
+      // =====================================
+      // 1. ORDER PLACED
+      // =====================================
+
+      addNotification(
+        `placed:${order.id}`,
+        'Order placed successfully',
+        `Your order for ${count} item(s), including ` +
           `${productName}, has been received. ` +
           `Your preferred delivery date is ` +
           `${this.formatDeliveryDate(
             order.preferredDeliveryDate
           )}. Awaiting staff confirmation.`,
-        time: this.formatTimestamp(order.createdAt),
-        read: preferences[placedId]?.read === true,
-        actionLabel: 'View order',
-        sortTime: createdAt,
-        orderId: order.id
-      });
+        'pi pi-shopping-bag',
+        order.createdAt,
+        createdAt
+      );
+
+      // =====================================
+      // 2. MAIN ORDER STATUS
+      // =====================================
 
       const status = String(
         order.status || 'Pending'
       );
 
-      if (status !== 'Pending') {
-
-        const statusId =
-          `status:${status}:${order.id}`;
-
-        const statusMessages: Record<
-          string,
-          {
-            title: string;
-            message: string;
-            icon: string;
-          }
-        > = {
-
-          Confirmed: {
-            title: 'Order confirmed',
-            message:
-              `Your order for ${productName} ` +
-              'has been confirmed by SilkMart staff.',
-            icon: 'pi pi-check-circle'
-          },
-
-          Rejected: {
-            title: 'Order rejected',
-            message:
-              `Your order for ${productName} ` +
-              'was not approved. Contact staff for assistance.',
-            icon: 'pi pi-times-circle'
-          },
-
-          Cancelled: {
-            title: 'Order cancelled',
-            message:
-              `Your order for ${productName} ` +
-              'has been cancelled.',
-            icon: 'pi pi-ban'
-          },
-
-          Delivered: {
-            title: 'Order delivered',
-            message:
-              `Your order for ${productName} ` +
-              'has been marked delivered.',
-            icon: 'pi pi-box'
-          }
-        };
-
-        const info = statusMessages[status];
-
-        if (info) {
-
-          results.push({
-            id: statusId,
-            type: 'order',
-            icon: info.icon,
-            title: info.title,
-            message: info.message,
-            time: this.formatTimestamp(
-              order.updatedAt
-            ),
-            read:
-              preferences[statusId]?.read === true,
-            actionLabel: 'View order',
-            sortTime: updatedAt || createdAt,
-            orderId: order.id
-          });
+      const statusMessages: Record<
+        string,
+        {
+          title: string;
+          message: string;
+          icon: string;
         }
+      > = {
+
+        Confirmed: {
+          title: 'Order confirmed',
+          message:
+            `Your order for ${productName} ` +
+            'has been confirmed by SilkMart staff.',
+          icon: 'pi pi-check-circle'
+        },
+
+        Rejected: {
+          title: 'Order rejected',
+          message:
+            `Your order for ${productName} ` +
+            'was not approved. Contact SilkMart staff for assistance.',
+          icon: 'pi pi-times-circle'
+        },
+
+        Cancelled: {
+          title: 'Order cancelled',
+          message:
+            `Your order for ${productName} ` +
+            'has been cancelled.',
+          icon: 'pi pi-ban'
+        },
+
+        Delivered: {
+          title: 'Order delivered',
+          message:
+            `Your SilkMart order for ${productName} ` +
+            'has been marked as delivered. Thank you for ordering!',
+          icon: 'pi pi-check-circle'
+        }
+      };
+
+      const statusInfo = statusMessages[status];
+
+      if (statusInfo) {
+
+        addNotification(
+          `status:${status}:${order.id}`,
+          statusInfo.title,
+          statusInfo.message,
+          statusInfo.icon,
+          order.updatedAt,
+          updatedAt || createdAt
+        );
       }
+
+      // =====================================
+      // 3. DELIVERY INFORMATION
+      // =====================================
+
+      const deliveryStatus = String(
+        raw.deliveryStatus || ''
+      );
+
+      const scheduledDate =
+        raw.scheduledDeliveryDate || '';
+
+      const deliveryDateText =
+        scheduledDate
+          ? this.formatDeliveryDate(scheduledDate)
+          : 'the confirmed delivery date';
+
+      const deliveryTimeText =
+        raw.deliveryTimeSlot
+          ? ` Expected delivery time: ${raw.deliveryTimeSlot}.`
+          : '';
+
+      // Prevent delivery notices for cancelled
+      // or rejected orders.
+      if (
+        status === 'Cancelled' ||
+        status === 'Rejected'
+      ) {
+        continue;
+      }
+
+      // =====================================
+      // 4. DELIVERY SCHEDULED
+      // =====================================
+
+      if (
+        scheduledDate &&
+        [
+          'Scheduled',
+          'Preparing',
+          'Out for Delivery',
+          'Delivered'
+        ].includes(deliveryStatus)
+      ) {
+
+        addNotification(
+          `delivery-scheduled:${order.id}:${scheduledDate}`,
+          'Your delivery has been scheduled',
+          `Your SilkMart order for ${productName} ` +
+            `has been scheduled for ${deliveryDateText}.` +
+            deliveryTimeText +
+            ' Please prepare to receive your order.',
+          'pi pi-calendar',
+          raw.deliveryUpdatedAt,
+          updatedAt || createdAt
+        );
+      }
+
+      // =====================================
+      // 5. ORDER PREPARATION
+      // =====================================
+
+      if (
+        [
+          'Preparing',
+          'Out for Delivery',
+          'Delivered'
+        ].includes(deliveryStatus)
+      ) {
+
+        addNotification(
+          `delivery-preparing:${order.id}`,
+          'Your order is being prepared',
+          `SilkMart staff is preparing your order ` +
+            `for ${productName}. The products, quantities, ` +
+            'and packaging are being checked before dispatch.',
+          'pi pi-box',
+          raw.deliveryUpdatedAt,
+          updatedAt || createdAt
+        );
+      }
+
+      // =====================================
+      // 6. OUT FOR DELIVERY
+      // =====================================
+
+      if (
+        deliveryStatus === 'Out for Delivery' ||
+        deliveryStatus === 'Delivered' ||
+        status === 'Delivered'
+      ) {
+
+        addNotification(
+          `delivery-dispatched:${order.id}`,
+          'Your order is out for delivery!',
+          `Good news! Your SilkMart order for ` +
+            `${productName} has been dispatched ` +
+            'and is on its way. Please be ready ' +
+            'to receive your products.',
+          'pi pi-truck',
+          raw.dispatchedAt || raw.deliveryUpdatedAt,
+          updatedAt || createdAt
+        );
+      }
+
+      // =====================================
+      // 7. DELIVERY COMPLETED
+      // =====================================
+
+      // The main order status already creates
+      // the "Order delivered" notification.
+      // We avoid adding an identical second card.
     }
 
-    this.notifications = results
-      .filter(
-        item => !preferences[item.id]?.deleted
-      )
-      .sort(
-        (a, b) => b.sortTime - a.sortTime
-      );
+    this.notifications = results.sort(
+      (a, b) =>
+        b.sortTime - a.sortTime ||
+        a.id.localeCompare(b.id)
+    );
   }
 
   // =========================================
-  // LIVE CHAT BADGE LISTENERS
+  // LIVE ORDER CHAT LISTENERS
   // =========================================
 
   private syncChatListeners(session: number): void {
@@ -467,9 +582,8 @@ export class NotifCust implements OnInit, OnDestroy {
       this.customerOrders.map(order => order.id)
     );
 
-    // Remove listeners for deleted orders.
-    for (const [orderId, subscription]
-      of this.chatListeners.entries()) {
+    for (const [orderId, subscription] of
+      this.chatListeners.entries()) {
 
       if (!orderIds.has(orderId)) {
         subscription.unsubscribe();
@@ -481,7 +595,6 @@ export class NotifCust implements OnInit, OnDestroy {
       }
     }
 
-    // Subscribe to orders not yet monitored.
     for (const order of this.customerOrders) {
 
       if (this.chatListeners.has(order.id)) {
@@ -508,21 +621,17 @@ export class NotifCust implements OnInit, OnDestroy {
 
                 this.messagesByOrder[orderId] = messages;
 
-                // An open chat means the customer
-                // is viewing those messages.
                 if (
                   this.showChatPopup &&
                   this.selectedChatOrder?.id === orderId
                 ) {
 
                   this.chatMessages = messages;
-
                   this.chatLoading = false;
 
                   this.markOrderChatAsRead(orderId);
 
                 } else {
-
                   this.calculateUnreadForOrder(orderId);
                 }
 
@@ -576,7 +685,6 @@ export class NotifCust implements OnInit, OnDestroy {
   // =========================================
 
   private getSeenChatsStorageKey(): string {
-
     return (
       'silkmart_seen_chat_messages:' +
       this.currentUserId
@@ -585,7 +693,9 @@ export class NotifCust implements OnInit, OnDestroy {
 
   private loadSeenChatMessages(): SeenChatMessages {
 
-    if (!this.currentUserId) return {};
+    if (!this.currentUserId) {
+      return {};
+    }
 
     try {
 
@@ -627,14 +737,19 @@ export class NotifCust implements OnInit, OnDestroy {
 
   private saveSeenChatMessages(): void {
 
-    if (!this.currentUserId) return;
+    if (!this.currentUserId) {
+      return;
+    }
 
     try {
+
       localStorage.setItem(
         this.getSeenChatsStorageKey(),
         JSON.stringify(this.seenChatMessages)
       );
+
     } catch (error) {
+
       console.error(
         'Unable to save chat read state:',
         error
@@ -678,8 +793,6 @@ export class NotifCust implements OnInit, OnDestroy {
 
     for (const message of messages) {
 
-      // Only incoming staff messages
-      // need to be marked as read.
       if (
         message.senderRole === 'staff' &&
         message.id &&
@@ -745,12 +858,18 @@ export class NotifCust implements OnInit, OnDestroy {
   };
 
   // =========================================
-  // ORDER NOTIFICATION HELPERS
+  // DATE AND TIME HELPERS
   // =========================================
 
   private toMillis(value: any): number {
 
-    if (!value) return 0;
+    if (!value) {
+      return 0;
+    }
+
+    if (typeof value === 'number') {
+      return value;
+    }
 
     if (typeof value.toMillis === 'function') {
       return value.toMillis();
@@ -769,7 +888,9 @@ export class NotifCust implements OnInit, OnDestroy {
 
     const timestamp = this.toMillis(value);
 
-    if (!timestamp) return 'Just now';
+    if (!timestamp) {
+      return 'Just now';
+    }
 
     return new Date(timestamp).toLocaleString(
       'en-PH',
@@ -785,7 +906,9 @@ export class NotifCust implements OnInit, OnDestroy {
 
   private formatDeliveryDate(value: string): string {
 
-    if (!value) return 'not yet specified';
+    if (!value) {
+      return 'not yet specified';
+    }
 
     const parts = value.split('-');
 
@@ -814,11 +937,10 @@ export class NotifCust implements OnInit, OnDestroy {
   }
 
   // =========================================
-  // ORDER NOTIFICATION PREFERENCES
+  // NOTIFICATION PREFERENCES
   // =========================================
 
   private preferencesKey(): string {
-
     return (
       'silkNotificationState:' +
       this.currentUserId
@@ -855,6 +977,7 @@ export class NotifCust implements OnInit, OnDestroy {
       );
 
     } catch (error) {
+
       console.error(
         'Notification preference error:',
         error
@@ -863,7 +986,7 @@ export class NotifCust implements OnInit, OnDestroy {
   }
 
   // =========================================
-  // FILTERS
+  // NOTIFICATION FILTERS
   // =========================================
 
   get unreadCount(): number {
@@ -874,7 +997,6 @@ export class NotifCust implements OnInit, OnDestroy {
   }
 
   get orderCount(): number {
-
     return this.notifications.length;
   }
 
@@ -896,12 +1018,11 @@ export class NotifCust implements OnInit, OnDestroy {
   }
 
   setFilter(filter: NotificationFilter): void {
-
     this.selectedFilter = filter;
   }
 
   // =========================================
-  // MARK ORDER NOTIFICATIONS READ
+  // MARK NOTIFICATIONS AS READ
   // =========================================
 
   markAsRead(item: CustomerNotification): void {
@@ -946,7 +1067,7 @@ export class NotifCust implements OnInit, OnDestroy {
   }
 
   // =========================================
-  // DELETE ORDER NOTIFICATION
+  // DELETE NOTIFICATION
   // =========================================
 
   openDeleteConfirmation(
@@ -965,7 +1086,9 @@ export class NotifCust implements OnInit, OnDestroy {
 
   confirmDeleteNotification(): void {
 
-    if (!this.selectedDeleteNotification) return;
+    if (!this.selectedDeleteNotification) {
+      return;
+    }
 
     const id = this.selectedDeleteNotification.id;
 
@@ -986,7 +1109,7 @@ export class NotifCust implements OnInit, OnDestroy {
   }
 
   // =========================================
-  // OPEN CUSTOMER CHAT
+  // CUSTOMER CHAT POPUP
   // =========================================
 
   openChat(order: SilkMartOrder): void {
@@ -1005,7 +1128,6 @@ export class NotifCust implements OnInit, OnDestroy {
     if (messages) {
 
       this.chatMessages = [...messages];
-
       this.chatLoading = false;
 
       this.markOrderChatAsRead(order.id);
@@ -1019,13 +1141,11 @@ export class NotifCust implements OnInit, OnDestroy {
     this.refreshUI();
   }
 
-  // =========================================
-  // CLOSE CUSTOMER CHAT
-  // =========================================
-
   closeChat(force = false): void {
 
-    if (this.chatSaving && !force) return;
+    if (this.chatSaving && !force) {
+      return;
+    }
 
     this.chatSub?.unsubscribe();
     this.chatSub = null;
@@ -1041,7 +1161,7 @@ export class NotifCust implements OnInit, OnDestroy {
   }
 
   // =========================================
-  // SEND CHAT MESSAGE
+  // SEND CUSTOMER CHAT MESSAGE
   // =========================================
 
   async sendChatMessage(): Promise<void> {
@@ -1111,7 +1231,9 @@ export class NotifCust implements OnInit, OnDestroy {
 
     const timestamp = this.toMillis(value);
 
-    if (!timestamp) return 'Sending...';
+    if (!timestamp) {
+      return 'Sending...';
+    }
 
     return new Date(timestamp).toLocaleTimeString(
       'en-PH',

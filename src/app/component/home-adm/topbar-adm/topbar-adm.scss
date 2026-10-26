@@ -670,3 +670,57 @@
     transition: none;
   }
 }
+
+
+/* LIVE ADMIN NOTIFICATION BADGE */
+
+.notification-button {
+  position: relative;
+  text-decoration: none;
+}
+
+.notification-dot {
+  position: absolute;
+  top: -5px;
+  right: -7px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  min-width: 19px;
+  height: 19px;
+  padding: 0 5px;
+
+  border: 2px solid #fbfaf4;
+  border-radius: 999px;
+
+  background: #d94b4b;
+  color: #ffffff;
+
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+
+  pointer-events: none;
+
+  animation: adminBadgeAppear 0.25s ease both;
+}
+
+@keyframes adminBadgeAppear {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .notification-dot {
+    animation: none;
+  }
+}

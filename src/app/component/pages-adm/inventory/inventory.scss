@@ -57,7 +57,7 @@ button:disabled {
   h1 {
     margin: 7px 0;
     font-family: "Instrument Serif", Georgia, serif;
-    font-size: clamp(38px, 4vw, 55px);
+    font-size: clamp(32px, 3vw, 42px);
     font-weight: 400;
     line-height: 1.05;
     color: #183f32;
@@ -2353,4 +2353,249 @@ table tbody tr:nth-child(5) {
   color: #57755f;
   font-size: 11px;
   line-height: 1.6;
+}
+
+
+
+/* =========================================
+   PRODUCT COLOR INVENTORY
+   ========================================= */
+
+.inventory-color-stock {
+  grid-column: 1 / -1;
+  width: 100%;
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid #dce8dc;
+  border-radius: 11px;
+  background: #f8fbf7;
+}
+
+.inventory-color-heading {
+  margin-bottom: 14px;
+
+  strong {
+    display: block;
+    color: #214c39;
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  small {
+    display: block;
+    margin-top: 5px;
+    color: #7b8f80;
+    font-size: 10px;
+    line-height: 1.6;
+  }
+}
+
+/* SELECTABLE COLORS */
+
+.inventory-color-options {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.inventory-color-choice {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 7px;
+  min-width: 0;
+  min-height: 37px;
+  padding: 7px 9px;
+  border: 1px solid #dce6db;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #456350;
+  font-size: 10px;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.2s ease;
+
+  &:hover:not(:disabled) {
+    border-color: #9bc6a5;
+    background: #eef6ed;
+    transform: translateY(-1px);
+  }
+
+  &.selected {
+    border-color: #287457;
+    background: #e9f5eb;
+    color: #205c41;
+    font-weight: 700;
+  }
+
+  &:focus-visible {
+    outline: 2px solid #287457;
+    outline-offset: 2px;
+  }
+}
+
+.inventory-color-dot {
+  display: block;
+  flex: 0 0 15px;
+  width: 15px;
+  height: 15px;
+  border: 1px solid rgba(0, 0, 0, 0.18);
+  border-radius: 50%;
+}
+
+.inventory-color-check {
+  margin-left: auto;
+  color: #287457;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+/* QUANTITY PER SELECTED COLOR */
+
+.inventory-color-stock-list {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  margin-top: 15px;
+  padding-top: 14px;
+  border-top: 1px solid #dce8dd;
+}
+
+.inventory-color-stock-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+  padding: 9px 11px;
+  border: 1px solid #e0e9df;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.inventory-color-stock-name {
+  color: #315742;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.inventory-color-stock-row label {
+  display: flex;
+  align-items: center;
+  flex-direction: row;
+  gap: 10px;
+  min-width: 0;
+  margin: 0;
+
+  span {
+    color: #718776;
+    font-size: 10px;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+
+  input[type="number"] {
+    width: 95px;
+    min-width: 75px;
+    min-height: 35px;
+    padding: 7px 9px;
+    border: 1px solid #d8e4d9;
+    border-radius: 7px;
+    background: #ffffff;
+    color: #214c39;
+    font-size: 12px;
+    font-weight: 700;
+    text-align: right;
+    outline: none;
+
+    &:focus {
+      border-color: #39845e;
+      box-shadow: 0 0 0 3px rgba(57, 132, 94, 0.1);
+    }
+  }
+}
+
+/* TOTAL STOCK */
+
+.inventory-color-stock-total {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 4px;
+  padding: 13px 2px 2px;
+  border-top: 1px solid #dce8dd;
+
+  span {
+    color: #315742;
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  strong {
+    color: #287457;
+    font-size: 16px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.inventory-color-note {
+  margin: 12px 0 0;
+  color: #819184;
+  font-size: 10px;
+  line-height: 1.6;
+}
+
+/* READ-ONLY CALCULATED STOCK */
+
+.form-grid input.inventory-readonly-stock {
+  border-color: #c5dcc9;
+  background: #edf5eb;
+  color: #287457;
+  font-weight: 700;
+  cursor: default;
+}
+
+/* RESPONSIVE COLOR INVENTORY */
+
+@media (max-width: 600px) {
+  .inventory-color-stock {
+    padding: 13px;
+  }
+
+  .inventory-color-options {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .inventory-color-choice {
+    min-height: 35px;
+    padding: 6px;
+    font-size: 9px;
+  }
+}
+
+@media (max-width: 390px) {
+  .inventory-color-options {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .inventory-color-stock-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .inventory-color-stock-row label {
+    justify-content: space-between;
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .inventory-color-choice {
+    transition: none !important;
+  }
 }

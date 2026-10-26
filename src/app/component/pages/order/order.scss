@@ -1800,3 +1800,48 @@
   }
 
 }
+
+
+/* =========================================
+   REAL PRODUCT IMAGES — MY ORDERS
+   ========================================= */
+
+.order-product-image,
+.cancel-product-image,
+.delete-product-image {
+  position: relative;
+  overflow: hidden;
+}
+
+.order-real-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
+.order-image-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  color: #789b85;
+  background: #edf4ec;
+}
+
+.order-image-placeholder i {
+  font-size: 32px;
+}
+
+.cancel-product-image > .pi-image,
+.delete-product-image > .pi-image {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  color: #789b85;
+  font-size: 22px;
+}

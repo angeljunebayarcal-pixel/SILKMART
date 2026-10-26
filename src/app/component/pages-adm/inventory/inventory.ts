@@ -41,6 +41,13 @@ interface Species {
   imageUrl: string;
 }
 
+
+interface ProductColorStock {
+  name: string;
+  quantity: number;
+}
+
+
 interface SilkProduct {
   id: string;
   name: string;
@@ -53,6 +60,8 @@ interface SilkProduct {
   imageUrl: string;
   published: boolean;
   featured: boolean;
+  colorStocks: ProductColorStock[];
+
 }
 
 interface Cocoons {
@@ -176,6 +185,23 @@ export class Inventory implements OnInit, OnDestroy {
     'Silk Thread',
     'Other'
   ];
+
+  
+  readonly availableProductColors = [
+    { name: 'White', hex: '#ffffff' },
+    { name: 'Black', hex: '#242424' },
+    { name: 'Red', hex: '#cc4e4e' },
+    { name: 'Pink', hex: '#ed9eb9' },
+    { name: 'Orange', hex: '#e99b56' },
+    { name: 'Yellow', hex: '#eacb59' },
+    { name: 'Green', hex: '#679e75' },
+    { name: 'Blue', hex: '#679acf' },
+    { name: 'Purple', hex: '#9875b5' },
+    { name: 'Brown', hex: '#98765d' },
+    { name: 'Beige', hex: '#d6bfa1' },
+    { name: 'Gray', hex: '#a5a8a8' }
+  ];
+
 
   readonly graphLeft = 68;
   readonly graphRight = 710;
@@ -366,9 +392,22 @@ export class Inventory implements OnInit, OnDestroy {
                   : category === 'Cocoons'
                     ? 'cocoons'
                     : 'pcs',
+                    
               imageUrl: String(item.imageUrl || ''),
               published: item.published === true,
-              featured: item.featured === true
+              featured: item.featured === true,
+              colorStocks: Array.isArray(item.colorStocks)
+                ? item.colorStocks
+                    .filter((color: any) =>
+                      typeof color?.name === 'string' &&
+                      Number.isInteger(Number(color.quantity)) &&
+                      Number(color.quantity) >= 0
+                    )
+                    .map((color: any) => ({
+                      name: String(color.name),
+                      quantity: Number(color.quantity)
+                    }))
+                : []
             };
           });
         }
@@ -445,8 +484,89 @@ export class Inventory implements OnInit, OnDestroy {
       unit: 'pcs',
       imageUrl: '',
       published: false,
-      featured: false
+      featured: false,
+      colorStocks: []
+
     };
+  }
+
+  
+  canManageProductColors(): boolean {
+    const category = this.productForm.category
+      .trim()
+      .toLowerCase();
+
+    return category !== 'silkworms' &&
+      category !== 'cocoons';
+  }
+
+  hasProductColorStock(): boolean {
+    return this.canManageProductColors() &&
+      this.productForm.colorStocks.length > 0;
+  }
+
+  hasSelectedProductColor(name: string): boolean {
+    return this.productForm.colorStocks.some(
+      color => color.name === name
+    );
+  }
+
+  toggleProductColor(name: string): void {
+    if (!this.canManageProductColors()) return;
+
+    const exists = this.hasSelectedProductColor(name);
+
+    if (exists) {
+      this.productForm.colorStocks =
+        this.productForm.colorStocks.filter(
+          color => color.name !== name
+        );
+    } else {
+      this.productForm.colorStocks.push({
+        name,
+        quantity: 0
+      });
+    }
+
+    this.syncProductColorTotal();
+  }
+
+  setProductColorQuantity(
+    name: string,
+    value: number | string
+  ): void {
+    const color = this.productForm.colorStocks.find(
+      item => item.name === name
+    );
+
+    if (!color) return;
+
+    color.quantity = Number(value);
+    this.syncProductColorTotal();
+  }
+
+  get productColorStockTotal(): number {
+    return this.productForm.colorStocks.reduce(
+      (total, color) => {
+        const quantity = Number(color.quantity);
+
+        return total +
+          (Number.isInteger(quantity) && quantity > 0
+            ? quantity
+            : 0);
+      },
+      0
+    );
+  }
+
+  
+  syncProductColorTotal(): void {
+    if (!this.canManageProductColors()) {
+      return;
+    }
+
+    this.productForm.quantity =
+      this.productColorStockTotal;
   }
 
   private emptyCocoons(): Cocoons {
@@ -1157,10 +1277,18 @@ export class Inventory implements OnInit, OnDestroy {
     this.showEditor = true;
   }
 
+  
   openEditProduct(item: SilkProduct): void {
     this.editorKind = 'product';
     this.editingId = item.id;
-    this.productForm = { ...item };
+
+    this.productForm = {
+      ...item,
+      colorStocks: (item.colorStocks || []).map(
+        color => ({ ...color })
+      )
+    };
+
     this.imageError = '';
     this.showEditor = true;
   }
@@ -1286,10 +1414,44 @@ export class Inventory implements OnInit, OnDestroy {
     }
   }
 
+  
   private async saveProduct(): Promise<void> {
     const form = this.productForm;
-    const stock = Number(form.quantity);
     const price = Number(form.price);
+
+    const supportsColors = this.canManageProductColors();
+
+    const colorStocks: ProductColorStock[] =
+      supportsColors
+        ? form.colorStocks.map(color => ({
+            name: color.name,
+            quantity: Number(color.quantity)
+          }))
+        : [];
+
+    if (colorStocks.length > 0) {
+      const invalidColors = colorStocks.some(color =>
+        !this.availableProductColors.some(
+          available => available.name === color.name
+        ) ||
+        !Number.isInteger(color.quantity) ||
+        color.quantity <= 0
+      );
+
+      if (invalidColors) {
+        await this.warning(
+          'Every selected color must have a quantity greater than zero, using whole numbers only.'
+        );
+        return;
+      }
+    }
+
+    const stock = colorStocks.length > 0
+      ? colorStocks.reduce(
+          (total, color) => total + color.quantity,
+          0
+        )
+      : Number(form.quantity);
 
     if (
       !form.name.trim() ||
@@ -1338,6 +1500,7 @@ export class Inventory implements OnInit, OnDestroy {
           description: form.description.trim(),
           price,
           stock,
+          colorStocks,
           imageUrl: form.imageUrl,
           published: form.published,
           featured: form.featured,
@@ -1363,12 +1526,19 @@ export class Inventory implements OnInit, OnDestroy {
               ? 'cocoons'
               : 'pcs';
 
+        const colorSummary = colorStocks.length > 0
+          ? ' | Colors: ' +
+            colorStocks.map(
+              color => `${color.name}: ${color.quantity}`
+            ).join(', ')
+          : '';
+
         this.addBatchActivity(
           batch,
           editing
             ? 'Silk product updated'
             : 'Silk product added',
-          `${data.name} — ${stock} ${unit}`,
+          `${data.name} — ${stock} ${unit}${colorSummary}`,
           editing ? 'edit' : 'add'
         );
 
@@ -1379,9 +1549,7 @@ export class Inventory implements OnInit, OnDestroy {
       this.editingId = null;
 
       await this.success(
-        editing
-          ? 'Product Updated'
-          : 'Product Added'
+        editing ? 'Product Updated' : 'Product Added'
       );
 
     } catch (error: any) {
@@ -1392,6 +1560,7 @@ export class Inventory implements OnInit, OnDestroy {
       this.refresh();
     }
   }
+
 
   // =========================================
   // STOCK ADJUSTMENTS
@@ -1519,8 +1688,16 @@ export class Inventory implements OnInit, OnDestroy {
     }
   }
 
+  
   async adjustProduct(item: SilkProduct): Promise<void> {
     if (this.saving) return;
+
+    if (item.colorStocks && item.colorStocks.length > 0) {
+      await this.warning(
+        'This product has color-specific stock. Use Edit to update the quantity of each color.'
+      );
+      return;
+    }
 
     const change = await this.askAdjustment(
       item.name,
@@ -1555,6 +1732,19 @@ export class Inventory implements OnInit, OnDestroy {
             if (!snapshot.exists()) {
               throw new Error(
                 'Product no longer exists.'
+              );
+            }
+
+            
+            const existingColorStocks =
+              snapshot.data()['colorStocks'];
+
+            if (
+              Array.isArray(existingColorStocks) &&
+              existingColorStocks.length > 0
+            ) {
+              throw new Error(
+                'This product uses color-specific stock. Update individual color quantities using Edit.'
               );
             }
 

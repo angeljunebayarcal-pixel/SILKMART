@@ -1475,3 +1475,268 @@ button:disabled {
   background: #ffeded;
   color: #c84e50;
 }
+
+
+/* =========================================
+   CUSTOMER SELECTED COLORS — ADMIN ORDERS
+   ========================================= */
+
+.customer-color-preview {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  width: 100%;
+  margin: 10px 0 13px;
+  padding: 11px 12px;
+  border: 1px solid #d9e8dd;
+  border-radius: 9px;
+  background: #f2f8f1;
+  text-align: left;
+}
+
+.customer-color-preview-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 28px;
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  background: #e0efe4;
+  color: #287156;
+  font-size: 13px;
+}
+
+.customer-color-preview > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.customer-color-preview strong {
+  color: #245840;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.customer-color-preview > div > span {
+  color: #567363;
+  font-size: 11px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+/* =========================================
+   CUSTOMER PROFILE SIDEBAR
+   ========================================= */
+
+.customer-preferences-sidebar {
+  margin: 16px 0;
+  padding: 13px 14px;
+  border: 1px solid #dce9de;
+  border-radius: 10px;
+  background: #f4f9f3;
+}
+
+.customer-preferences-label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 8px;
+  color: #28664b;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.customer-preferences-label i {
+  font-size: 13px;
+}
+
+.customer-preferences-sidebar p {
+  margin: 0;
+  color: #54715e;
+  font-size: 11px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+
+/* =========================================
+   ORDER DETAILS — COLOR PREFERENCES
+   ========================================= */
+
+.customer-color-detail-section {
+  border: 1px solid #dce9df;
+  border-radius: 12px;
+  background: #f8fbf7;
+  padding: 18px;
+}
+
+.customer-color-detail-heading {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  margin-bottom: 13px;
+}
+
+.customer-color-detail-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 36px;
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  background: #e0eee3;
+  color: #287156;
+  font-size: 16px;
+}
+
+.customer-color-detail-heading > div {
+  min-width: 0;
+}
+
+.customer-color-detail-heading h3 {
+  margin: 0 0 5px;
+  color: #204c39;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.customer-color-detail-heading p {
+  margin: 0;
+  color: #819286;
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.customer-color-detail-content {
+  padding: 13px 14px;
+  border: 1px solid #d6e5d9;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #245b43;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.customer-color-detail-note {
+  display: block;
+  margin-top: 10px;
+  color: #829287;
+  font-size: 10px;
+  line-height: 1.6;
+}
+
+@media (max-width: 600px) {
+  .customer-color-detail-section {
+    padding: 12px;
+  }
+
+  .customer-color-preview {
+    padding: 9px;
+  }
+}
+
+/* =========================================
+   COMPACT CUSTOMER PREFERENCES
+   ========================================= */
+
+.customer-color-preview {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+
+  width: 100%;
+  height: 34px;
+  min-height: 34px;
+  max-height: 34px;
+
+  margin: 5px 0 7px;
+  padding: 5px 9px;
+
+  border: 1px solid #d9e8dd;
+  border-radius: 6px;
+  background: #f2f8f1;
+
+  overflow: hidden;
+}
+
+/* SMALLER ICON */
+
+.customer-color-preview-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  flex: 0 0 20px;
+  width: 20px;
+  height: 20px;
+
+  border-radius: 5px;
+  background: #e0efe4;
+  color: #287156;
+
+  font-size: 10px;
+}
+
+/* TEXT WRAPPER */
+
+.customer-color-preview > div {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+/* LABEL */
+
+.customer-color-preview strong {
+  flex: 0 0 auto;
+  color: #245840;
+  font-size: 10px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* SELECTED COLORS TEXT */
+
+.customer-color-preview > div > span {
+  display: block;
+  flex: 1;
+  min-width: 0;
+
+  color: #567363;
+  font-size: 10px;
+  line-height: 1.3;
+
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* SMALL SCREENS */
+
+@media (max-width: 600px) {
+  .customer-color-preview {
+    height: 32px;
+    min-height: 32px;
+    max-height: 32px;
+    padding: 4px 7px;
+  }
+
+  .customer-color-preview strong {
+    font-size: 9px;
+  }
+
+  .customer-color-preview > div > span {
+    font-size: 9px;
+  }
+}

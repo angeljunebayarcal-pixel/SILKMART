@@ -202,6 +202,24 @@
 
       </a>
 
+      <!-- DELIVERY MANAGEMENT -->
+      <a
+        routerLink="/home-adm/delivery"
+        routerLinkActive="active"
+        [attr.tabindex]="menuOpen ? 0 : -1"
+        (click)="closeMenu()"
+      >
+
+        <span>
+          Delivery Management
+        </span>
+
+        <span class="dropdown-arrow">
+          ›
+        </span>
+
+      </a>
+
     </nav>
 
   </div>
@@ -209,12 +227,16 @@
   <!-- RIGHT: NOTIFICATION AND PROFILE -->
   <div class="topbar-actions">
 
-    <!-- NOTIFICATION -->
-    <button
+    <!-- LIVE NOTIFICATION BELL -->
+    <a
       class="notification-button"
-      type="button"
-      aria-label="Admin notifications"
-      (click)="openNotifications()"
+      routerLink="/home-adm/notf-adm"
+      routerLinkActive="active"
+      aria-label="Open Admin notifications"
+      [attr.title]="notificationCount > 0
+        ? notificationCount + ' unread notifications'
+        : 'Notifications'"
+      [attr.aria-live]="'polite'"
     >
 
       <svg
@@ -240,15 +262,19 @@
 
       </svg>
 
-      <!-- NOTIFICATION COUNT -->
+      <!-- UNREAD NOTIFICATION COUNT -->
       <span
         *ngIf="notificationCount > 0"
         class="notification-dot"
       >
-        {{ notificationCount }}
+        {{
+          notificationCount > 99
+            ? '99+'
+            : notificationCount
+        }}
       </span>
 
-    </button>
+    </a>
 
     <!-- ADMIN PROFILE -->
     <button

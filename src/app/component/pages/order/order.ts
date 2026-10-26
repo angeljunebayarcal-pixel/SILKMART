@@ -1,6 +1,5 @@
 
 import { CommonModule } from '@angular/common';
-
 import {
   ChangeDetectorRef,
   Component,
@@ -9,16 +8,9 @@ import {
   OnInit,
   runInInjectionContext
 } from '@angular/core';
-
 import { Router } from '@angular/router';
-
-import {
-  Auth,
-  onAuthStateChanged
-} from '@angular/fire/auth';
-
+import { Auth, onAuthStateChanged } from '@angular/fire/auth';
 import { Subscription } from 'rxjs';
-
 import {
   OrderServ,
   SilkMartOrder
@@ -35,6 +27,7 @@ interface SilkOrder {
   status: string;
   orderDate: string;
   artClass: string;
+  imageUrl: string;
   cancelReason: string;
   preferredDeliveryDate: string;
   products: string[];
@@ -48,28 +41,17 @@ interface SilkOrder {
   styleUrl: './order.scss'
 })
 export class Order implements OnInit, OnDestroy {
-
   currentUserId = '';
   authResolved = false;
 
   orders: SilkOrder[] = [];
-
   loadingOrders = true;
   orderError = '';
-
   saving = false;
-
-  // =========================================
-  // CANCELLATION POPUP
-  // =========================================
 
   cancelOrderPopup = false;
   selectedOrder: SilkOrder | null = null;
   selectedCancelReason = '';
-
-  // =========================================
-  // PERMANENT DELETE POPUP
-  // =========================================
 
   deleteOrderPopup = false;
   selectedDeleteOrder: SilkOrder | null = null;
@@ -96,10 +78,6 @@ export class Order implements OnInit, OnDestroy {
     private orderService: OrderServ
   ) {}
 
-  // =========================================
-  // PAGE INITIALIZATION
-  // =========================================
-
   ngOnInit(): void {
     this.listenToAuthUser();
   }
@@ -109,11 +87,9 @@ export class Order implements OnInit, OnDestroy {
       this.injector,
       () => onAuthStateChanged(
         this.auth,
-
         user => {
           this.ordersSubscription?.unsubscribe();
           this.ordersSubscription = null;
-
           this.authResolved = true;
 
           if (!user) {
@@ -121,10 +97,8 @@ export class Order implements OnInit, OnDestroy {
             this.orders = [];
             this.loadingOrders = false;
             this.orderError = '';
-
             this.closeCancelPopup();
             this.closeDeletePopup();
-
             this.cdr.detectChanges();
             return;
           }
@@ -133,31 +107,19 @@ export class Order implements OnInit, OnDestroy {
           this.orders = [];
           this.loadingOrders = true;
           this.orderError = '';
-
           this.loadOrders();
           this.cdr.detectChanges();
         },
-
         error => {
-          console.error(
-            'Authentication error:',
-            error
-          );
-
+          console.error('Authentication error:', error);
           this.authResolved = true;
           this.loadingOrders = false;
-          this.orderError =
-            'Unable to verify your account.';
-
+          this.orderError = 'Unable to verify your account.';
           this.cdr.detectChanges();
         }
       )
     );
   }
-
-  // =========================================
-  // FIRESTORE REAL-TIME ORDER LISTENER
-  // =========================================
 
   loadOrders(): void {
     if (!this.currentUserId) {
@@ -167,52 +129,35 @@ export class Order implements OnInit, OnDestroy {
     }
 
     this.ordersSubscription?.unsubscribe();
-
     this.loadingOrders = true;
     this.orderError = '';
 
     this.ordersSubscription = runInInjectionContext(
       this.injector,
-      () => this.orderService.getMyOrders()
-        .subscribe({
-          next: (firebaseOrders: SilkMartOrder[]) => {
-            this.orders = firebaseOrders
-              .filter(
-                order =>
-                  order.customerId === this.currentUserId
-              )
-              .map(
-                order => this.convertFirestoreOrder(order)
-              );
+      () => this.orderService.getMyOrders().subscribe({
+        next: (firebaseOrders: SilkMartOrder[]) => {
+          this.orders = firebaseOrders
+            .filter(
+              order => order.customerId === this.currentUserId
+            )
+            .map(order => this.convertFirestoreOrder(order));
 
-            this.loadingOrders = false;
-            this.orderError = '';
-
-            this.cdr.detectChanges();
-          },
-
-          error: error => {
-            console.error(
-              'Firestore orders error:',
-              error
-            );
-
-            this.loadingOrders = false;
-
-            this.orderError =
-              error?.code === 'permission-denied'
-                ? 'Firebase denied access to your orders.'
-                : 'Unable to load orders. Check your connection.';
-
-            this.cdr.detectChanges();
-          }
-        })
+          this.loadingOrders = false;
+          this.orderError = '';
+          this.cdr.detectChanges();
+        },
+        error: error => {
+          console.error('Firestore orders error:', error);
+          this.loadingOrders = false;
+          this.orderError =
+            error?.code === 'permission-denied'
+              ? 'Firebase denied access to your orders.'
+              : 'Unable to load orders. Check your connection.';
+          this.cdr.detectChanges();
+        }
+      })
     );
   }
-
-  // =========================================
-  // FORMAT FIRESTORE DATA FOR CURRENT DESIGN
-  // =========================================
 
   private convertFirestoreOrder(
     order: SilkMartOrder
@@ -239,27 +184,30 @@ export class Order implements OnInit, OnDestroy {
       name += ` + ${items.length - 1} more`;
     }
 
+    // Read the actual product photo saved with the order.
+    // Older orders might not have an image field.
+    const firstImage = firstProduct as any;
+
+    const imageUrl = String(
+      firstImage?.image ||
+      firstImage?.imageUrl ||
+      ''
+    );
+
     return {
       id: String(order.id),
       userId: order.customerId,
       name,
       category:
-        firstProduct?.category ||
-        'SILK COLLECTION',
-      price: Number(
-        firstProduct?.price ?? 0
-      ),
+        firstProduct?.category || 'SILK COLLECTION',
+      price: Number(firstProduct?.price ?? 0),
       quantity,
       total: Number(order.total ?? 0),
       status: order.status || 'Pending',
-      orderDate: this.formatOrderDate(
-        order.createdAt
-      ),
-      artClass:
-        firstProduct?.artClass ||
-        'scarf-art',
-      cancelReason:
-        order.cancelReason || '',
+      orderDate: this.formatOrderDate(order.createdAt),
+      artClass: firstProduct?.artClass || '',
+      imageUrl,
+      cancelReason: order.cancelReason || '',
       preferredDeliveryDate:
         order.preferredDeliveryDate || '',
       products: productNames
@@ -290,10 +238,6 @@ export class Order implements OnInit, OnDestroy {
     });
   }
 
-  // =========================================
-  // OPEN CANCEL POPUP
-  // =========================================
-
   openCancelPopup(order: SilkOrder): void {
     if (
       !this.currentUserId ||
@@ -303,9 +247,7 @@ export class Order implements OnInit, OnDestroy {
     }
 
     if (order.status !== 'Pending') {
-      alert(
-        'Only pending orders can be cancelled.'
-      );
+      alert('Only pending orders can be cancelled.');
       return;
     }
 
@@ -326,10 +268,6 @@ export class Order implements OnInit, OnDestroy {
     this.selectedCancelReason = reason;
   }
 
-  // =========================================
-  // CANCEL ORDER IN FIRESTORE
-  // =========================================
-
   async confirmCancellation(): Promise<void> {
     if (
       this.saving ||
@@ -346,9 +284,7 @@ export class Order implements OnInit, OnDestroy {
     }
 
     if (!this.selectedCancelReason) {
-      alert(
-        'Please select a cancellation reason.'
-      );
+      alert('Please select a cancellation reason.');
       return;
     }
 
@@ -363,27 +299,16 @@ export class Order implements OnInit, OnDestroy {
       this.saving = false;
       this.closeCancelPopup();
 
-      // Real-time Firestore listener refreshes the status.
     } catch (error: any) {
-      console.error(
-        'Order cancellation failed:',
-        error
-      );
-
+      console.error('Order cancellation failed:', error);
       alert(
-        error?.message ||
-        'Unable to cancel this order.'
+        error?.message || 'Unable to cancel this order.'
       );
-
       this.saving = false;
     }
 
     this.cdr.detectChanges();
   }
-
-  // =========================================
-  // OPEN DELETE POPUP
-  // =========================================
 
   deleteOrder(order: SilkOrder): void {
     if (
@@ -394,9 +319,7 @@ export class Order implements OnInit, OnDestroy {
     }
 
     if (order.status !== 'Cancelled') {
-      alert(
-        'Only cancelled orders can be deleted.'
-      );
+      alert('Only cancelled orders can be deleted.');
       return;
     }
 
@@ -404,20 +327,12 @@ export class Order implements OnInit, OnDestroy {
     this.deleteOrderPopup = true;
   }
 
-  // =========================================
-  // CLOSE DELETE POPUP
-  // =========================================
-
   closeDeletePopup(): void {
     if (this.deletingOrder) return;
 
     this.deleteOrderPopup = false;
     this.selectedDeleteOrder = null;
   }
-
-  // =========================================
-  // PERMANENTLY DELETE FIRESTORE ORDER
-  // =========================================
 
   async confirmDeleteOrder(): Promise<void> {
     if (
@@ -445,16 +360,7 @@ export class Order implements OnInit, OnDestroy {
     this.cdr.detectChanges();
 
     try {
-      // Permanently removes the actual
-      // orders/{orderId} Firestore document.
-
-      await this.orderService.deleteMyCancelledOrder(
-        order.id
-      );
-
-      // Update the screen immediately.
-      // The Firestore listener also receives
-      // the deletion automatically.
+      await this.orderService.deleteMyCancelledOrder(order.id);
 
       this.orders = this.orders.filter(
         item => item.id !== order.id
@@ -464,14 +370,11 @@ export class Order implements OnInit, OnDestroy {
       this.closeDeletePopup();
 
     } catch (error: any) {
-      console.error(
-        'Permanent deletion failed:',
-        error
-      );
+      console.error('Permanent deletion failed:', error);
 
       if (error?.code === 'permission-denied') {
         alert(
-          'Firebase denied the deletion. Check the Firestore delete rule.'
+          'Firebase denied the deletion. Check your Firestore delete rule.'
         );
       } else {
         alert(
@@ -486,14 +389,8 @@ export class Order implements OnInit, OnDestroy {
     this.cdr.detectChanges();
   }
 
-  // =========================================
-  // NAVIGATION
-  // =========================================
-
   shopCollection(): void {
-    this.router.navigate([
-      '/home-cust/shopsilk'
-    ]);
+    this.router.navigate(['/home-cust/shopsilk']);
   }
 
   trackOrder(): void {
@@ -504,14 +401,9 @@ export class Order implements OnInit, OnDestroy {
     }
   }
 
-  // =========================================
-  // CLEANUP
-  // =========================================
-
   ngOnDestroy(): void {
     this.ordersSubscription?.unsubscribe();
     this.ordersSubscription = null;
-
     this.stopAuthListener?.();
     this.stopAuthListener = null;
   }

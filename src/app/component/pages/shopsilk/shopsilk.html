@@ -1,12 +1,15 @@
+
 <div class="shopsilk">
 
   <!-- COLLECTION -->
   <section class="collection-section">
+
     <div class="collection-heading">
       <div>
         <div class="eyebrow">THE COLLECTION</div>
         <h1>Useful beauty, woven slowly.</h1>
       </div>
+
       <p class="collection-description">
         Pieces for quiet mornings, thoughtful gifting, and
         the everyday rituals in between.
@@ -15,68 +18,84 @@
 
     <!-- SEARCH AND FILTERS -->
     <div class="collection-controls">
+
       <div class="search-box">
-        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <circle cx="11" cy="11" r="6.5" stroke="currentColor" stroke-width="1.5" />
-          <path d="M16 16L20 20" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+        <svg viewBox="0 0 24 24" fill="none">
+          <circle
+            cx="11"
+            cy="11"
+            r="6.5"
+            stroke="currentColor"
+            stroke-width="1.5"/>
+          <path
+            d="M16 16L20 20"
+            stroke="currentColor"
+            stroke-width="1.5"
+            stroke-linecap="round"/>
         </svg>
+
         <input
           type="text"
           placeholder="Search the collection"
-          [(ngModel)]="searchTerm"
-        />
+          [(ngModel)]="searchTerm">
       </div>
 
       <div class="category-buttons">
         <button
+          *ngFor="let category of categories"
           type="button"
-          [class.active]="selectedCategory === 'All pieces'"
-          (click)="selectCategory('All pieces')"
-        >All pieces</button>
-
-        <button
-          type="button"
-          [class.active]="selectedCategory === 'Scarves'"
-          (click)="selectCategory('Scarves')"
-        >Scarves</button>
-
-        <button
-          type="button"
-          [class.active]="selectedCategory === 'Home & sleep'"
-          (click)="selectCategory('Home & sleep')"
-        >Home &amp; sleep</button>
-
-        <button
-          type="button"
-          [class.active]="selectedCategory === 'Ribbons & trim'"
-          (click)="selectCategory('Ribbons & trim')"
-        >Ribbons &amp; trim</button>
+          [class.active]="selectedCategory === category"
+          (click)="selectCategory(category)">
+          {{ category }}
+        </button>
       </div>
 
-      <select class="sort-select" [(ngModel)]="sortOption">
+      <select
+        class="sort-select"
+        [(ngModel)]="sortOption">
         <option value="featured">Featured first</option>
         <option value="low">Price: Low to high</option>
         <option value="high">Price: High to low</option>
       </select>
+
     </div>
 
     <!-- PRODUCTS -->
     <div class="product-grid">
+
       <article
         class="product-card"
         *ngFor="let product of filteredProducts"
-        (click)="openProduct(product)"
-      >
-        <div class="product-image" [ngClass]="product.artClass">
-          <span class="featured-label" *ngIf="product.featured">FEATURED</span>
-          <div *ngIf="product.artClass === 'scarf-art'" class="scarf-shape"></div>
-          <div *ngIf="product.artClass === 'sleep-art'" class="sleep-shape"></div>
-          <div *ngIf="product.artClass === 'ribbon-art'" class="ribbon-shape"></div>
-          <div *ngIf="product.artClass === 'throw-art'" class="throw-shape"></div>
+        (click)="openProduct(product)">
+
+        <div
+          class="product-image"
+          [ngClass]="product.artClass">
+
+          <span
+            class="featured-label"
+            *ngIf="product.featured">
+            FEATURED
+          </span>
+
+          <img
+            *ngIf="product.imageUrl"
+            [src]="product.imageUrl"
+            [alt]="product.name"
+            class="firebase-product-photo">
+
+          <div
+            *ngIf="!product.imageUrl"
+            class="firebase-image-placeholder">
+            <i class="pi pi-image"></i>
+          </div>
         </div>
 
         <div class="product-info">
-          <div class="product-category">{{ product.category }}</div>
+          <div class="product-category">
+            {{ product.category }}
+          </div>
+
           <h2>{{ product.name }}</h2>
 
           <div class="product-bottom">
@@ -84,40 +103,76 @@
               <div class="product-price">
                 ₱{{ product.price | number:'1.2-2' }}
               </div>
-              <div class="stock">{{ product.stock }} available nearby</div>
+
+              <div class="stock">
+                {{ product.stock | number }}
+                {{ getStockUnit(product) }} available
+              </div>
             </div>
 
             <button
               class="add-button"
               type="button"
               (click)="$event.stopPropagation(); addToCart(product)"
-              [attr.aria-label]="'Add ' + product.name + ' to cart'"
-            >+</button>
+              [attr.aria-label]="'Choose options for ' + product.name">
+              +
+            </button>
           </div>
         </div>
       </article>
+
     </div>
 
-    <div class="no-products" *ngIf="filteredProducts.length === 0">
-      <p>No pieces found.</p>
+    <div
+      class="no-products"
+      *ngIf="loadingProducts">
+      <p>Loading the collection...</p>
     </div>
+
+    <div
+      class="no-products"
+      *ngIf="!loadingProducts && productsError">
+      <p>{{ productsError }}</p>
+
+      <button
+        type="button"
+        (click)="loadPublishedProducts()">
+        Retry
+      </button>
+    </div>
+
+    <div
+      class="no-products"
+      *ngIf="
+        !loadingProducts &&
+        !productsError &&
+        filteredProducts.length === 0
+      ">
+      <p>No published products available right now.</p>
+    </div>
+
   </section>
 
   <!-- CARE SECTION -->
   <section class="care-section">
+
     <div class="care-content">
-      <div class="care-label">CARE IS PART OF THE CRAFT</div>
+      <div class="care-label">
+        CARE IS PART OF THE CRAFT
+      </div>
+
       <h2>Keep the softness going.</h2>
+
       <p>
         Silk likes a gentle life: cool water, a little shade,
-        and time to breathe.<br />
+        and time to breathe.
         Every piece comes with simple care notes from our makers.
       </p>
+
       <button
         type="button"
         class="find-piece-button"
-        (click)="scrollToCollection()"
-      >
+        (click)="scrollToCollection()">
         Find your piece
         <span>→</span>
       </button>
@@ -128,121 +183,275 @@
       <div class="care-oval"></div>
       <div class="care-circle"></div>
     </div>
+
   </section>
 
   <!-- FOOTER -->
   <footer class="customer-footer">
+
     <div class="footer-main">
+
       <div class="footer-brand">
         <div class="footer-brand-title">
           <div class="footer-leaf">♡</div>
+
           <div>
             <div class="footer-name">SilkMart</div>
-            <div class="footer-subtitle">VILLANUEVA SILK</div>
+            <div class="footer-subtitle">
+              VILLANUEVA SILK
+            </div>
           </div>
         </div>
+
         <p>
           Naturally raised, locally woven. A small silk
-          producer in Barangay Imelda, Villanueva, Misamis
-          Oriental.
+          producer in Barangay Imelda, Villanueva,
+          Misamis Oriental.
         </p>
       </div>
 
       <div class="footer-column">
         <div class="footer-heading">STAY CLOSE</div>
+
         <p>
-          Every order supports the hands, homes, and patient
-          work behind local silk.
+          Every order supports the hands, homes,
+          and patient work behind local silk.
         </p>
       </div>
 
       <div class="footer-column">
         <div class="footer-heading">NEED A HAND?</div>
+
         <p>
-          Questions about care or delivery? Our small team is
-          happy to help.
+          Questions about care or delivery?
+          Our small team is happy to help.
         </p>
+
         <button
           type="button"
           class="track-button"
-          (click)="trackOrder()"
-        >
+          (click)="trackOrder()">
           Track an order
           <span>→</span>
         </button>
       </div>
+
     </div>
 
     <div class="footer-bottom">
       © 2026 SilkMart · Made in Misamis Oriental
     </div>
+
   </footer>
 
   <!-- PRODUCT DETAILS POPUP -->
   <div
     class="product-modal-backdrop"
     *ngIf="selectedProduct"
-    (click)="closeProduct()"
-  >
-    <div class="product-modal" (click)="$event.stopPropagation()">
+    (click)="closeProduct()">
+
+    <div
+      class="product-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Product details"
+      (click)="$event.stopPropagation()">
+
       <button
         type="button"
         class="modal-close"
         (click)="closeProduct()"
-        aria-label="Close product"
-      >×</button>
+        aria-label="Close product">
+        ×
+      </button>
 
-      <div class="modal-product-image" [ngClass]="selectedProduct.artClass">
-        <span class="featured-label" *ngIf="selectedProduct.featured">
+      <!-- IMAGE -->
+      <div
+        class="modal-product-image"
+        [ngClass]="selectedProduct.artClass">
+
+        <span
+          class="featured-label"
+          *ngIf="selectedProduct.featured">
           FEATURED
         </span>
-        <div *ngIf="selectedProduct.artClass === 'scarf-art'" class="scarf-shape"></div>
-        <div *ngIf="selectedProduct.artClass === 'sleep-art'" class="sleep-shape"></div>
-        <div *ngIf="selectedProduct.artClass === 'ribbon-art'" class="ribbon-shape"></div>
-        <div *ngIf="selectedProduct.artClass === 'throw-art'" class="throw-shape"></div>
+
+        <img
+          *ngIf="selectedProduct.imageUrl"
+          [src]="selectedProduct.imageUrl"
+          [alt]="selectedProduct.name"
+          class="firebase-product-photo">
+
+        <div
+          *ngIf="!selectedProduct.imageUrl"
+          class="firebase-image-placeholder">
+          <i class="pi pi-image"></i>
+        </div>
       </div>
 
+      <!-- DETAILS -->
       <div class="modal-product-details">
-        <div class="product-category">{{ selectedProduct.category }}</div>
+
+        <div class="product-category">
+          {{ selectedProduct.category }}
+        </div>
+
         <h2>{{ selectedProduct.name }}</h2>
+
         <div class="modal-price">
           ₱{{ selectedProduct.price | number:'1.2-2' }}
         </div>
 
         <p class="modal-description">
-          A carefully finished silk piece made for quiet
-          everyday moments, thoughtful gifting, and simple
-          comfort.
+          {{
+            selectedProduct.description ||
+            'No description provided.'
+          }}
         </p>
 
         <div class="modal-stock">
-          {{ selectedProduct.stock }} pieces available
+          {{ selectedProduct.stock | number }}
+          {{ getStockUnit(selectedProduct) }} available in total
         </div>
 
+        <!-- ADMIN/STAFF AVAILABLE COLORS -->
+        <div
+          class="product-color-section"
+          *ngIf="canChooseColors(selectedProduct)">
+
+          <div class="product-color-heading">
+            <div>
+              <strong>Available Colors</strong>
+              <span>
+                Select one color · Stock shown for each color
+              </span>
+            </div>
+
+            <button
+              type="button"
+              class="clear-color-button"
+              *ngIf="selectedColors.length > 0"
+              (click)="clearColors()">
+              Clear
+            </button>
+          </div>
+
+          <div
+            class="product-color-options"
+            role="group"
+            aria-label="Available product colors">
+
+            <button
+              type="button"
+              *ngFor="let color of availableColors"
+              class="product-color-option"
+              [class.selected]="isColorSelected(color.name)"
+              [attr.aria-pressed]="isColorSelected(color.name)"
+              [title]="color.name + ' - ' + color.quantity + ' pcs available'"
+              (click)="toggleColor(color.name)">
+
+              <span
+                class="product-color-swatch"
+                [style.background-color]="color.hex">
+              </span>
+
+              <span class="product-color-name">
+                {{ color.name }}
+              </span>
+
+              <span class="product-color-stock-count">
+                {{ color.quantity | number }} pcs
+              </span>
+
+              <span
+                class="product-color-tick"
+                *ngIf="isColorSelected(color.name)">
+                ✓
+              </span>
+            </button>
+
+          </div>
+
+          <p
+            class="selected-colors-text"
+            *ngIf="selectedColors.length > 0">
+            Selected color: {{ selectedColorsText }}
+            · {{ maximumQuantity | number }} pcs available
+          </p>
+
+          <p
+            class="color-availability-note"
+            *ngIf="selectedColors.length === 0">
+            Please select a color to continue.
+          </p>
+
+          <p
+            class="color-availability-note"
+            *ngIf="selectedColors.length > 0">
+            Your order quantity cannot exceed the stock
+            available for the selected color.
+          </p>
+
+        </div>
+
+        <!-- QUANTITY -->
         <div class="modal-quantity-row">
+
           <span>Quantity</span>
-          <div class="quantity-control">
-            <button type="button" (click)="decreaseQuantity()">−</button>
-            <span>{{ selectedQuantity }}</span>
-            <button type="button" (click)="increaseQuantity()">+</button>
+
+          <div class="quantity-control editable-quantity">
+
+            <button
+              type="button"
+              aria-label="Decrease quantity"
+              [disabled]="selectedQuantity <= 1 || maximumQuantity < 1"
+              (click)="decreaseQuantity()">
+              −
+            </button>
+
+            <input
+              type="number"
+              class="quantity-number-input"
+              aria-label="Quantity to order"
+              name="selectedQuantity"
+              min="1"
+              step="1"
+              [max]="maximumQuantity"
+              [disabled]="maximumQuantity < 1"
+              [(ngModel)]="selectedQuantity"
+              (blur)="normalizeQuantity()">
+
+            <button
+              type="button"
+              aria-label="Increase quantity"
+              [disabled]="maximumQuantity < 1 || selectedQuantity >= maximumQuantity"
+              (click)="increaseQuantity()">
+              +
+            </button>
+
           </div>
         </div>
 
+        <!-- ACTIONS -->
         <div class="modal-actions">
+
           <button
             type="button"
             class="modal-add-button"
-            (click)="addSelectedProduct()"
-          >Add to bag</button>
+            [disabled]="!quantityValid"
+            (click)="addSelectedProduct()">
+            Add to bag
+          </button>
 
           <button
             type="button"
             class="modal-order-button"
-            (click)="orderSelectedProduct()"
-          >
+            [disabled]="!quantityValid"
+            (click)="orderSelectedProduct()">
             Order now
             <span>→</span>
           </button>
+
         </div>
       </div>
     </div>
@@ -252,32 +461,59 @@
   <div
     class="add-success-backdrop"
     *ngIf="addSuccessPopup"
-    (click)="closeAddSuccessPopup()"
-  >
-    <div class="add-success-modal" (click)="$event.stopPropagation()">
+    (click)="closeAddSuccessPopup()">
+
+    <div
+      class="add-success-modal"
+      (click)="$event.stopPropagation()">
+
       <button
         type="button"
         class="add-success-close"
         (click)="closeAddSuccessPopup()"
-        aria-label="Close"
-      >×</button>
+        aria-label="Close">
+        ×
+      </button>
 
       <div class="add-success-icon">✓</div>
-      <div class="add-success-eyebrow">ADDED TO ORDERS</div>
-      <h2>Added successfully.</h2>
-      <p>Your selected silk piece has been added to your orders.</p>
+      <div class="add-success-eyebrow">
+        ADDED TO ORDERS
+      </div>
 
-      <div class="added-product" *ngIf="addedProduct">
-        <div class="added-product-image" [ngClass]="addedProduct.artClass">
-          <div *ngIf="addedProduct.artClass === 'scarf-art'" class="scarf-shape"></div>
-          <div *ngIf="addedProduct.artClass === 'sleep-art'" class="sleep-shape"></div>
-          <div *ngIf="addedProduct.artClass === 'ribbon-art'" class="ribbon-shape"></div>
-          <div *ngIf="addedProduct.artClass === 'throw-art'" class="throw-shape"></div>
+      <h2>Added successfully.</h2>
+
+      <p>
+        Your selected silk piece has been added to your orders.
+      </p>
+
+      <div
+        class="added-product"
+        *ngIf="addedProduct">
+
+        <div
+          class="added-product-image"
+          [ngClass]="addedProduct.artClass">
+
+          <img
+            *ngIf="addedProduct.imageUrl"
+            [src]="addedProduct.imageUrl"
+            [alt]="addedProduct.name"
+            class="firebase-product-photo">
+
+          <div
+            *ngIf="!addedProduct.imageUrl"
+            class="firebase-image-placeholder">
+            <i class="pi pi-image"></i>
+          </div>
         </div>
 
         <div class="added-product-info">
-          <div class="product-category">{{ addedProduct.category }}</div>
+          <div class="product-category">
+            {{ addedProduct.category }}
+          </div>
+
           <h3>{{ addedProduct.name }}</h3>
+
           <div class="added-product-price">
             ₱{{ addedProduct.price | number:'1.2-2' }}
           </div>
@@ -285,20 +521,22 @@
       </div>
 
       <div class="add-success-actions">
+
         <button
           type="button"
           class="continue-shopping-button"
-          (click)="closeAddSuccessPopup()"
-        >Continue shopping</button>
+          (click)="closeAddSuccessPopup()">
+          Continue shopping
+        </button>
 
         <button
           type="button"
           class="view-orders-button"
-          (click)="viewOrders()"
-        >
+          (click)="viewOrders()">
           View orders
           <span>→</span>
         </button>
+
       </div>
     </div>
   </div>
@@ -307,66 +545,87 @@
   <div
     class="register-backdrop"
     *ngIf="showRegisterPopup"
-    (click)="closeRegisterPopup()"
-  >
-    <div class="register-modal" (click)="$event.stopPropagation()">
+    (click)="closeRegisterPopup()">
+
+    <div
+      class="register-modal"
+      (click)="$event.stopPropagation()">
+
       <button
         type="button"
         class="register-close"
         (click)="closeRegisterPopup()"
-        aria-label="Close registration"
-      >
+        aria-label="Close registration">
         <i class="pi pi-times"></i>
       </button>
 
       <div class="register-brand">
         <div class="register-brand-icon">
-          <!-- ORIGINAL SILKMART WORM AND LEAF -->
           <svg viewBox="0 0 24 24" fill="none">
-            <circle cx="8.7" cy="8.7" r="1.45" stroke="currentColor" stroke-width="1.15" />
-            <circle cx="10.8" cy="7.9" r="1.45" stroke="currentColor" stroke-width="1.15" />
-            <circle cx="13" cy="7.4" r="1.45" stroke="currentColor" stroke-width="1.15" />
-            <circle cx="15.2" cy="7.2" r="1.45" stroke="currentColor" stroke-width="1.15" />
-            <circle cx="17.4" cy="7.3" r="1.65" stroke="currentColor" stroke-width="1.15" />
-            <circle cx="17.85" cy="6.95" r="0.22" fill="currentColor" />
+            <circle cx="8.7" cy="8.7" r="1.45" stroke="currentColor" stroke-width="1.15"/>
+            <circle cx="10.8" cy="7.9" r="1.45" stroke="currentColor" stroke-width="1.15"/>
+            <circle cx="13" cy="7.4" r="1.45" stroke="currentColor" stroke-width="1.15"/>
+            <circle cx="15.2" cy="7.2" r="1.45" stroke="currentColor" stroke-width="1.15"/>
+            <circle cx="17.4" cy="7.3" r="1.65" stroke="currentColor" stroke-width="1.15"/>
+            <circle cx="17.85" cy="6.95" r="0.22" fill="currentColor"/>
+
             <path
               d="M17.7 5.9C18.2 5.1 18.8 4.9 19.5 5.1"
-              stroke="currentColor" stroke-width="0.95" stroke-linecap="round"
-            />
+              stroke="currentColor"
+              stroke-width="0.95"
+              stroke-linecap="round"/>
+
             <path
               d="M16.7 5.9C16.4 5.1 15.8 4.8 15.2 4.9"
-              stroke="currentColor" stroke-width="0.95" stroke-linecap="round"
-            />
+              stroke="currentColor"
+              stroke-width="0.95"
+              stroke-linecap="round"/>
+
             <path
-              d="M17.8 4.5C13.2 4.8 8.4 7.2 7 11.2C6.1 13.8 7.3 16.2 9.8 17.1C12.7 18.1 15.5 16.4 16.5 13.9"
-              stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
-            />
+              d="M17.8 4.5C13.2 4.8 8.4 7.2 7 11.2C6.1 13.8 7.3 16.1C12.7 18.1 15.5 16.4 16.5 13.9"
+              stroke="currentColor"
+              stroke-width="1.5"
+              stroke-linecap="round"/>
+
             <path
               d="M7.4 17.2C9.8 14.4 12.5 12.2 16.5 10.4"
-              stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
-            />
+              stroke="currentColor"
+              stroke-width="1.5"
+              stroke-linecap="round"/>
           </svg>
         </div>
 
         <div>
-          <div class="register-brand-name">SilkMart</div>
-          <div class="register-brand-subtitle">VILLANUEVA SILK</div>
+          <div class="register-brand-name">
+            SilkMart
+          </div>
+          <div class="register-brand-subtitle">
+            VILLANUEVA SILK
+          </div>
         </div>
       </div>
 
       <div class="register-heading">
-        <div class="register-eyebrow">CUSTOMER ACCOUNT</div>
+        <div class="register-eyebrow">
+          CUSTOMER ACCOUNT
+        </div>
+
         <h2>Create your account</h2>
         <p>Create an account to continue with your order.</p>
       </div>
 
       <form (ngSubmit)="createAccount()">
+
         <div class="register-grid">
 
           <div class="register-field">
-            <label for="fullName">Full Name</label>
+            <label for="fullName">
+              Full Name
+            </label>
+
             <div class="register-input-wrap">
               <i class="pi pi-user"></i>
+
               <input
                 id="fullName"
                 type="text"
@@ -374,15 +633,18 @@
                 [(ngModel)]="fullName"
                 placeholder="Enter your full name"
                 autocomplete="name"
-                required
-              />
+                required>
             </div>
           </div>
 
           <div class="register-field">
-            <label for="registerEmail">Email Address</label>
+            <label for="registerEmail">
+              Email Address
+            </label>
+
             <div class="register-input-wrap">
               <i class="pi pi-envelope"></i>
+
               <input
                 id="registerEmail"
                 type="email"
@@ -390,15 +652,18 @@
                 [(ngModel)]="registerEmail"
                 placeholder="you@example.com"
                 autocomplete="email"
-                required
-              />
+                required>
             </div>
           </div>
 
           <div class="register-field">
-            <label for="mobileNumber">Mobile Number</label>
+            <label for="mobileNumber">
+              Mobile Number
+            </label>
+
             <div class="register-input-wrap">
               <i class="pi pi-phone"></i>
+
               <input
                 id="mobileNumber"
                 type="tel"
@@ -406,15 +671,18 @@
                 [(ngModel)]="mobileNumber"
                 placeholder="09XXXXXXXXX"
                 autocomplete="tel"
-                required
-              />
+                required>
             </div>
           </div>
 
           <div class="register-field register-full-width">
-            <label for="completeAddress">Complete Address</label>
+            <label for="completeAddress">
+              Complete Address
+            </label>
+
             <div class="register-input-wrap register-textarea-wrap">
               <i class="pi pi-map-marker"></i>
+
               <textarea
                 id="completeAddress"
                 name="completeAddress"
@@ -422,15 +690,18 @@
                 placeholder="Enter your complete address"
                 rows="3"
                 autocomplete="street-address"
-                required
-              ></textarea>
+                required></textarea>
             </div>
           </div>
 
           <div class="register-field">
-            <label for="registerPassword">Password</label>
+            <label for="registerPassword">
+              Password
+            </label>
+
             <div class="register-input-wrap register-password-wrap">
               <i class="pi pi-lock"></i>
+
               <input
                 id="registerPassword"
                 [type]="showRegisterPassword ? 'text' : 'password'"
@@ -438,26 +709,32 @@
                 [(ngModel)]="registerPassword"
                 placeholder="Enter password"
                 autocomplete="new-password"
-                required
-              />
+                required>
+
               <button
                 type="button"
                 class="register-eye-button"
                 (click)="toggleRegisterPassword()"
-                aria-label="Toggle password visibility"
-              >
+                aria-label="Toggle password visibility">
                 <i
                   class="pi"
-                  [ngClass]="showRegisterPassword ? 'pi-eye-slash' : 'pi-eye'"
-                ></i>
+                  [ngClass]="
+                    showRegisterPassword
+                      ? 'pi-eye-slash'
+                      : 'pi-eye'
+                  "></i>
               </button>
             </div>
           </div>
 
           <div class="register-field">
-            <label for="confirmPassword">Confirm Password</label>
+            <label for="confirmPassword">
+              Confirm Password
+            </label>
+
             <div class="register-input-wrap register-password-wrap">
               <i class="pi pi-lock"></i>
+
               <input
                 id="confirmPassword"
                 [type]="showConfirmPassword ? 'text' : 'password'"
@@ -465,25 +742,29 @@
                 [(ngModel)]="confirmPassword"
                 placeholder="Confirm password"
                 autocomplete="new-password"
-                required
-              />
+                required>
+
               <button
                 type="button"
                 class="register-eye-button"
                 (click)="toggleConfirmPassword()"
-                aria-label="Toggle confirm password visibility"
-              >
+                aria-label="Toggle confirm password visibility">
                 <i
                   class="pi"
-                  [ngClass]="showConfirmPassword ? 'pi-eye-slash' : 'pi-eye'"
-                ></i>
+                  [ngClass]="
+                    showConfirmPassword
+                      ? 'pi-eye-slash'
+                      : 'pi-eye'
+                  "></i>
               </button>
             </div>
           </div>
 
         </div>
 
-        <div class="register-error" *ngIf="registerError">
+        <div
+          class="register-error"
+          *ngIf="registerError">
           <i class="pi pi-exclamation-circle"></i>
           <span>{{ registerError }}</span>
         </div>
@@ -491,8 +772,8 @@
         <button
           type="submit"
           class="register-submit"
-          [disabled]="registerLoading"
-        >
+          [disabled]="registerLoading">
+
           <ng-container *ngIf="!registerLoading">
             <i class="pi pi-user-plus"></i>
             <span>Create account &amp; continue</span>
@@ -503,6 +784,7 @@
             <i class="pi pi-spin pi-spinner"></i>
             <span>Creating account...</span>
           </ng-container>
+
         </button>
       </form>
     </div>
@@ -512,75 +794,106 @@
   <div
     class="bag-confirm-backdrop"
     *ngIf="showAddBagConfirmation"
-    (click)="closeAddBagConfirmation()"
-  >
+    (click)="closeAddBagConfirmation()">
+
     <div
       class="bag-confirm-modal"
       role="dialog"
       aria-modal="true"
       aria-labelledby="bag-confirm-title"
-      (click)="$event.stopPropagation()"
-    >
+      (click)="$event.stopPropagation()">
+
       <div class="bag-confirm-icon">
         <i class="pi pi-shopping-bag"></i>
       </div>
 
-      <div class="bag-confirm-eyebrow">YOUR SHOPPING BAG</div>
-      <h2 id="bag-confirm-title">Add to your bag?</h2>
+      <div class="bag-confirm-eyebrow">
+        YOUR SHOPPING BAG
+      </div>
+
+      <h2 id="bag-confirm-title">
+        Add to your bag?
+      </h2>
+
       <p>
         Would you like to continue adding this
-        silk piece to your shopping cart?
+        silk product to your shopping cart?
       </p>
 
-      <div class="bag-confirm-product" *ngIf="confirmationProduct">
+      <div
+        class="bag-confirm-product"
+        *ngIf="confirmationProduct">
+
         <div class="bag-confirm-product-info">
-          <span>{{ confirmationProduct.category }}</span>
+          <span>
+            {{ confirmationProduct.category }}
+          </span>
+
           <h3>{{ confirmationProduct.name }}</h3>
-          <small>Quantity: {{ confirmationQuantity }}</small>
+
+          <small>
+            Quantity: {{ confirmationQuantity }}
+          </small>
+
+          <small *ngIf="confirmationColors.length > 0">
+            Selected color: {{ confirmationColors.join(', ') }}
+          </small>
         </div>
+
         <strong>
-          ₱{{ confirmationProduct.price * confirmationQuantity | number:'1.2-2' }}
+          ₱{{
+            confirmationProduct.price *
+            confirmationQuantity |
+            number:'1.2-2'
+          }}
         </strong>
       </div>
 
       <div class="bag-confirm-actions">
+
         <button
           type="button"
           class="bag-cancel-button"
-          (click)="closeAddBagConfirmation()"
-        >Cancel</button>
+          (click)="closeAddBagConfirmation()">
+          Cancel
+        </button>
 
         <button
           type="button"
           class="bag-continue-button"
-          (click)="confirmAddToBag()"
-        >
+          (click)="confirmAddToBag()">
           <i class="pi pi-shopping-bag"></i>
           Add to cart
         </button>
+
       </div>
     </div>
   </div>
 
-  <!-- ORDER NOW CONFIRMATION AND DELIVERY CALENDAR -->
+  <!-- ORDER NOW CONFIRMATION -->
   <div
     class="order-confirm-backdrop"
     *ngIf="showOrderConfirmation"
-    (click)="closeOrderConfirmation()"
-  >
+    (click)="closeOrderConfirmation()">
+
     <div
       class="order-confirm-modal"
       role="dialog"
       aria-modal="true"
       aria-labelledby="order-confirm-title"
-      (click)="$event.stopPropagation()"
-    >
+      (click)="$event.stopPropagation()">
+
       <div class="order-confirm-icon">
         <i class="pi pi-shopping-bag"></i>
       </div>
 
-      <div class="order-confirm-eyebrow">ORDER CONFIRMATION</div>
-      <h2 id="order-confirm-title">Place your order?</h2>
+      <div class="order-confirm-eyebrow">
+        ORDER CONFIRMATION
+      </div>
+
+      <h2 id="order-confirm-title">
+        Place your order?
+      </h2>
 
       <p>
         Review your selected silk piece and choose
@@ -589,26 +902,46 @@
 
       <div
         class="order-confirm-product"
-        *ngIf="confirmationOrderProduct"
-      >
+        *ngIf="confirmationOrderProduct">
+
         <div class="order-confirm-product-info">
-          <span>{{ confirmationOrderProduct.category }}</span>
-          <h3>{{ confirmationOrderProduct.name }}</h3>
-          <small>Quantity: {{ confirmationOrderQuantity }}</small>
+          <span>
+            {{ confirmationOrderProduct.category }}
+          </span>
+
+          <h3>
+            {{ confirmationOrderProduct.name }}
+          </h3>
+
+          <small>
+            Quantity: {{ confirmationOrderQuantity }}
+          </small>
+
+          <small *ngIf="confirmationOrderColors.length > 0">
+            Selected color:
+            {{ confirmationOrderColors.join(', ') }}
+          </small>
         </div>
+
         <strong>
-          ₱{{ confirmationOrderProduct.price * confirmationOrderQuantity | number:'1.2-2' }}
+          ₱{{
+            confirmationOrderProduct.price *
+            confirmationOrderQuantity |
+            number:'1.2-2'
+          }}
         </strong>
       </div>
 
-      <!-- CALENDAR -->
       <div class="order-delivery-date">
+
         <label for="preferredDeliveryDate">
           Preferred delivery date
         </label>
 
         <div class="order-delivery-date-field">
-          <i class="pi pi-calendar" aria-hidden="true"></i>
+          <i
+            class="pi pi-calendar"
+            aria-hidden="true"></i>
 
           <input
             id="preferredDeliveryDate"
@@ -617,8 +950,7 @@
             [min]="minDeliveryDate"
             [(ngModel)]="preferredDeliveryDate"
             required
-            aria-describedby="deliveryDateNote"
-          />
+            aria-describedby="deliveryDateNote">
         </div>
 
         <small id="deliveryDateNote">
@@ -628,23 +960,36 @@
       </div>
 
       <div class="order-confirm-actions">
+
         <button
           type="button"
           class="order-cancel-button"
-          (click)="closeOrderConfirmation()"
-        >Cancel</button>
+          (click)="closeOrderConfirmation()">
+          Cancel
+        </button>
 
         <button
           type="button"
           class="order-continue-button"
-          [disabled]="!preferredDeliveryDate || preferredDeliveryDate < minDeliveryDate"
-          (click)="confirmOrderNow()"
-        >
-          <i class="pi pi-check"></i>
-          Confirm order
-        </button>
-      </div>
+          [disabled]="
+            orderSaving ||
+            !preferredDeliveryDate ||
+            preferredDeliveryDate < minDeliveryDate
+          "
+          (click)="confirmOrderNow()">
 
+          <i
+            class="pi"
+            [ngClass]="
+              orderSaving
+                ? 'pi-spin pi-spinner'
+                : 'pi-check'
+            "></i>
+
+          {{ orderSaving ? 'Saving...' : 'Confirm order' }}
+        </button>
+
+      </div>
     </div>
   </div>
 

@@ -37,6 +37,11 @@ type ProductStatusFilter =
   | 'Draft'
   | 'Out of Stock';
 
+interface ProductColorStock {
+  name: string;
+  quantity: number;
+}
+
 interface ShopProduct {
   id: string;
   name: string;
@@ -49,6 +54,7 @@ interface ShopProduct {
   featured: boolean;
   createdAt: any;
   updatedAt: any;
+  colorStocks: ProductColorStock[];
 }
 
 interface ProductForm {
@@ -60,6 +66,7 @@ interface ProductForm {
   imageUrl: string;
   published: boolean;
   featured: boolean;
+  colorStocks: ProductColorStock[];
 }
 
 @Component({
@@ -109,6 +116,21 @@ export class Products implements OnInit, OnDestroy {
     'Other'
   ];
 
+  readonly availableProductColors = [
+    { name: 'White', hex: '#ffffff' },
+    { name: 'Black', hex: '#242424' },
+    { name: 'Red', hex: '#cc4e4e' },
+    { name: 'Pink', hex: '#ed9eb9' },
+    { name: 'Orange', hex: '#e99b56' },
+    { name: 'Yellow', hex: '#eacb59' },
+    { name: 'Green', hex: '#679e75' },
+    { name: 'Blue', hex: '#679acf' },
+    { name: 'Purple', hex: '#9875b5' },
+    { name: 'Brown', hex: '#98765d' },
+    { name: 'Beige', hex: '#d6bfa1' },
+    { name: 'Gray', hex: '#a5a8a8' }
+  ];
+
   constructor(
     private auth: Auth,
     private firestore: Firestore,
@@ -133,11 +155,16 @@ export class Products implements OnInit, OnDestroy {
     this.cdr.detectChanges();
   }
 
+  // =========================================
+  // INITIALIZATION
+  // =========================================
+
   ngOnInit(): void {
     this.authUnsubscribe = this.inContext(() =>
       onAuthStateChanged(
         this.auth,
         user => this.zone.run(() => {
+
           this.productsSubscription?.unsubscribe();
           this.productsSubscription = null;
 
@@ -147,8 +174,10 @@ export class Products implements OnInit, OnDestroy {
             this.products = [];
             this.selectedProduct = null;
             this.loading = false;
+
             this.errorMessage =
               'Please sign in with an Admin or Staff account.';
+
             this.refresh();
             return;
           }
@@ -157,9 +186,11 @@ export class Products implements OnInit, OnDestroy {
         }),
         error => this.zone.run(() => {
           console.error(error);
+
           this.loading = false;
           this.errorMessage =
             'Unable to verify your Firebase account.';
+
           this.refresh();
         })
       )
@@ -191,6 +222,7 @@ export class Products implements OnInit, OnDestroy {
         { idField: 'id' }
       ).subscribe({
         next: records => this.zone.run(() => {
+
           if (uid !== this.currentUserId) return;
 
           this.products = records.map(
@@ -211,6 +243,7 @@ export class Products implements OnInit, OnDestroy {
         }),
 
         error: error => this.zone.run(() => {
+
           console.error('Products load error:', error);
 
           this.loading = false;
@@ -237,7 +270,20 @@ export class Products implements OnInit, OnDestroy {
       published: raw.published === true,
       featured: raw.featured === true,
       createdAt: raw.createdAt || null,
-      updatedAt: raw.updatedAt || null
+      updatedAt: raw.updatedAt || null,
+
+      colorStocks: Array.isArray(raw.colorStocks)
+        ? raw.colorStocks
+            .filter((color: any) =>
+              typeof color?.name === 'string' &&
+              Number.isInteger(Number(color.quantity)) &&
+              Number(color.quantity) >= 0
+            )
+            .map((color: any) => ({
+              name: String(color.name),
+              quantity: Number(color.quantity)
+            }))
+        : []
     };
   }
 
@@ -296,6 +342,7 @@ export class Products implements OnInit, OnDestroy {
 
     return this.products
       .filter(product => {
+
         const text = [
           product.name,
           product.category,
@@ -324,6 +371,7 @@ export class Products implements OnInit, OnDestroy {
 
         if (this.stockFilter === 'In Stock') {
           matchesStock = product.stock > 0;
+
         } else if (this.stockFilter === 'Low Stock') {
           const threshold =
             this.isSilkwormProduct(product) ? 10 : 100;
@@ -331,6 +379,7 @@ export class Products implements OnInit, OnDestroy {
           matchesStock =
             product.stock > 0 &&
             product.stock <= threshold;
+
         } else if (this.stockFilter === 'Out of Stock') {
           matchesStock = product.stock <= 0;
         }
@@ -343,6 +392,7 @@ export class Products implements OnInit, OnDestroy {
         );
       })
       .sort((a, b) => {
+
         switch (this.sortBy) {
           case 'oldest':
             return (
@@ -391,6 +441,91 @@ export class Products implements OnInit, OnDestroy {
   }
 
   // =========================================
+  // COLOR-SPECIFIC INVENTORY
+  // =========================================
+
+  canManageProductColors(): boolean {
+    const category = this.productForm.category
+      .trim()
+      .toLowerCase();
+
+    return category !== 'silkworms' &&
+      category !== 'cocoons';
+  }
+
+  hasProductColorStock(): boolean {
+    return this.canManageProductColors() &&
+      this.productForm.colorStocks.length > 0;
+  }
+
+  hasSelectedProductColor(name: string): boolean {
+    return this.productForm.colorStocks.some(
+      color => color.name === name
+    );
+  }
+
+  toggleProductColor(name: string): void {
+    if (!this.canManageProductColors()) return;
+
+    if (!this.availableProductColors.some(
+      color => color.name === name
+    )) {
+      return;
+    }
+
+    if (this.hasSelectedProductColor(name)) {
+      this.productForm.colorStocks =
+        this.productForm.colorStocks.filter(
+          color => color.name !== name
+        );
+    } else {
+      this.productForm.colorStocks.push({
+        name,
+        quantity: 0
+      });
+    }
+
+    this.syncProductColorTotal();
+  }
+
+  setProductColorQuantity(
+    name: string,
+    value: number | string
+  ): void {
+    const color = this.productForm.colorStocks.find(
+      item => item.name === name
+    );
+
+    if (!color) return;
+
+    color.quantity = Number(value);
+    this.syncProductColorTotal();
+  }
+
+  get productColorStockTotal(): number {
+    return this.productForm.colorStocks.reduce(
+      (total, color) => {
+        const quantity = Number(color.quantity);
+
+        return total +
+          (
+            Number.isInteger(quantity) && quantity > 0
+              ? quantity
+              : 0
+          );
+      },
+      0
+    );
+  }
+
+  syncProductColorTotal(): void {
+    if (!this.canManageProductColors()) return;
+
+    this.productForm.stock =
+      this.productColorStockTotal;
+  }
+
+  // =========================================
   // PRODUCT FORM
   // =========================================
 
@@ -403,7 +538,8 @@ export class Products implements OnInit, OnDestroy {
       stock: null,
       imageUrl: '',
       published: false,
-      featured: false
+      featured: false,
+      colorStocks: []
     };
   }
 
@@ -412,11 +548,6 @@ export class Products implements OnInit, OnDestroy {
     this.productForm = this.emptyForm();
     this.formError = '';
     this.showProductModal = true;
-  }
-
-  createListing(): void {
-    this.openAddProduct();
-    this.productForm.published = false;
   }
 
   openEditProduct(product: ShopProduct): void {
@@ -431,7 +562,10 @@ export class Products implements OnInit, OnDestroy {
       stock: product.stock,
       imageUrl: product.imageUrl,
       published: product.published,
-      featured: product.featured
+      featured: product.featured,
+      colorStocks: (product.colorStocks || []).map(
+        color => ({ ...color })
+      )
     };
 
     this.formError = '';
@@ -469,6 +603,7 @@ export class Products implements OnInit, OnDestroy {
 
     try {
       const url = new URL(value);
+
       return (
         url.protocol === 'http:' ||
         url.protocol === 'https:'
@@ -477,6 +612,10 @@ export class Products implements OnInit, OnDestroy {
       return false;
     }
   }
+
+  // =========================================
+  // FORM VALIDATION
+  // =========================================
 
   private validateForm(): string {
     const form = this.productForm;
@@ -506,9 +645,41 @@ export class Products implements OnInit, OnDestroy {
     }
 
     if (
-      form.stock === null ||
-      !Number.isInteger(Number(form.stock)) ||
-      Number(form.stock) < 0
+      this.canManageProductColors() &&
+      form.colorStocks.length > 0
+    ) {
+      const selectedNames = new Set(
+        form.colorStocks.map(color => color.name)
+      );
+
+      if (
+        selectedNames.size !== form.colorStocks.length
+      ) {
+        return 'Duplicate product colors are not allowed.';
+      }
+
+      const invalidColor = form.colorStocks.some(
+        color =>
+          !this.availableProductColors.some(
+            available => available.name === color.name
+          ) ||
+          !Number.isInteger(Number(color.quantity)) ||
+          Number(color.quantity) <= 0
+      );
+
+      if (invalidColor) {
+        return 'Every selected color must have a quantity greater than zero, using whole numbers only.';
+      }
+    }
+
+    const stock = this.hasProductColorStock()
+      ? this.productColorStockTotal
+      : form.stock;
+
+    if (
+      stock === null ||
+      !Number.isInteger(Number(stock)) ||
+      Number(stock) < 0
     ) {
       return 'Stock must be a whole number of zero or more.';
     }
@@ -517,7 +688,10 @@ export class Products implements OnInit, OnDestroy {
       return 'Please provide a valid image URL or compressed Base64 JPEG image.';
     }
 
-    if (form.published && Number(form.stock) <= 0) {
+    if (
+      form.published &&
+      Number(stock) <= 0
+    ) {
       return 'Add available stock before publishing this product.';
     }
 
@@ -532,6 +706,7 @@ export class Products implements OnInit, OnDestroy {
     if (this.saving) return;
 
     this.formError = this.validateForm();
+
     if (this.formError) return;
 
     if (!this.currentUserId) {
@@ -542,12 +717,29 @@ export class Products implements OnInit, OnDestroy {
 
     const form = this.productForm;
 
+    const colorStocks: ProductColorStock[] =
+      this.canManageProductColors()
+        ? form.colorStocks.map(color => ({
+            name: color.name,
+            quantity: Number(color.quantity)
+          }))
+        : [];
+
+    const totalStock =
+      colorStocks.length > 0
+        ? colorStocks.reduce(
+            (total, color) => total + color.quantity,
+            0
+          )
+        : Number(form.stock);
+
     const data = {
       name: form.name.trim(),
       category: form.category,
       description: form.description.trim(),
       price: Number(form.price),
-      stock: Number(form.stock),
+      stock: totalStock,
+      colorStocks,
       imageUrl: form.imageUrl.trim(),
       published: form.published,
       featured: form.featured,
@@ -567,6 +759,7 @@ export class Products implements OnInit, OnDestroy {
             data
           )
         );
+
       } else {
         const reference = this.inContext(() =>
           doc(this.productCollection)
@@ -634,6 +827,7 @@ export class Products implements OnInit, OnDestroy {
         text: 'Add stock before publishing this product.',
         confirmButtonColor: '#287457'
       });
+
       return;
     }
 
@@ -745,11 +939,16 @@ export class Products implements OnInit, OnDestroy {
 
   getStatusText(product: ShopProduct): string {
     if (product.stock <= 0) return 'Out of Stock';
-    return product.published ? 'Published' : 'Draft';
+
+    return product.published
+      ? 'Published'
+      : 'Draft';
   }
 
   getStatusClass(product: ShopProduct): string {
-    if (product.stock <= 0) return 'status-out';
+    if (product.stock <= 0) {
+      return 'status-out';
+    }
 
     return product.published
       ? 'status-published'
@@ -778,7 +977,10 @@ export class Products implements OnInit, OnDestroy {
     }
 
     const millis = new Date(value).getTime();
-    return Number.isFinite(millis) ? millis : 0;
+
+    return Number.isFinite(millis)
+      ? millis
+      : 0;
   }
 
   formatDate(value: any): string {

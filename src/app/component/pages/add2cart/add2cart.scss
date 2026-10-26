@@ -1282,3 +1282,45 @@ input[type='checkbox'] {
     font-size: 12px;
   }
 }
+
+
+/* =========================================
+   REAL PRODUCT IMAGES — SHOPPING BAG
+   ========================================= */
+
+.cart-item .product-art {
+  position: relative;
+  overflow: hidden;
+}
+
+.cart-real-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  border-radius: inherit;
+}
+
+.cart-item .product-art:has(.cart-real-image) {
+  background: #edf3ed;
+}
+
+.cart-item .product-art:has(.cart-real-image) .art-decoration,
+.cart-item .product-art:has(.cart-real-image) > .pi {
+  display: none;
+}
+
+/* OPTIONAL COLOR PREFERENCES */
+
+.cart-color-preferences {
+  margin: 7px 0 10px;
+  color: #728b7a;
+  font-size: 10px;
+  line-height: 1.6;
+}
+
+.cart-color-preferences strong {
+  color: #287156;
+  font-weight: 700;
+}
