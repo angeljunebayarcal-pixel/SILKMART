@@ -13,6 +13,7 @@ import { Products } from './component/pages-adm/products/products';
 import { ProfileAdm } from './component/pages-adm/profile-adm/profile-adm';
 import { Delivery } from './component/pages-adm/delivery/delivery';
 import { NotfAdm } from './component/pages-adm/notf-adm/notf-adm';
+import { StfAprv } from './component/pages-adm/stf-aprv/stf-aprv';
 
 export const routes: Routes = [
   { path: '', component: Login },
@@ -43,6 +44,7 @@ export const routes: Routes = [
       { path: 'profile-adm', component: ProfileAdm },
       { path: 'delivery', component: Delivery },
       { path: 'notf-adm', component: NotfAdm },
+      { path: 'stf-aprv', component: StfAprv },
 
 
 

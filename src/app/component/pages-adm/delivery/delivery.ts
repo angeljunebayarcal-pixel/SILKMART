@@ -736,145 +736,220 @@ export class Delivery implements OnInit, AfterViewInit, OnDestroy {
     }
   }
 
-  async dispatch(): Promise<void> {
-    const order = this.selectedOrder;
+  
+async dispatch(): Promise<void> {
+  const order = this.selectedOrder;
 
-    if (!order || this.saving) {
-      return;
-    }
-
-    if (
-      order.deliveryStatus !== 'Scheduled' &&
-      order.deliveryStatus !== 'Preparing'
-    ) {
-      await Swal.fire({
-        icon: 'warning',
-        title: 'Not Ready for Dispatch',
-        text: 'Schedule and prepare this order first.',
-        confirmButtonColor: '#287156'
-      });
-      return;
-    }
-
-    if (
-      !this.prepQuantity ||
-      !this.prepPackaging ||
-      !this.prepHandling
-    ) {
-      await Swal.fire({
-        icon: 'warning',
-        title: 'Incomplete Preparation',
-        text:
-          'Complete all preparation checklist items before dispatch.',
-        confirmButtonColor: '#287156'
-      });
-      return;
-    }
-
-    const result = await Swal.fire({
-      icon: 'question',
-      title: 'Dispatch This Order?',
-      text:
-        `Mark order ${order.id} as Out for Delivery?`,
-      showCancelButton: true,
-      confirmButtonText: 'Dispatch Order',
-      confirmButtonColor: '#287156'
-    });
-
-    if (!result.isConfirmed) {
-      return;
-    }
-
-    this.saving = true;
-
-    try {
-      await this.saveFields(order, {
-        deliveryStatus: 'Out for Delivery',
-        deliveryPreparation: {
-          quantityChecked: true,
-          packagingChecked: true,
-          handlingChecked: true
-        },
-        dispatchedAt: serverTimestamp()
-      });
-
-      this.saving = false;
-      this.closeEditor();
-
-      await Swal.fire({
-        icon: 'success',
-        title: 'Order Dispatched',
-        timer: 1400,
-        showConfirmButton: false
-      });
-    } catch (error) {
-      this.saving = false;
-      await this.showSaveError(error);
-    }
+  if (!order || this.saving) {
+    return;
   }
 
-  async markDelivered(): Promise<void> {
-    const order = this.selectedOrder;
+  if (
+    order.deliveryStatus !== 'Scheduled' &&
+    order.deliveryStatus !== 'Preparing'
+  ) {
+    this.showEditor = false;
+    this.unlockBody();
+    this.refresh();
 
-    if (!order || this.saving) {
-      return;
-    }
-
-    if (order.deliveryStatus !== 'Out for Delivery') {
-      await Swal.fire({
-        icon: 'warning',
-        title: 'Not Dispatched',
-        text:
-          'Dispatch this order before marking it delivered.',
-        confirmButtonColor: '#287156'
-      });
-      return;
-    }
-
-    const result = await Swal.fire({
-      icon: 'question',
-      title: 'Confirm Delivery?',
-      text:
-        'Confirm that the customer received the order.',
-      showCancelButton: true,
+    await Swal.fire({
+      icon: 'warning',
+      title: 'Not Ready for Dispatch',
+      text: 'Schedule and prepare this order first.',
       confirmButtonColor: '#287156',
-      confirmButtonText: 'Confirm Delivered'
+      heightAuto: false
     });
 
-    if (!result.isConfirmed) {
-      return;
-    }
-
-    this.saving = true;
-
-    try {
-      // Update the main order status through the
-      // existing OrderServ to keep Customer Orders
-      // synchronized with Delivery Management.
-      await this.ordersService.updateOrderStatus(
-        order.id,
-        'Delivered'
-      );
-
-      await this.saveFields(order, {
-        deliveryStatus: 'Delivered',
-        deliveredAt: serverTimestamp()
-      });
-
-      this.saving = false;
-      this.closeEditor();
-
-      await Swal.fire({
-        icon: 'success',
-        title: 'Delivery Completed',
-        timer: 1500,
-        showConfirmButton: false
-      });
-    } catch (error) {
-      this.saving = false;
-      await this.showSaveError(error);
-    }
+    this.showEditor = true;
+    this.lockBody();
+    this.refresh();
+    return;
   }
+
+  if (
+    !this.prepQuantity ||
+    !this.prepPackaging ||
+    !this.prepHandling
+  ) {
+    this.showEditor = false;
+    this.unlockBody();
+    this.refresh();
+
+    await Swal.fire({
+      icon: 'warning',
+      title: 'Incomplete Preparation',
+      text: 'Complete all preparation checklist items before dispatch.',
+      confirmButtonColor: '#287156',
+      heightAuto: false
+    });
+
+    this.showEditor = true;
+    this.lockBody();
+    this.refresh();
+    return;
+  }
+
+  // Hide Delivery Details before SweetAlert opens.
+  this.showEditor = false;
+  this.unlockBody();
+  this.refresh();
+
+  const result = await Swal.fire({
+    icon: 'question',
+    title: 'Dispatch This Order?',
+    text: `Mark order ${order.id} as Out for Delivery?`,
+    showCancelButton: true,
+    confirmButtonText: 'Dispatch Order',
+    cancelButtonText: 'Cancel',
+    confirmButtonColor: '#287156',
+    background: '#fbfaf4',
+    heightAuto: false
+  });
+
+  if (!result.isConfirmed) {
+    this.showEditor = true;
+    this.lockBody();
+    this.refresh();
+    return;
+  }
+
+  this.saving = true;
+
+  try {
+    await this.saveFields(order, {
+      deliveryStatus: 'Out for Delivery',
+      deliveryPreparation: {
+        quantityChecked: true,
+        packagingChecked: true,
+        handlingChecked: true
+      },
+      dispatchedAt: serverTimestamp()
+    });
+
+    this.saving = false;
+    this.closeEditor();
+    this.refresh();
+
+    await Swal.fire({
+      icon: 'success',
+      title: 'Order Dispatched',
+      text: 'The order is now out for delivery.',
+      timer: 1400,
+      showConfirmButton: false,
+      heightAuto: false
+    });
+
+  } catch (error) {
+    this.saving = false;
+
+    await this.showSaveError(error);
+
+    this.showEditor = true;
+    this.lockBody();
+    this.refresh();
+  }
+}
+
+
+async markDelivered(): Promise<void> {
+  const order = this.selectedOrder;
+
+  if (!order || this.saving) {
+    return;
+  }
+
+  if (order.deliveryStatus !== 'Out for Delivery') {
+    this.showEditor = false;
+    this.unlockBody();
+    this.refresh();
+
+    await Swal.fire({
+      icon: 'warning',
+      title: 'Not Dispatched',
+      text: 'Dispatch this order before marking it delivered.',
+      confirmButtonColor: '#287156',
+      heightAuto: false
+    });
+
+    this.showEditor = true;
+    this.lockBody();
+    this.refresh();
+    return;
+  }
+
+  // Hide Delivery Details before confirmation.
+  this.showEditor = false;
+  this.unlockBody();
+  this.refresh();
+
+  const result = await Swal.fire({
+    icon: 'question',
+    title: 'Confirm Delivery?',
+    text: 'Confirm that the customer received the order.',
+    showCancelButton: true,
+    confirmButtonText: 'Confirm Delivered',
+    cancelButtonText: 'Cancel',
+    confirmButtonColor: '#287156',
+    background: '#fbfaf4',
+    heightAuto: false
+  });
+
+  if (!result.isConfirmed) {
+    this.showEditor = true;
+    this.lockBody();
+    this.refresh();
+    return;
+  }
+
+  this.saving = true;
+
+  try {
+    // Update order and delivery statuses atomically.
+    await runInInjectionContext(
+      this.injector,
+      () => updateDoc(
+        doc(this.firestore, 'orders', order.id),
+        {
+          status: 'Delivered',
+          deliveryStatus: 'Delivered',
+          updatedAt: serverTimestamp(),
+          deliveredAt: serverTimestamp(),
+          deliveryUpdatedAt: serverTimestamp()
+        }
+      )
+    );
+
+    this.saving = false;
+    this.closeEditor();
+    this.refresh();
+
+    await Swal.fire({
+      icon: 'success',
+      title: 'Delivery Completed',
+      text: 'The order has been marked as delivered.',
+      timer: 1500,
+      showConfirmButton: false,
+      heightAuto: false
+    });
+
+  } catch (error) {
+    this.saving = false;
+
+    console.error('Delivery completion failed:', error);
+
+    await Swal.fire({
+      icon: 'error',
+      title: 'Unable to Complete Delivery',
+      text: 'The update could not be completed. Please check Firebase permissions or your connection.',
+      confirmButtonColor: '#287156',
+      heightAuto: false
+    });
+
+    this.showEditor = true;
+    this.lockBody();
+    this.refresh();
+  }
+}
 
   private async showSaveError(
     error: unknown

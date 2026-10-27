@@ -1,1 +1,421 @@
-<p>stf-aprv works!</p>
+
+<div class="approval-page">
+
+  <div class="approval-container">
+
+    <header class="page-header">
+      <div class="eyebrow">
+        SILKMART · ADMINISTRATION
+      </div>
+
+      <h1>Staff Approval</h1>
+
+      <p>
+        Review staff applications, verify submitted identification,
+        and manage access to SilkMart.
+      </p>
+    </header>
+
+    <section class="summary-grid">
+
+      <button
+        type="button"
+        class="summary-card"
+        (click)="setFilter('pending')"
+      >
+        <span class="summary-icon pending">
+          <i class="pi pi-clock"></i>
+        </span>
+
+        <div>
+          <small>Pending Applications</small>
+          <strong>{{ pendingCount }}</strong>
+          <span>Awaiting your review</span>
+        </div>
+      </button>
+
+      <button
+        type="button"
+        class="summary-card"
+        (click)="setFilter('approved')"
+      >
+        <span class="summary-icon approved">
+          <i class="pi pi-check-circle"></i>
+        </span>
+
+        <div>
+          <small>Approved Staff</small>
+          <strong>{{ approvedCount }}</strong>
+          <span>Granted staff access</span>
+        </div>
+      </button>
+
+      <button
+        type="button"
+        class="summary-card"
+        (click)="setFilter('rejected')"
+      >
+        <span class="summary-icon rejected">
+          <i class="pi pi-times-circle"></i>
+        </span>
+
+        <div>
+          <small>Rejected Applications</small>
+          <strong>{{ rejectedCount }}</strong>
+          <span>Access not granted</span>
+        </div>
+      </button>
+
+    </section>
+
+    <section class="applications-panel">
+
+      <div class="panel-heading">
+        <div>
+          <h2>Staff Applications</h2>
+          <p>
+            Review personal details and verification documents.
+          </p>
+        </div>
+
+        <span class="record-count">
+          {{ filteredApplications.length }} applicants
+        </span>
+      </div>
+
+      <div class="toolbar">
+
+        <label class="search-box">
+          <i class="pi pi-search"></i>
+
+          <input
+            type="search"
+            [(ngModel)]="search"
+            placeholder="Search name, email or applicant..."
+          />
+        </label>
+
+        <select
+          [(ngModel)]="filter"
+          aria-label="Filter applications"
+        >
+          <option value="all">All Applications</option>
+          <option value="pending">Pending</option>
+          <option value="approved">Approved</option>
+          <option value="rejected">Rejected</option>
+        </select>
+
+      </div>
+
+      <div
+        class="state-box"
+        *ngIf="loading"
+      >
+        <i class="pi pi-spin pi-spinner"></i>
+        Loading staff applications...
+      </div>
+
+      <div
+        class="state-box error"
+        *ngIf="!loading && error"
+      >
+        <i class="pi pi-exclamation-circle"></i>
+        {{ error }}
+      </div>
+
+      <div
+        class="state-box"
+        *ngIf="
+          !loading &&
+          !error &&
+          filteredApplications.length === 0
+        "
+      >
+        <i class="pi pi-inbox"></i>
+        No staff applications found.
+      </div>
+
+      <div
+        class="applications-list"
+        *ngIf="
+          !loading &&
+          !error &&
+          filteredApplications.length > 0
+        "
+      >
+
+        <article
+          class="applicant-card"
+          *ngFor="let app of filteredApplications"
+        >
+
+          <div class="applicant-avatar">
+            {{ app.fullName.charAt(0).toUpperCase() }}
+          </div>
+
+          <div class="applicant-info">
+
+            <div class="applicant-topline">
+              <h3>{{ app.fullName }}</h3>
+
+              <span
+                class="status-pill"
+                [class.pending]="isPending(app)"
+                [class.approved]="app.approvalStatus === 'approved'"
+                [class.rejected]="app.approvalStatus === 'rejected'"
+              >
+                {{
+                  isPending(app)
+                    ? 'Pending'
+                    : (app.approvalStatus | titlecase)
+                }}
+              </span>
+            </div>
+
+            <p>
+              <i class="pi pi-envelope"></i>
+              {{ app.email }}
+            </p>
+
+            <div class="applicant-meta">
+              <span>
+                <i class="pi pi-phone"></i>
+                {{ app.mobileNumber || 'No number' }}
+              </span>
+
+              <span>
+                <i class="pi pi-calendar"></i>
+                {{ formatDate(app.appliedAt) }}
+              </span>
+            </div>
+
+          </div>
+
+          <div class="applicant-actions">
+
+            <span
+              class="document-state"
+              [class.missing]="!app.verificationImagePath"
+            >
+              <i
+                [class]="app.verificationImagePath
+                  ? 'pi pi-image'
+                  : 'pi pi-exclamation-circle'"
+              ></i>
+
+              {{
+                app.verificationImagePath
+                  ? 'ID Submitted'
+                  : 'ID Missing'
+              }}
+            </span>
+
+            <button
+              type="button"
+              class="review-button"
+              (click)="viewApplication(app)"
+            >
+              Review Application
+              <i class="pi pi-arrow-right"></i>
+            </button>
+
+          </div>
+
+        </article>
+
+      </div>
+
+    </section>
+
+    <div class="security-note">
+      <i class="pi pi-shield"></i>
+
+      Staff verification documents should only be accessed
+      by authorized administrators. Customer registrations
+      do not require ID verification.
+    </div>
+
+  </div>
+
+</div>
+
+<!-- APPLICATION REVIEW MODAL -->
+<div
+  class="review-backdrop"
+  *ngIf="showDetails && selectedApplicant"
+  (click)="closeDetails()"
+>
+
+  <section
+    class="review-modal"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="review-title"
+    (click)="$event.stopPropagation()"
+  >
+
+    <header class="review-header">
+
+      <div>
+        <span class="eyebrow">
+          STAFF IDENTITY VERIFICATION
+        </span>
+
+        <h2 id="review-title">
+          Review Application
+        </h2>
+
+        <p>{{ selectedApplicant.fullName }}</p>
+      </div>
+
+      <button
+        type="button"
+        class="close-button"
+        [disabled]="saving"
+        (click)="closeDetails()"
+      >
+        <i class="pi pi-times"></i>
+      </button>
+
+    </header>
+
+    <div class="review-body">
+
+      <h3>Applicant Information</h3>
+
+      <div class="details-grid">
+
+        <div>
+          <span>Full Name</span>
+          <strong>{{ selectedApplicant.fullName }}</strong>
+        </div>
+
+        <div>
+          <span>Email Address</span>
+          <strong>{{ selectedApplicant.email }}</strong>
+        </div>
+
+        <div>
+          <span>Mobile Number</span>
+          <strong>
+            {{ selectedApplicant.mobileNumber || 'Not provided' }}
+          </strong>
+        </div>
+
+        <div>
+          <span>Application Date</span>
+          <strong>
+            {{ formatDate(selectedApplicant.appliedAt) }}
+          </strong>
+        </div>
+
+      </div>
+
+      <div class="address-section">
+        <span>Complete Address</span>
+        <strong>
+          {{
+            selectedApplicant.completeAddress ||
+            'Not provided'
+          }}
+        </strong>
+      </div>
+
+      <h3>Verification Document</h3>
+
+      <p class="section-description">
+        Review the submitted document carefully before
+        granting staff access.
+      </p>
+
+      <div class="document-preview">
+
+        <div
+          class="document-loading"
+          *ngIf="imageLoading"
+        >
+          <i class="pi pi-spin pi-spinner"></i>
+          Loading verification document...
+        </div>
+
+        <div
+          class="document-empty"
+          *ngIf="!imageLoading && imageError"
+        >
+          <i class="pi pi-image"></i>
+          <p>{{ imageError }}</p>
+        </div>
+
+        <img
+          *ngIf="
+            !imageLoading &&
+            !imageError &&
+            verificationImageUrl
+          "
+          [src]="verificationImageUrl"
+          alt="Submitted staff verification document"
+        />
+
+      </div>
+
+      <div
+        class="rejection-message"
+        *ngIf="
+          selectedApplicant.approvalStatus === 'rejected' &&
+          selectedApplicant.rejectionReason
+        "
+      >
+        <strong>Rejection Reason</strong>
+        <p>{{ selectedApplicant.rejectionReason }}</p>
+      </div>
+
+      <div class="verification-reminder">
+        <i class="pi pi-info-circle"></i>
+
+        A submitted ID is supporting evidence, not
+        automatic proof of employment. Verify the applicant
+        against authorized PTRI staff records before approval.
+      </div>
+
+    </div>
+
+    <footer class="review-footer">
+
+      <button
+        type="button"
+        class="cancel-button"
+        [disabled]="saving"
+        (click)="closeDetails()"
+      >
+        Close
+      </button>
+
+      <ng-container *ngIf="isPending(selectedApplicant)">
+
+        <button
+          type="button"
+          class="reject-button"
+          [disabled]="saving"
+          (click)="reject(selectedApplicant)"
+        >
+          <i class="pi pi-times"></i>
+          Reject
+        </button>
+
+        <button
+          type="button"
+          class="approve-button"
+          [disabled]="saving || !verificationImageUrl"
+          (click)="approve(selectedApplicant)"
+        >
+          <i class="pi pi-check"></i>
+          Approve Staff
+        </button>
+
+      </ng-container>
+
+    </footer>
+
+  </section>
+
+</div>

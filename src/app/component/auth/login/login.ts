@@ -1,9 +1,28 @@
 
 import { CommonModule } from '@angular/common';
-import { Component, HostListener } from '@angular/core';
+import {
+  Component,
+  HostListener,
+  Injector,
+  OnDestroy,
+  runInInjectionContext
+} from '@angular/core';
 import { FormsModule, NgForm } from '@angular/forms';
 import { Router } from '@angular/router';
 import Swal from 'sweetalert2';
+
+import {
+  Auth,
+  deleteUser,
+  signOut
+} from '@angular/fire/auth';
+
+import {
+  Firestore,
+  doc,
+  writeBatch,
+  serverTimestamp
+} from '@angular/fire/firestore';
 
 import { AuthServ } from '../../../services/auth.serv';
 import { UserServ } from '../../../services/user.serv';
@@ -15,34 +34,18 @@ import { UserServ } from '../../../services/user.serv';
   templateUrl: './login.html',
   styleUrls: ['./login.scss']
 })
-export class Login {
-
-  // =========================================
-  // FRAME STATE
-  // =========================================
+export class Login implements OnDestroy {
 
   showLoginForm = false;
   showRegisterForm = false;
-
-  // =========================================
-  // PASSWORD VISIBILITY
-  // =========================================
 
   showPassword = false;
   showRegisterPassword = false;
   showConfirmPassword = false;
 
-  // =========================================
-  // LOGIN
-  // =========================================
-
   email = '';
   password = '';
   loginLoading = false;
-
-  // =========================================
-  // REGISTRATION
-  // =========================================
 
   fullName = '';
   registerEmail = '';
@@ -54,19 +57,24 @@ export class Login {
 
   selectedAccountType: 'customer' | 'staff' = 'customer';
 
-  // =========================================
-  // CONSTRUCTOR
-  // =========================================
+  staffIdFile: File | null = null;
+  staffIdPreviewUrl = '';
+  staffIdError = '';
+
+  private readonly maxJpgBytes = 350 * 1024;
 
   constructor(
     private router: Router,
     private authService: AuthServ,
-    private userService: UserServ
+    private userService: UserServ,
+    private auth: Auth,
+    private firestore: Firestore,
+    private injector: Injector
   ) {}
 
-  // =========================================
-  // OPEN LOGIN
-  // =========================================
+  ngOnDestroy(): void {
+    this.resetStaffId();
+  }
 
   openLogin(): void {
     this.showLoginForm = true;
@@ -74,55 +82,34 @@ export class Login {
     this.showPassword = false;
   }
 
-  // =========================================
-  // CLOSE LOGIN
-  // =========================================
-
   closeLogin(): void {
-    if (this.loginLoading || this.registerLoading) {
-      return;
-    }
+    if (this.loginLoading || this.registerLoading) return;
 
     this.showLoginForm = false;
     this.showRegisterForm = false;
-
     this.showPassword = false;
     this.showRegisterPassword = false;
     this.showConfirmPassword = false;
   }
-
-  // =========================================
-  // OPEN REGISTER
-  // =========================================
 
   openRegister(): void {
     this.showLoginForm = true;
     this.showRegisterForm = true;
-
     this.selectedAccountType = 'customer';
+    this.resetStaffId();
 
     this.showPassword = false;
     this.showRegisterPassword = false;
     this.showConfirmPassword = false;
   }
 
-  // =========================================
-  // BACK TO LOGIN
-  // =========================================
-
   backToLogin(): void {
-    if (this.registerLoading) {
-      return;
-    }
+    if (this.registerLoading) return;
 
     this.showRegisterForm = false;
     this.showRegisterPassword = false;
     this.showConfirmPassword = false;
   }
-
-  // =========================================
-  // PASSWORD TOGGLES
-  // =========================================
 
   togglePassword(): void {
     this.showPassword = !this.showPassword;
@@ -136,44 +123,23 @@ export class Login {
     this.showConfirmPassword = !this.showConfirmPassword;
   }
 
-  // =========================================
-  // CONTINUE AS CUSTOMER
-  // =========================================
-
   async continueAsCustomer(): Promise<void> {
     try {
-      if (this.authService.currentUser) {
-        await this.authService.logout();
+      if (this.auth.currentUser) {
+        await runInInjectionContext(
+          this.injector,
+          () => signOut(this.auth)
+        );
       }
-
-      sessionStorage.setItem(
-        'silkmartGuestMode',
-        'true'
-      );
-
-      this.showLoginForm = false;
-      this.showRegisterForm = false;
-      this.showPassword = false;
-      this.showRegisterPassword = false;
-      this.showConfirmPassword = false;
-
-      await this.router.navigate(['/home-cust']);
-
     } catch (error) {
-      console.error('Guest access error:', error);
-
-      sessionStorage.setItem(
-        'silkmartGuestMode',
-        'true'
-      );
-
-      await this.router.navigate(['/home-cust']);
+      console.error('Guest logout failed:', error);
     }
-  }
 
-  // =========================================
-  // ESCAPE KEY
-  // =========================================
+    sessionStorage.setItem('silkmartGuestMode', 'true');
+
+    this.closeLogin();
+    await this.router.navigate(['/home-cust']);
+  }
 
   @HostListener('document:keydown.escape')
   onEscape(): void {
@@ -186,15 +152,202 @@ export class Login {
     }
   }
 
-  // =========================================
-  // FIREBASE LOGIN
-  // =========================================
+  // ========================================
+  // VERIFICATION JPG SELECTION
+  // ========================================
 
-  async login(form: NgForm): Promise<void> {
+  onStaffIdSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0] || null;
 
-    if (this.loginLoading) {
+    this.resetStaffId();
+
+    if (!file) return;
+
+    const name = file.name.toLowerCase();
+
+    if (
+      file.type !== 'image/jpeg' ||
+      !(name.endsWith('.jpg') || name.endsWith('.jpeg'))
+    ) {
+      this.staffIdError = 'Choose a JPG or JPEG image.';
+      input.value = '';
       return;
     }
+
+    if (file.size === 0 || file.size > 15 * 1024 * 1024) {
+      this.staffIdError =
+        'Choose a valid JPG image smaller than 15 MB.';
+      input.value = '';
+      return;
+    }
+
+    this.staffIdFile = file;
+    this.staffIdPreviewUrl = URL.createObjectURL(file);
+  }
+
+  private resetStaffId(): void {
+    if (this.staffIdPreviewUrl) {
+      URL.revokeObjectURL(this.staffIdPreviewUrl);
+    }
+
+    this.staffIdFile = null;
+    this.staffIdPreviewUrl = '';
+    this.staffIdError = '';
+  }
+
+  clearStaffId(input: HTMLInputElement): void {
+    this.resetStaffId();
+    input.value = '';
+  }
+
+  // ========================================
+  // AUTOMATIC JPG COMPRESSION
+  // ========================================
+
+  private async compressStaffId(file: File): Promise<{
+    base64: string;
+    size: number;
+  }> {
+    const originalUrl = URL.createObjectURL(file);
+
+    try {
+      const image = new Image();
+
+      await new Promise<void>((resolve, reject) => {
+        image.onload = () => resolve();
+        image.onerror = () =>
+          reject(new Error('INVALID_VERIFICATION_IMAGE'));
+
+        image.src = originalUrl;
+      });
+
+      if (
+        !image.naturalWidth ||
+        !image.naturalHeight ||
+        image.naturalWidth * image.naturalHeight > 50000000
+      ) {
+        throw new Error('INVALID_VERIFICATION_IMAGE');
+      }
+
+      const canvas = document.createElement('canvas');
+      const context = canvas.getContext('2d');
+
+      if (!context) {
+        throw new Error('IMAGE_PROCESSING_FAILED');
+      }
+
+      for (const maxDimension of [1600, 1400, 1200, 1000, 800, 640]) {
+        const ratio = Math.min(
+          1,
+          maxDimension /
+            Math.max(image.naturalWidth, image.naturalHeight)
+        );
+
+        canvas.width = Math.max(
+          1,
+          Math.round(image.naturalWidth * ratio)
+        );
+        canvas.height = Math.max(
+          1,
+          Math.round(image.naturalHeight * ratio)
+        );
+
+        context.fillStyle = '#ffffff';
+        context.fillRect(0, 0, canvas.width, canvas.height);
+        context.drawImage(
+          image,
+          0,
+          0,
+          canvas.width,
+          canvas.height
+        );
+
+        for (const quality of [0.85, 0.75, 0.65, 0.5, 0.4]) {
+          const base64 = canvas.toDataURL(
+            'image/jpeg',
+            quality
+          );
+
+          const encoded = base64.split(',')[1] || '';
+          const size = Math.floor(encoded.length * 3 / 4);
+
+          if (
+            size > 0 &&
+            size <= this.maxJpgBytes &&
+            base64.length < 500000
+          ) {
+            return { base64, size };
+          }
+        }
+      }
+
+      throw new Error('IMAGE_TOO_LARGE');
+    } finally {
+      URL.revokeObjectURL(originalUrl);
+    }
+  }
+
+  // ========================================
+  // FIRESTORE BATCH FOR STAFF REGISTRATION
+  // ========================================
+
+  private async createStaffApplication(
+    uid: string,
+    file: File
+  ): Promise<void> {
+    const image = await this.compressStaffId(file);
+
+    const userRef = runInInjectionContext(
+      this.injector,
+      () => doc(this.firestore, 'users', uid)
+    );
+
+    const verificationRef = runInInjectionContext(
+      this.injector,
+      () => doc(this.firestore, 'staff_verifications', uid)
+    );
+
+    const batch = runInInjectionContext(
+      this.injector,
+      () => writeBatch(this.firestore)
+    );
+
+    batch.set(userRef, {
+      fullName: this.fullName.trim(),
+      email: this.registerEmail.trim().toLowerCase(),
+      mobileNumber: this.mobileNumber.trim(),
+      completeAddress: this.completeAddress.trim(),
+      role: 'pending_staff',
+      requestedRole: 'staff',
+      approvalStatus: 'pending',
+      verificationStorage: 'firestore-base64',
+      verificationImagePath: `staff_verifications/${uid}`,
+      staffAppliedAt: serverTimestamp(),
+      createdAt: serverTimestamp()
+    });
+
+    batch.set(verificationRef, {
+      applicantUid: uid,
+      imageBase64: image.base64,
+      imageType: 'image/jpeg',
+      fileName: file.name,
+      fileSize: image.size,
+      submittedAt: serverTimestamp()
+    });
+
+    await runInInjectionContext(
+      this.injector,
+      () => batch.commit()
+    );
+  }
+
+  // ========================================
+  // LOGIN
+  // ========================================
+
+  async login(form: NgForm): Promise<void> {
+    if (this.loginLoading) return;
 
     if (form.invalid) {
       form.control.markAllAsTouched();
@@ -202,111 +355,91 @@ export class Login {
       await Swal.fire({
         icon: 'warning',
         title: 'Incomplete Information',
-        text: 'Please enter your email and password.',
-        confirmButtonText: 'Okay',
+        text: 'Enter your email and password.',
         confirmButtonColor: '#245d43'
       });
-
       return;
     }
 
     this.loginLoading = true;
-
     let destination = '';
 
     try {
-      // Sign in using Firebase Authentication.
       await this.authService.login(
         this.email.trim(),
         this.password
       );
 
-      const signedInUser = this.authService.currentUser;
+      const user = this.auth.currentUser;
 
-      if (!signedInUser) {
-        throw new Error(
-          'Unable to verify signed-in user.'
-        );
+      if (!user) {
+        throw new Error('Unable to verify signed-in user.');
       }
 
-      // Read the account's actual Firebase role.
-      destination = await this.getAccountDestination(
-        signedInUser.uid
-      );
+      destination = await this.getAccountDestination(user.uid);
 
-      sessionStorage.removeItem(
-        'silkmartGuestMode'
-      );
+      sessionStorage.removeItem('silkmartGuestMode');
 
     } catch (error: any) {
-      console.error('Login verification error:', error);
-
       let title = 'Sign In Failed';
-      let message = 'Unable to sign in. Please try again.';
+      let message = 'Unable to sign in.';
       let icon: 'error' | 'info' = 'error';
 
       if (
-        error?.code === 'auth/invalid-credential' ||
-        error?.code === 'auth/wrong-password' ||
-        error?.code === 'auth/user-not-found'
+        ['auth/invalid-credential',
+         'auth/wrong-password',
+         'auth/user-not-found'].includes(error?.code)
       ) {
         message = 'Incorrect email or password.';
       } else if (error?.code === 'auth/invalid-email') {
         message = 'Please enter a valid email address.';
-      } else if (error?.code === 'auth/user-disabled') {
-        message = 'This account has been disabled.';
       } else if (error?.code === 'auth/too-many-requests') {
-        message =
-          'Too many sign-in attempts. Please try again later.';
+        message = 'Too many attempts. Please try again later.';
       } else if (error?.code === 'auth/network-request-failed') {
         message = 'Please check your internet connection.';
+      } else if (error?.code === 'auth/user-disabled') {
+        message = 'This account has been disabled.';
       } else if (error?.message === 'STAFF_ACCOUNT_NOT_APPROVED') {
-        title = 'Admin / Staff Account';
+        title = 'Application Pending';
+        message = 'Your staff application is awaiting approval.';
         icon = 'info';
-
-        message =
-          'Your account exists, but its Admin / Staff ' +
-          'role has not been approved yet.';
-      } else if (
-        error?.message === 'Unable to verify account role.' ||
-        error?.message === 'Unable to verify signed-in user.'
-      ) {
-        message =
-          'Your sign-in could not be completed because ' +
-          'your account information could not be verified.';
-      } else if (
-        error?.message === 'Your account role is not authorized.'
-      ) {
-        message =
-          'Your account does not have a recognized role.';
+      } else if (error?.message === 'STAFF_ACCOUNT_REJECTED') {
+        title = 'Application Rejected';
+        message = 'Contact an administrator about your application.';
+        icon = 'info';
+      } else if (error?.message === 'Unable to verify account role.') {
+        message = 'Unable to verify your account role.';
       }
 
-      this.loginLoading = false;
+      if (
+        error?.message === 'STAFF_ACCOUNT_NOT_APPROVED' ||
+        error?.message === 'STAFF_ACCOUNT_REJECTED'
+      ) {
+        try {
+          await runInInjectionContext(
+            this.injector,
+            () => signOut(this.auth)
+          );
+        } catch (logoutError) {
+          console.error('Logout error:', logoutError);
+        }
+      }
 
       await Swal.fire({
         icon,
         title,
         text: message,
-        confirmButtonText: 'Okay',
         confirmButtonColor: '#245d43'
       });
-
       return;
-
     } finally {
-      // Do not leave the sign-in button spinning.
       this.loginLoading = false;
     }
-
-    // =========================================
-    // SUCCESSFUL LOGIN
-    // =========================================
 
     await Swal.fire({
       icon: 'success',
       title: 'Welcome Back!',
-      text: 'You have successfully signed in to SilkMart.',
-      confirmButtonText: 'Continue',
+      text: 'Successfully signed in to SilkMart.',
       confirmButtonColor: '#245d43',
       timer: 1800,
       timerProgressBar: true
@@ -314,46 +447,24 @@ export class Login {
 
     this.closeLogin();
 
-    // =========================================
-    // DASHBOARD NAVIGATION
-    // =========================================
+    const navigated = await this.router.navigate([destination]);
 
-    try {
-      const success = await this.router.navigate([
-        destination
-      ]);
-
-      if (!success) {
-        throw new Error(
-          'Dashboard navigation was cancelled.'
-        );
-      }
-
-    } catch (error) {
-      console.error('Navigation error:', error);
-
+    if (!navigated) {
       await Swal.fire({
         icon: 'error',
         title: 'Dashboard Unavailable',
-        text:
-          'Your account was signed in successfully, ' +
-          'but the dashboard could not be opened. ' +
-          'Please check the route configuration.',
-        confirmButtonText: 'Okay',
+        text: 'Check the dashboard route configuration.',
         confirmButtonColor: '#245d43'
       });
     }
   }
 
-  // =========================================
-  // CREATE FIREBASE ACCOUNT
-  // =========================================
+  // ========================================
+  // CREATE ACCOUNT
+  // ========================================
 
   async createAccount(form: NgForm): Promise<void> {
-
-    if (this.registerLoading) {
-      return;
-    }
+    if (this.registerLoading) return;
 
     if (form.invalid) {
       form.control.markAllAsTouched();
@@ -362,10 +473,8 @@ export class Login {
         icon: 'warning',
         title: 'Incomplete Information',
         text: 'Please complete all required fields.',
-        confirmButtonText: 'Okay',
         confirmButtonColor: '#245d43'
       });
-
       return;
     }
 
@@ -373,11 +482,9 @@ export class Login {
       await Swal.fire({
         icon: 'warning',
         title: 'Passwords Do Not Match',
-        text: 'Please make sure both passwords are the same.',
-        confirmButtonText: 'Okay',
+        text: 'Please make sure both passwords match.',
         confirmButtonColor: '#245d43'
       });
-
       return;
     }
 
@@ -385,160 +492,157 @@ export class Login {
       await Swal.fire({
         icon: 'warning',
         title: 'Password Too Short',
-        text: 'Your password must contain at least 6 characters.',
-        confirmButtonText: 'Okay',
+        text: 'Use a password with at least 6 characters.',
         confirmButtonColor: '#245d43'
       });
+      return;
+    }
 
+    const accountType = this.selectedAccountType;
+
+    if (accountType === 'staff' && !this.staffIdFile) {
+      this.staffIdError = 'Please select a verification ID.';
+
+      await Swal.fire({
+        icon: 'warning',
+        title: 'Verification ID Required',
+        text: 'Please choose a JPG verification ID.',
+        confirmButtonColor: '#245d43'
+      });
       return;
     }
 
     this.registerLoading = true;
 
-    const accountType = this.selectedAccountType;
+    let createdUser: Awaited<
+      ReturnType<AuthServ['register']>
+    >['user'] | null = null;
+
+    let profileSaved = false;
 
     try {
-      // =====================================
-      // CREATE FIREBASE AUTH ACCOUNT
-      // =====================================
+      // Compress before creating Authentication account.
+      let preparedImage: { base64: string; size: number } | null = null;
+
+      if (accountType === 'staff' && this.staffIdFile) {
+        preparedImage = await this.compressStaffId(this.staffIdFile);
+      }
 
       const result = await this.authService.register(
         this.registerEmail.trim().toLowerCase(),
         this.registerPassword
       );
 
-      // =====================================
-      // CREATE FIRESTORE PROFILE
-      // =====================================
-
-      // Staff applications are recorded
-      // separately from Customer accounts.
-      // Only trusted authorization can grant
-      // the actual admin or staff role.
-
-      const accountRole =
-        accountType === 'staff'
-          ? 'pending_staff'
-          : 'customer';
-
-      const profileData = {
-        fullName: this.fullName.trim(),
-        email: this.registerEmail.trim().toLowerCase(),
-        mobileNumber: this.mobileNumber.trim(),
-        completeAddress: this.completeAddress.trim(),
-        role: accountRole,
-
-        ...(accountType === 'staff'
-          ? {
-              requestedRole: 'staff',
-              approvalStatus: 'pending'
-            }
-          : {})
-      };
-
-      await this.userService.createUserProfile(
-        result.user.uid,
-        profileData as Parameters<
-          UserServ['createUserProfile']
-        >[1]
-      );
-
-      sessionStorage.removeItem(
-        'silkmartGuestMode'
-      );
-
-      // =====================================
-      // ADMIN / STAFF REGISTRATION
-      // =====================================
+      createdUser = result.user;
 
       if (accountType === 'staff') {
+        if (!this.staffIdFile || !preparedImage) {
+          throw new Error('INVALID_VERIFICATION_IMAGE');
+        }
+
+        // Both Firestore documents commit together.
+        await this.createStaffApplication(
+          createdUser.uid,
+          this.staffIdFile
+        );
+
+        profileSaved = true;
+
+        await runInInjectionContext(
+          this.injector,
+          () => signOut(this.auth)
+        );
 
         await Swal.fire({
           icon: 'success',
-          title: 'Account Created!',
+          title: 'Application Submitted!',
           text:
-            'Your Admin / Staff registration was successful. ' +
-            'Your account needs authorization before ' +
-            'opening the administrator dashboard.',
-          confirmButtonText: 'Continue',
+            'Your ID was saved securely. An administrator ' +
+            'must approve your application before staff access.',
           confirmButtonColor: '#245d43'
         });
 
         this.clearRegisterForm();
-
         this.showRegisterForm = false;
         this.showLoginForm = false;
 
         await this.router.navigate(['/login']);
         this.openLogin();
-
         return;
       }
 
-      // =====================================
-      // CUSTOMER REGISTRATION
-      // =====================================
+      await this.userService.createUserProfile(
+        createdUser.uid,
+        {
+          fullName: this.fullName.trim(),
+          email: this.registerEmail.trim().toLowerCase(),
+          mobileNumber: this.mobileNumber.trim(),
+          completeAddress: this.completeAddress.trim(),
+          role: 'customer'
+        } as Parameters<UserServ['createUserProfile']>[1]
+      );
+
+      profileSaved = true;
+      sessionStorage.removeItem('silkmartGuestMode');
 
       await Swal.fire({
         icon: 'success',
         title: 'Account Created!',
-        text:
-          'Your SilkMart customer account ' +
-          'has been created successfully.',
-        confirmButtonText: 'Continue',
+        text: 'Your customer account was created successfully.',
         confirmButtonColor: '#245d43',
-        timer: 2200,
-        timerProgressBar: true
+        timer: 2000
       });
 
       this.clearRegisterForm();
-
       this.showRegisterForm = false;
       this.showLoginForm = false;
 
       await this.router.navigate(['/home-cust']);
 
     } catch (error: any) {
-      console.error('Registration error:', error);
+      console.error('Registration failed:', error);
 
       let message =
-        'Unable to complete registration. Please try again.';
+        'Registration could not be completed.';
 
       if (error?.code === 'auth/email-already-in-use') {
         message =
-          'This email is already registered. Please sign in ' +
-          'instead of creating another account.';
-      } else if (error?.code === 'auth/invalid-email') {
-        message = 'Please enter a valid email address.';
-      } else if (error?.code === 'auth/weak-password') {
-        message = 'Please use a stronger password.';
-      } else if (
-        error?.code === 'permission-denied' ||
-        error?.code === 'firestore/permission-denied'
-      ) {
+          'This email is already registered. Please sign in.';
+      } else if (error?.code === 'permission-denied') {
         message =
-          'Firebase Authentication may have created the account, ' +
-          'but Firestore did not save its profile. ' +
-          'Please check your Firestore rules.';
+          'Firestore denied the operation. Check the published rules.';
+      } else if (error?.message === 'INVALID_VERIFICATION_IMAGE') {
+        message = 'Unable to read the JPG image.';
+      } else if (error?.message === 'IMAGE_TOO_LARGE') {
+        message =
+          'The ID could not be compressed enough. ' +
+          'Please use a smaller or clearer JPG.';
+      }
+
+      if (createdUser && !profileSaved) {
+        try {
+          await runInInjectionContext(
+            this.injector,
+            () => deleteUser(createdUser!)
+          );
+        } catch (cleanupError) {
+          console.error('Account cleanup failed:', cleanupError);
+          message +=
+            ' The login account might already exist. ' +
+            'Contact an administrator before registering again.';
+        }
       }
 
       await Swal.fire({
         icon: 'error',
-        title: 'Account Creation Failed',
+        title: 'Registration Failed',
         text: message,
-        confirmButtonText: 'Okay',
         confirmButtonColor: '#245d43'
       });
-
     } finally {
-      // Always reset registration loading.
       this.registerLoading = false;
     }
   }
-
-  // =========================================
-  // CLEAR REGISTRATION FORM
-  // =========================================
 
   clearRegisterForm(): void {
     this.fullName = '';
@@ -550,91 +654,74 @@ export class Login {
 
     this.selectedAccountType = 'customer';
 
+    this.resetStaffId();
+
     this.showRegisterPassword = false;
     this.showConfirmPassword = false;
   }
 
-  // =========================================
-  // ROLE-BASED REDIRECT
-  // =========================================
+  // ========================================
+  // ACCOUNT DESTINATION
+  // ========================================
 
-  private getAccountDestination(
-    uid: string
-  ): Promise<string> {
-
+  private getAccountDestination(uid: string): Promise<string> {
     return new Promise((resolve, reject) => {
       let finished = false;
       let unsubscribe: (() => void) | null = null;
 
       const timeout = setTimeout(() => {
-        if (finished) {
-          return;
-        }
-
+        if (finished) return;
         finished = true;
         unsubscribe?.();
-
-        reject(
-          new Error('Unable to verify account role.')
-        );
+        reject(new Error('Unable to verify account role.'));
       }, 10000);
 
       try {
         unsubscribe = this.userService.listenToUserProfile(
           uid,
           profile => {
-            if (finished) {
-              return;
-            }
+            if (finished) return;
 
             finished = true;
             clearTimeout(timeout);
 
-            queueMicrotask(() => {
-              unsubscribe?.();
-            });
+            queueMicrotask(() => unsubscribe?.());
 
             const role = String(
               profile?.role ?? ''
-            ).trim().toLowerCase();
+            ).toLowerCase();
 
-            // ADMIN / STAFF
-            if (
-              role === 'admin' ||
-              role === 'administrator' ||
-              role === 'staff'
-            ) {
+            const status = String(
+              (
+                profile as typeof profile & {
+                  approvalStatus?: string
+                }
+              )?.approvalStatus ?? ''
+            ).toLowerCase();
+
+            if (role === 'admin' || role === 'administrator') {
               resolve('/home-adm');
-              return;
-            }
-
-            // CUSTOMER
-            if (role === 'customer') {
+            } else if (role === 'staff') {
+              if (status === 'pending' || status === 'rejected') {
+                reject(new Error('STAFF_ACCOUNT_NOT_APPROVED'));
+              } else {
+                resolve('/home-adm');
+              }
+            } else if (role === 'customer') {
               resolve('/home-cust');
-              return;
+            } else if (role === 'pending_staff') {
+              reject(new Error(
+                status === 'rejected'
+                  ? 'STAFF_ACCOUNT_REJECTED'
+                  : 'STAFF_ACCOUNT_NOT_APPROVED'
+              ));
+            } else {
+              reject(new Error('Unable to verify account role.'));
             }
-
-            // PENDING STAFF
-            if (role === 'pending_staff') {
-              reject(
-                new Error('STAFF_ACCOUNT_NOT_APPROVED')
-              );
-              return;
-            }
-
-            reject(
-              new Error(
-                'Your account role is not authorized.'
-              )
-            );
           }
         );
-
       } catch (error) {
-        if (finished) {
-          return;
-        }
-
+        if (finished) return;
         finished = true;
         clearTimeout(timeout);
         reject(error);

@@ -1,12 +1,9 @@
+
 <div class="login-page">
 
   <!-- WELCOME SCREEN -->
-  <main
-    class="welcome-screen"
-    [class.form-open]="showLoginForm"
-  >
+  <main class="welcome-screen" [class.form-open]="showLoginForm">
 
-    <!-- BRAND -->
     <div class="brand">
       <div class="brand-icon" aria-hidden="true">
         <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -29,14 +26,12 @@
       </div>
     </div>
 
-    <!-- WELCOME CONTENT -->
     <section class="welcome-content">
       <div class="eyebrow">WELCOME!</div>
 
       <h1>
         Discover the beauty<br />
-        of
-        <span>Villanueva Silk.</span>
+        of <span>Villanueva Silk.</span>
       </h1>
 
       <p>
@@ -54,7 +49,6 @@
       </button>
     </section>
 
-    <!-- LEAF IMAGE -->
     <div class="leaf-decoration" aria-hidden="true">
       <img
         class="leaf-worm-image"
@@ -67,6 +61,7 @@
     <div class="circle circle-1"></div>
     <div class="circle circle-2"></div>
     <div class="circle circle-3"></div>
+
   </main>
 
   <!-- LOGIN / REGISTER OVERLAY -->
@@ -77,7 +72,6 @@
     aria-modal="true"
     (click)="closeLogin()"
   >
-
     <section
       class="login-panel"
       [class.register-mode]="showRegisterForm"
@@ -96,7 +90,6 @@
       <!-- RIGHT FORM SIDE -->
       <div class="login-form-side">
 
-        <!-- CLOSE BUTTON -->
         <button
           class="close-button"
           type="button"
@@ -107,7 +100,6 @@
           <i class="pi pi-times" aria-hidden="true"></i>
         </button>
 
-        <!-- PANEL BRAND -->
         <div class="panel-brand">
           <div class="panel-brand-icon" aria-hidden="true">
             <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -126,7 +118,9 @@
 
           <div>
             <div class="panel-brand-name">SilkMart</div>
-            <div class="panel-brand-subtitle">VILLANUEVA (DOST-PTRI)</div>
+            <div class="panel-brand-subtitle">
+              VILLANUEVA (DOST-PTRI)
+            </div>
           </div>
         </div>
 
@@ -145,7 +139,6 @@
             novalidate
           >
 
-            <!-- EMAIL -->
             <div class="form-group">
               <label for="email">Email address</label>
 
@@ -162,11 +155,11 @@
                   placeholder="you@example.com"
                   autocomplete="email"
                   required
+                  email
                 />
               </div>
             </div>
 
-            <!-- PASSWORD -->
             <div class="form-group">
               <label for="password">Password</label>
 
@@ -199,7 +192,6 @@
               </div>
             </div>
 
-            <!-- SIGN IN -->
             <button
               class="signin-button"
               type="submit"
@@ -218,12 +210,10 @@
 
           </form>
 
-          <!-- DIVIDER -->
           <div class="divider">
             <span>or</span>
           </div>
 
-          <!-- CREATE ACCOUNT -->
           <button
             class="register-button"
             type="button"
@@ -233,7 +223,6 @@
             <span>Create an account</span>
           </button>
 
-          <!-- CONTINUE AS CUSTOMER -->
           <button
             class="guest-button"
             type="button"
@@ -246,10 +235,9 @@
 
         </ng-container>
 
-        <!-- REGISTER FORM -->
+        <!-- REGISTRATION FORM -->
         <ng-container *ngIf="showRegisterForm">
 
-          <!-- BACK -->
           <button
             class="back-button"
             type="button"
@@ -260,16 +248,15 @@
             <span>Back to login</span>
           </button>
 
-          <!-- REGISTER HEADING -->
           <div class="register-heading">
             <div class="eyebrow">CREATE ACCOUNT</div>
-
             <h2>Join SilkMart.</h2>
-
             <p>
-              {{ selectedAccountType === 'customer'
-                ? 'Create your customer account to start ordering silk products.'
-                : 'Administrative and staff access requires an authorized account.' }}
+              {{
+                selectedAccountType === 'customer'
+                  ? 'Create your customer account to start ordering silk products.'
+                  : 'Administrative and staff access requires an authorized account.'
+              }}
             </p>
           </div>
 
@@ -279,9 +266,8 @@
             novalidate
           >
 
-            <!-- NEW: ACCOUNT TYPE -->
+            <!-- ACCOUNT TYPE -->
             <div class="form-group account-type-group">
-
               <label>Account Type</label>
 
               <div class="account-type-options">
@@ -320,10 +306,9 @@
                 class="account-type-note"
                 *ngIf="selectedAccountType === 'staff'"
               >
-                Admin / Staff accounts must be approved and
-                created by an authorized administrator.
+                Staff applications require ID verification and approval
+                from an authorized administrator.
               </p>
-
             </div>
 
             <!-- FULL NAME -->
@@ -369,7 +354,7 @@
               </div>
             </div>
 
-            <!-- MOBILE -->
+            <!-- MOBILE NUMBER -->
             <div class="form-group">
               <label for="mobileNumber">Mobile Number</label>
 
@@ -478,6 +463,81 @@
               </div>
             </div>
 
+
+<!-- STAFF VERIFICATION: STAFF ONLY -->
+<div
+  class="staff-verification-group"
+  *ngIf="selectedAccountType === 'staff'"
+>
+  <label for="staffVerificationId">
+    Staff Verification ID
+    <span class="required">*</span>
+  </label>
+
+  <p class="staff-verification-description">
+    Upload a clear JPG photo of your work or school ID
+    for administrator review.
+  </p>
+
+  <input
+    #staffIdInput
+    id="staffVerificationId"
+    type="file"
+    accept=".jpg,.jpeg,image/jpeg"
+    class="staff-verification-native-input"
+    [disabled]="registerLoading"
+    (change)="onStaffIdSelected($event)"
+  />
+
+  <label
+    for="staffVerificationId"
+    class="staff-verification-choose"
+  >
+    <i class="pi pi-upload"></i>
+    Choose JPG File
+  </label>
+
+  <span class="staff-verification-filename" *ngIf="!staffIdFile">
+    No file selected
+  </span>
+
+  <div
+    class="staff-verification-file"
+    *ngIf="staffIdFile"
+  >
+    <a
+      [href]="staffIdPreviewUrl"
+      target="_blank"
+      rel="noopener noreferrer"
+      [title]="staffIdFile.name"
+    >
+      <i class="pi pi-paperclip"></i>
+      {{ staffIdFile.name }}
+    </a>
+
+    <button
+      type="button"
+      [disabled]="registerLoading"
+      (click)="clearStaffId(staffIdInput)"
+    >
+      Remove
+    </button>
+  </div>
+
+  <p
+    class="staff-verification-error"
+    *ngIf="staffIdError"
+  >
+    {{ staffIdError }}
+  </p>
+
+  <p class="staff-verification-privacy">
+    Your ID is for authorized administrator verification only.
+    Customers do not need to upload an ID.
+  </p>
+</div>
+
+
             <!-- CREATE ACCOUNT -->
             <button
               class="signin-button create-account-button"
@@ -501,6 +561,5 @@
 
       </div>
     </section>
-
   </div>
 </div>
