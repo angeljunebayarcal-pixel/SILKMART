@@ -1,28 +1,17 @@
-<p>profile-adm works!</p>
 
 <div class="profile-page">
 
   <!-- HEADER -->
   <section class="profile-heading">
     <div>
-      <div class="profile-eyebrow">
-        SILKMART STAFF ACCOUNT
-      </div>
-
+      <div class="profile-eyebrow">SILKMART STAFF ACCOUNT</div>
       <h1>My Profile</h1>
-
-      <p>
-        Manage your account information
-        and access your SilkMart work areas.
-      </p>
+      <p>Manage your account information and access your SilkMart work areas.</p>
     </div>
   </section>
 
-  <!-- LOADING AUTH -->
-  <div
-    class="profile-loading"
-    *ngIf="!authResolved">
-
+  <!-- AUTH LOADING -->
+  <div class="profile-loading" *ngIf="!authResolved">
     <i class="pi pi-spin pi-spinner"></i>
     Checking your account...
   </div>
@@ -37,74 +26,49 @@
     </div>
 
     <h2>Staff Sign-in Required</h2>
-
-    <p>
-      Sign in using an authorized SilkMart
-      Admin or Staff account to view this page.
-    </p>
+    <p>Sign in using an authorized SilkMart Admin or Staff account to view this page.</p>
 
     <div class="profile-message error" *ngIf="errorMessage">
       {{ errorMessage }}
     </div>
   </section>
 
-  <!-- LOADING PROFILE -->
-  <div
-    class="profile-loading"
-    *ngIf="isSignedIn && profileLoading">
-
+  <!-- PROFILE LOADING -->
+  <div class="profile-loading" *ngIf="isSignedIn && profileLoading">
     <i class="pi pi-spin pi-spinner"></i>
     Loading your staff information...
   </div>
 
-  <!-- UNAUTHORIZED ROLE -->
+  <!-- UNAUTHORIZED -->
   <section
     class="profile-card access-card"
-    *ngIf="
-      isSignedIn &&
-      !profileLoading &&
-      !isAuthorized
-    ">
+    *ngIf="isSignedIn && !profileLoading && !isAuthorized">
 
     <div class="access-icon">
       <i class="pi pi-shield"></i>
     </div>
 
     <h2>Access Restricted</h2>
-
-    <p>
-      This profile is available only to
-      authorized SilkMart Admin and Staff accounts.
-    </p>
+    <p>This profile is available only to authorized SilkMart Admin and Staff accounts.</p>
 
     <div class="profile-message error" *ngIf="errorMessage">
       {{ errorMessage }}
     </div>
 
-    <button
-      type="button"
-      class="save-button"
-      (click)="loadProfile()">
+    <button type="button" class="save-button" (click)="loadProfile()">
       Try Again
     </button>
   </section>
 
-  <!-- AUTHORIZED PROFILE -->
+  <!-- PROFILE LAYOUT -->
   <div
     class="profile-layout"
-    *ngIf="
-      authResolved &&
-      isSignedIn &&
-      !profileLoading &&
-      isAuthorized
-    ">
+    *ngIf="authResolved && isSignedIn && !profileLoading && isAuthorized">
 
     <!-- LEFT SIDEBAR -->
     <aside class="profile-sidebar">
-
       <div class="sidebar-decoration"></div>
 
-      <!-- AVATAR -->
       <div class="profile-avatar">
         <span>{{ profileInitial }}</span>
       </div>
@@ -112,20 +76,11 @@
       <h2>{{ displayName }}</h2>
 
       <div class="profile-role">
-        <i
-          class="pi"
-          [ngClass]="
-            isAdministrator
-              ? 'pi-shield'
-              : 'pi-id-card'
-          ">
-        </i>
-
+        <i class="pi" [ngClass]="isAdministrator ? 'pi-shield' : 'pi-id-card'"></i>
         {{ roleLabel }}
       </div>
 
       <div class="profile-contact">
-
         <div class="contact-item">
           <i class="pi pi-envelope"></i>
           <span>{{ email }}</span>
@@ -133,42 +88,22 @@
 
         <div class="contact-item">
           <i class="pi pi-phone"></i>
-          <span>
-            {{
-              mobileNumber ||
-              'No mobile number provided'
-            }}
-          </span>
+          <span>{{ mobileNumber || 'No mobile number provided' }}</span>
         </div>
 
         <div class="contact-item">
           <i class="pi pi-map-marker"></i>
-          <span>
-            {{
-              completeAddress ||
-              'No address provided'
-            }}
-          </span>
+          <span>{{ completeAddress || 'No address provided' }}</span>
         </div>
-
       </div>
 
-      <!-- STAFF NAVIGATION -->
       <nav class="profile-menu" aria-label="Staff navigation">
 
-        <div class="sidebar-menu-heading">
-          MY ACCOUNT
-        </div>
+        <div class="sidebar-menu-heading">MY ACCOUNT</div>
 
-        <button
-          type="button"
-          class="profile-menu-item active">
-          <span class="menu-icon">
-            <i class="pi pi-user"></i>
-          </span>
-
+        <button type="button" class="profile-menu-item active">
+          <span class="menu-icon"><i class="pi pi-user"></i></span>
           <span>My Profile</span>
-
           <i class="pi pi-angle-right"></i>
         </button>
 
@@ -180,13 +115,8 @@
           type="button"
           class="profile-menu-item"
           (click)="goToInventory()">
-
-          <span class="menu-icon">
-            <i class="pi pi-box"></i>
-          </span>
-
+          <span class="menu-icon"><i class="pi pi-box"></i></span>
           <span>Inventory</span>
-
           <i class="pi pi-angle-right"></i>
         </button>
 
@@ -194,13 +124,8 @@
           type="button"
           class="profile-menu-item"
           (click)="goToProducts()">
-
-          <span class="menu-icon">
-            <i class="pi pi-shopping-bag"></i>
-          </span>
-
+          <span class="menu-icon"><i class="pi pi-shopping-bag"></i></span>
           <span>Product Management</span>
-
           <i class="pi pi-angle-right"></i>
         </button>
 
@@ -208,37 +133,26 @@
           type="button"
           class="profile-menu-item"
           (click)="goToCustomerOrders()">
-
-          <span class="menu-icon">
-            <i class="pi pi-list"></i>
-          </span>
-
+          <span class="menu-icon"><i class="pi pi-list"></i></span>
           <span>Customer Orders</span>
-
           <i class="pi pi-angle-right"></i>
         </button>
 
         <button
           type="button"
-          class="profile-menu-item logout"
-          [disabled]="loggingOut"
-          (click)="logout()">
-
-          <span class="menu-icon">
-            <i class="pi pi-sign-out"></i>
-          </span>
-
-          <span>
-            {{ loggingOut ? 'Logging out...' : 'Logout' }}
-          </span>
+          class="profile-menu-item settings-menu-item"
+          (click)="openSettings()">
+          <span class="menu-icon"><i class="pi pi-cog"></i></span>
+          <span>Settings</span>
+          <i class="pi pi-angle-right"></i>
         </button>
+
       </nav>
 
       <div class="sidebar-quote">
         <span>Timeless Silk,</span>
         <span>Naturally Woven.</span>
       </div>
-
     </aside>
 
     <!-- RIGHT CONTENT -->
@@ -246,19 +160,12 @@
 
       <!-- PERSONAL INFORMATION -->
       <section class="profile-card">
-
         <div class="card-header">
           <div class="card-title-group">
-            <div class="card-icon">
-              <i class="pi pi-user"></i>
-            </div>
-
+            <div class="card-icon"><i class="pi pi-user"></i></div>
             <div>
               <h2>Personal Information</h2>
-              <p>
-                Keep your personal and contact
-                information up to date.
-              </p>
+              <p>Keep your personal and contact information up to date.</p>
             </div>
           </div>
 
@@ -267,21 +174,17 @@
             type="button"
             class="edit-button"
             (click)="enableEdit()">
-
             <i class="pi pi-pencil"></i>
             Edit Information
           </button>
         </div>
 
         <div class="information-grid">
-
           <div class="info-field">
             <label for="staffFullName">Full Name</label>
-
             <div class="display-field" *ngIf="!editMode">
               {{ fullName || 'Not provided' }}
             </div>
-
             <input
               *ngIf="editMode"
               id="staffFullName"
@@ -292,11 +195,9 @@
 
           <div class="info-field">
             <label for="staffMobile">Mobile Number</label>
-
             <div class="display-field" *ngIf="!editMode">
               {{ mobileNumber || 'Not provided' }}
             </div>
-
             <input
               *ngIf="editMode"
               id="staffMobile"
@@ -307,38 +208,27 @@
 
           <div class="info-field">
             <label>Email Address</label>
-
             <div class="display-field disabled-field">
               {{ email }}
             </div>
-
-            <small>
-              Linked to Firebase Authentication.
-            </small>
+            <small>Linked to Firebase Authentication.</small>
           </div>
 
           <div class="info-field">
             <label>Account Type</label>
-
             <div class="display-field disabled-field">
               {{ roleLabel }}
             </div>
-
-            <small>
-              Account roles cannot be changed here.
-            </small>
+            <small>Account roles cannot be changed here.</small>
           </div>
-
         </div>
 
         <div class="edit-actions" *ngIf="editMode">
-
           <button
             type="button"
             class="cancel-button"
             [disabled]="saving"
             (click)="cancelEdit()">
-
             <i class="pi pi-times"></i>
             Cancel
           </button>
@@ -348,99 +238,62 @@
             class="save-button"
             [disabled]="saving"
             (click)="saveProfile()">
-
-            <i
-              class="pi"
-              [ngClass]="
-                saving
-                  ? 'pi-spin pi-spinner'
-                  : 'pi-check'
-              ">
-            </i>
-
+            <i class="pi" [ngClass]="saving ? 'pi-spin pi-spinner' : 'pi-check'"></i>
             {{ saving ? 'Saving...' : 'Save Changes' }}
           </button>
         </div>
 
-        <div
-          class="profile-message success"
-          role="status"
-          *ngIf="successMessage">
-
+        <div class="profile-message success" role="status" *ngIf="successMessage">
           <i class="pi pi-check-circle"></i>
           {{ successMessage }}
         </div>
 
-        <div
-          class="profile-message error"
-          role="alert"
-          *ngIf="errorMessage">
-
+        <div class="profile-message error" role="alert" *ngIf="errorMessage">
           <i class="pi pi-exclamation-circle"></i>
           {{ errorMessage }}
         </div>
-
       </section>
 
-      <!-- WORKPLACE INFORMATION -->
+      <!-- WORK INFORMATION -->
       <section class="profile-card">
-
         <div class="card-header">
           <div class="card-title-group">
-            <div class="card-icon">
-              <i class="pi pi-building"></i>
-            </div>
-
+            <div class="card-icon"><i class="pi pi-building"></i></div>
             <div>
               <h2>Work Information</h2>
-              <p>
-                Your access to the SilkMart management system.
-              </p>
+              <p>Your access to the SilkMart management system.</p>
             </div>
           </div>
         </div>
 
         <div class="information-grid">
-
           <div class="info-field">
             <label>System</label>
-            <div class="display-field disabled-field">
-              SilkMart
-            </div>
+            <div class="display-field disabled-field">SilkMart</div>
           </div>
 
           <div class="info-field">
             <label>System Role</label>
-            <div class="display-field disabled-field">
-              {{ roleLabel }}
-            </div>
+            <div class="display-field disabled-field">{{ roleLabel }}</div>
           </div>
 
           <div class="info-field full-width-field">
             <label>Management Access</label>
             <div class="display-field disabled-field">
-              Inventory, Product Management,
-              and Customer Orders
+              Inventory, Product Management, and Customer Orders
             </div>
           </div>
-
         </div>
       </section>
 
       <!-- ADDRESS INFORMATION -->
       <section class="profile-card">
-
         <div class="card-header">
           <div class="card-title-group">
-            <div class="card-icon">
-              <i class="pi pi-map-marker"></i>
-            </div>
-
+            <div class="card-icon"><i class="pi pi-map-marker"></i></div>
             <div>
               <h2>Address Details</h2>
-              <p>
-                Contact address associated with your staff profile.
-              </p>
+              <p>Contact address associated with your staff profile.</p>
             </div>
           </div>
         </div>
@@ -465,25 +318,18 @@
         </div>
 
         <p class="address-help" *ngIf="editMode">
-          Save your changes using the button in
-          Personal Information above.
+          Save your changes using the button in Personal Information above.
         </p>
       </section>
 
       <!-- ACCOUNT INFORMATION -->
       <section class="profile-card account-card">
-
         <div class="card-header">
           <div class="card-title-group">
-            <div class="card-icon">
-              <i class="pi pi-shield"></i>
-            </div>
-
+            <div class="card-icon"><i class="pi pi-shield"></i></div>
             <div>
               <h2>Account Information</h2>
-              <p>
-                Your staff account and security details.
-              </p>
+              <p>Your staff account and security details.</p>
             </div>
           </div>
         </div>
@@ -505,7 +351,6 @@
 
         <div class="account-row">
           <span>Staff Profile Access</span>
-
           <div class="status-badge">
             <span class="status-dot"></span>
             {{ accountStatus }}
@@ -514,52 +359,35 @@
 
         <div class="account-row">
           <span>Firebase Authentication</span>
-
           <div class="status-badge">
             <span class="status-dot"></span>
             Signed In
           </div>
         </div>
-
       </section>
 
       <!-- QUICK ACCESS -->
       <section class="profile-card">
-
         <div class="card-header">
           <div class="card-title-group">
-            <div class="card-icon">
-              <i class="pi pi-th-large"></i>
-            </div>
-
+            <div class="card-icon"><i class="pi pi-th-large"></i></div>
             <div>
               <h2>Staff Quick Access</h2>
-              <p>
-                Open the management areas you use.
-              </p>
+              <p>Open the management areas you use.</p>
             </div>
           </div>
         </div>
 
         <div class="quick-access-grid">
-
           <button
             type="button"
             class="quick-access-item"
             (click)="goToInventory()">
-
-            <div class="quick-access-icon">
-              <i class="pi pi-box"></i>
-            </div>
-
+            <div class="quick-access-icon"><i class="pi pi-box"></i></div>
             <strong>Inventory</strong>
-            <small>
-              Silkworms, cocoons, stock, and production records
-            </small>
-
+            <small>Silkworms, cocoons, stock, and production records</small>
             <span class="quick-access-link">
-              Open Inventory
-              <i class="pi pi-arrow-right"></i>
+              Open Inventory <i class="pi pi-arrow-right"></i>
             </span>
           </button>
 
@@ -567,19 +395,11 @@
             type="button"
             class="quick-access-item"
             (click)="goToProducts()">
-
-            <div class="quick-access-icon">
-              <i class="pi pi-shopping-bag"></i>
-            </div>
-
+            <div class="quick-access-icon"><i class="pi pi-shopping-bag"></i></div>
             <strong>Product Management</strong>
-            <small>
-              Catalog listings, product prices, and publishing
-            </small>
-
+            <small>Catalog listings, product prices, and publishing</small>
             <span class="quick-access-link">
-              Manage Products
-              <i class="pi pi-arrow-right"></i>
+              Manage Products <i class="pi pi-arrow-right"></i>
             </span>
           </button>
 
@@ -587,25 +407,460 @@
             type="button"
             class="quick-access-item"
             (click)="goToCustomerOrders()">
-
-            <div class="quick-access-icon">
-              <i class="pi pi-list"></i>
-            </div>
-
+            <div class="quick-access-icon"><i class="pi pi-list"></i></div>
             <strong>Customer Orders</strong>
-            <small>
-              Customer requests, order statuses, and messages
-            </small>
-
+            <small>Customer requests, order statuses, and messages</small>
             <span class="quick-access-link">
-              View Orders
-              <i class="pi pi-arrow-right"></i>
+              View Orders <i class="pi pi-arrow-right"></i>
             </span>
           </button>
-
         </div>
       </section>
 
     </main>
   </div>
+</div>
+
+<!-- ACCOUNT SETTINGS MODAL -->
+<div
+  class="settings-overlay"
+  *ngIf="showSettings"
+  (click)="closeSettings()">
+
+  <section
+    class="settings-modal"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="settingsTitle"
+    (click)="$event.stopPropagation()">
+
+    <!-- MODAL HEADER -->
+    <div class="settings-header">
+      <div>
+        <span class="settings-eyebrow">SILKMART ACCOUNT</span>
+        <h2 id="settingsTitle">Account Settings</h2>
+        <p>Manage your account security and session.</p>
+      </div>
+
+      <button
+        type="button"
+        class="settings-close"
+        aria-label="Close settings"
+        [disabled]="changingPassword || loggingOut || savingPreferences"
+        (click)="closeSettings()">
+        <i class="pi pi-times"></i>
+      </button>
+    </div>
+
+    <div class="settings-body">
+
+      <!-- ACCOUNT SUMMARY -->
+      <div class="settings-account">
+        <div class="settings-account-avatar">
+          {{ profileInitial }}
+        </div>
+
+        <div>
+          <strong>{{ displayName }}</strong>
+          <span>{{ email }}</span>
+          <small>{{ roleLabel }}</small>
+        </div>
+      </div>
+
+      <!-- CHANGE PASSWORD -->
+      <button
+        type="button"
+        class="settings-option"
+        [disabled]="changingPassword || loggingOut || savingPreferences"
+        (click)="togglePasswordForm()">
+
+        <span class="settings-option-icon">
+          <i class="pi pi-lock"></i>
+        </span>
+
+        <span class="settings-option-description">
+          <strong>Change Password</strong>
+          <small>Update your account password securely</small>
+        </span>
+
+        <i
+          class="pi"
+          [ngClass]="showPasswordForm ? 'pi-angle-up' : 'pi-angle-down'">
+        </i>
+      </button>
+
+      <form
+        *ngIf="showPasswordForm"
+        class="settings-password-form"
+        (ngSubmit)="changePassword()">
+
+        <!-- CURRENT PASSWORD -->
+        <label for="currentPassword">Current Password</label>
+
+        <div class="settings-password-input">
+          <input
+            id="currentPassword"
+            name="currentPassword"
+            [type]="showCurrentPassword ? 'text' : 'password'"
+            autocomplete="current-password"
+            [(ngModel)]="currentPassword"
+            [disabled]="changingPassword"
+            required>
+
+          <button
+            type="button"
+            class="settings-eye-button"
+            [disabled]="changingPassword"
+            [attr.aria-label]="showCurrentPassword ? 'Hide current password' : 'Show current password'"
+            [attr.aria-pressed]="showCurrentPassword"
+            (click)="showCurrentPassword = !showCurrentPassword">
+            <i
+              class="pi"
+              [ngClass]="showCurrentPassword ? 'pi-eye-slash' : 'pi-eye'">
+            </i>
+          </button>
+        </div>
+
+        <!-- NEW PASSWORD -->
+        <label for="newPassword">New Password</label>
+
+        <div class="settings-password-input">
+          <input
+            id="newPassword"
+            name="newPassword"
+            [type]="showNewPassword ? 'text' : 'password'"
+            autocomplete="new-password"
+            [(ngModel)]="newPassword"
+            [disabled]="changingPassword"
+            minlength="8"
+            required>
+
+          <button
+            type="button"
+            class="settings-eye-button"
+            [disabled]="changingPassword"
+            [attr.aria-label]="showNewPassword ? 'Hide new password' : 'Show new password'"
+            [attr.aria-pressed]="showNewPassword"
+            (click)="showNewPassword = !showNewPassword">
+            <i
+              class="pi"
+              [ngClass]="showNewPassword ? 'pi-eye-slash' : 'pi-eye'">
+            </i>
+          </button>
+        </div>
+
+        <!-- CONFIRM PASSWORD -->
+        <label for="confirmNewPassword">Confirm New Password</label>
+
+        <div class="settings-password-input">
+          <input
+            id="confirmNewPassword"
+            name="confirmNewPassword"
+            [type]="showConfirmPassword ? 'text' : 'password'"
+            autocomplete="new-password"
+            [(ngModel)]="confirmNewPassword"
+            [disabled]="changingPassword"
+            required>
+
+          <button
+            type="button"
+            class="settings-eye-button"
+            [disabled]="changingPassword"
+            [attr.aria-label]="showConfirmPassword ? 'Hide confirmed password' : 'Show confirmed password'"
+            [attr.aria-pressed]="showConfirmPassword"
+            (click)="showConfirmPassword = !showConfirmPassword">
+            <i
+              class="pi"
+              [ngClass]="showConfirmPassword ? 'pi-eye-slash' : 'pi-eye'">
+            </i>
+          </button>
+        </div>
+
+        <small class="settings-password-hint">
+          Use at least 8 characters and choose a password different
+          from your current password.
+        </small>
+
+        <div
+          *ngIf="passwordError"
+          class="settings-message error"
+          role="alert">
+          {{ passwordError }}
+        </div>
+
+        <div class="settings-form-actions">
+          <button
+            type="button"
+            class="settings-cancel"
+            [disabled]="changingPassword"
+            (click)="togglePasswordForm()">
+            Cancel
+          </button>
+
+          <button
+            type="submit"
+            class="settings-submit"
+            [disabled]="changingPassword">
+            <i
+              class="pi"
+              [ngClass]="changingPassword ? 'pi-spin pi-spinner' : 'pi-check'">
+            </i>
+            {{ changingPassword ? 'Updating...' : 'Update Password' }}
+          </button>
+        </div>
+      </form>
+
+      <!-- SECURITY & LOGIN ACTIVITY -->
+      <details class="settings-extra">
+        <summary class="settings-option">
+          <span class="settings-option-icon">
+            <i class="pi pi-shield"></i>
+          </span>
+
+          <span class="settings-option-description">
+            <strong>Security &amp; Login Activity</strong>
+            <small>Review your account security</small>
+          </span>
+
+          <i class="pi pi-angle-down"></i>
+        </summary>
+
+        <div class="settings-extra-content">
+          <p><strong>Signed-in Email</strong></p>
+          <p>{{ email }}</p>
+
+          <p><strong>Account Role</strong></p>
+          <p>{{ roleLabel }}</p>
+
+          <p><strong>Authentication Provider</strong></p>
+          <p>{{ loginProvider }}</p>
+
+          <p><strong>Account Created</strong></p>
+          <p>{{ accountCreated }}</p>
+
+          <p><strong>Last Sign-In</strong></p>
+          <p>{{ lastSignIn }}</p>
+
+          <p class="settings-extra-note">
+            These details come from Firebase Authentication.
+            Last Sign-In shows the latest recorded sign-in,
+            not a complete login history.
+          </p>
+        </div>
+      </details>
+
+      <!-- NOTIFICATION PREFERENCES -->
+      <details class="settings-extra">
+        <summary class="settings-option">
+          <span class="settings-option-icon">
+            <i class="pi pi-bell"></i>
+          </span>
+
+          <span class="settings-option-description">
+            <strong>Notification Preferences</strong>
+            <small>Manage staff notification types</small>
+          </span>
+
+          <i class="pi pi-angle-down"></i>
+        </summary>
+
+        <div class="settings-extra-content">
+          <p class="settings-extra-note">
+            Choose the notifications you want to receive.
+            Your selections are saved to your account.
+            The notification system must also be configured
+            to respect these preferences.
+          </p>
+
+          <!-- NEW ORDERS -->
+          <label class="settings-preference">
+            <span>New Customer Orders</span>
+
+            <input
+              type="checkbox"
+              name="prefNewOrders"
+              [(ngModel)]="notificationPreferences.newOrders"
+              (ngModelChange)="notificationSuccess = ''; notificationError = ''"
+              [disabled]="savingPreferences || changingPassword || loggingOut">
+          </label>
+
+          <!-- DELIVERY UPDATES -->
+          <label class="settings-preference">
+            <span>Delivery Updates</span>
+
+            <input
+              type="checkbox"
+              name="prefDeliveryUpdates"
+              [(ngModel)]="notificationPreferences.deliveryUpdates"
+              (ngModelChange)="notificationSuccess = ''; notificationError = ''"
+              [disabled]="savingPreferences || changingPassword || loggingOut">
+          </label>
+
+          <!-- LOW INVENTORY -->
+          <label class="settings-preference">
+            <span>Low Inventory Alerts</span>
+
+            <input
+              type="checkbox"
+              name="prefLowInventory"
+              [(ngModel)]="notificationPreferences.lowInventory"
+              (ngModelChange)="notificationSuccess = ''; notificationError = ''"
+              [disabled]="savingPreferences || changingPassword || loggingOut">
+          </label>
+
+          <!-- STAFF APPLICATIONS: ADMIN ONLY -->
+          <label
+            class="settings-preference"
+            *ngIf="isAdministrator">
+
+            <span>Staff Applications</span>
+
+            <input
+              type="checkbox"
+              name="prefStaffApplications"
+              [(ngModel)]="notificationPreferences.staffApplications"
+              (ngModelChange)="notificationSuccess = ''; notificationError = ''"
+              [disabled]="savingPreferences || changingPassword || loggingOut">
+          </label>
+
+          <!-- SUCCESS -->
+          <p
+            *ngIf="notificationSuccess"
+            class="settings-message success"
+            role="status">
+            {{ notificationSuccess }}
+          </p>
+
+          <!-- ERROR -->
+          <p
+            *ngIf="notificationError"
+            class="settings-message error"
+            role="alert">
+            {{ notificationError }}
+          </p>
+
+          <!-- SAVE -->
+          <div class="settings-preferences-actions">
+            <button
+              type="button"
+              class="settings-submit"
+              [disabled]="savingPreferences || changingPassword || loggingOut"
+              (click)="saveNotificationPreferences()">
+
+              <i
+                class="pi"
+                [ngClass]="savingPreferences ? 'pi-spin pi-spinner' : 'pi-check'">
+              </i>
+
+              {{ savingPreferences ? 'Saving Preferences...' : 'Save Preferences' }}
+            </button>
+          </div>
+        </div>
+      </details>
+
+      <!-- HELP & SUPPORT -->
+      <details class="settings-extra">
+        <summary class="settings-option">
+          <span class="settings-option-icon">
+            <i class="pi pi-question-circle"></i>
+          </span>
+
+          <span class="settings-option-description">
+            <strong>Help &amp; Support</strong>
+            <small>Guides and frequently asked questions</small>
+          </span>
+
+          <i class="pi pi-angle-down"></i>
+        </summary>
+
+        <div class="settings-extra-content">
+          <p><strong>How do I update my profile?</strong></p>
+          <p>
+            Close Settings, select Edit Information in My Profile,
+            make your changes, and select Save Changes.
+          </p>
+
+          <p><strong>How do I change my password?</strong></p>
+          <p>
+            Open Change Password and enter your current password,
+            new password, and confirmation.
+          </p>
+
+          <p><strong>Where can I manage customer orders?</strong></p>
+          <p>
+            Select Customer Orders from the profile sidebar
+            or Staff Quick Access.
+          </p>
+
+          <p class="settings-extra-note">
+            For account or permission issues, contact your
+            designated SilkMart system administrator.
+          </p>
+        </div>
+      </details>
+
+      <!-- ABOUT SILKMART -->
+      <details class="settings-extra">
+        <summary class="settings-option">
+          <span class="settings-option-icon">
+            <i class="pi pi-info-circle"></i>
+          </span>
+
+          <span class="settings-option-description">
+            <strong>About SilkMart</strong>
+            <small>Application and project information</small>
+          </span>
+
+          <i class="pi pi-angle-down"></i>
+        </summary>
+
+        <div class="settings-extra-content">
+          <p><strong>Application</strong></p>
+          <p>SilkMart — VILLANUEVA (DOST-PTRI)</p>
+
+          <p><strong>Purpose</strong></p>
+          <p>
+            A silkworm ordering and management system supporting
+            customer orders, delivery scheduling, inventory,
+            and cocoon monitoring.
+          </p>
+
+          <p><strong>Admin/Staff Portal</strong></p>
+          <p>Web management interface</p>
+        </div>
+      </details>
+
+      <!-- LOGOUT -->
+      <button
+        type="button"
+        class="settings-option settings-logout"
+        [disabled]="changingPassword || loggingOut || savingPreferences"
+        (click)="logout()">
+
+        <span class="settings-option-icon">
+          <i class="pi pi-sign-out"></i>
+        </span>
+
+        <span class="settings-option-description">
+          <strong>Logout</strong>
+          <small>Sign out of your SilkMart account</small>
+        </span>
+
+        <i class="pi pi-angle-right"></i>
+      </button>
+
+    </div>
+
+    <!-- SETTINGS FOOTER -->
+    <div class="settings-footer">
+      <button
+        type="button"
+        class="settings-done"
+        [disabled]="changingPassword || loggingOut || savingPreferences"
+        (click)="closeSettings()">
+        Close
+      </button>
+    </div>
+
+  </section>
 </div>

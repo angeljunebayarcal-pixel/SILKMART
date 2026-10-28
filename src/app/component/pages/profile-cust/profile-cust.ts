@@ -1,1048 +1,738 @@
-import {
-  CommonModule
-} from '@angular/common';
+
+import { CommonModule } from '@angular/common';
 
 import {
   ChangeDetectorRef,
   Component,
-  OnInit
+  Injector,
+  NgZone,
+  OnDestroy,
+  OnInit,
+  runInInjectionContext
 } from '@angular/core';
 
-import {
-  FormsModule
-} from '@angular/forms';
-
-import {
-  Router
-} from '@angular/router';
+import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 
 import {
   Auth,
-  onAuthStateChanged
+  EmailAuthProvider,
+  onAuthStateChanged,
+  reauthenticateWithCredential,
+  updatePassword,
+  User
 } from '@angular/fire/auth';
 
-import {
-  AuthServ
-} from '../../../services/auth.serv';
+import { Subscription } from 'rxjs';
+import Swal from 'sweetalert2';
+
+import { AuthServ } from '../../../services/auth.serv';
+import { UserServ } from '../../../services/user.serv';
 
 import {
-  UserServ
-} from '../../../services/user.serv';
-
+  OrderServ,
+  SilkMartOrder
+} from '../../../services/order.serv';
 
 interface RecentOrder {
-
-  id?: number;
-
-  userId?: string;
-
+  id: string;
   name: string;
-
-  category?: string;
-
-  price: number;
-
-  quantity: number;
-
   total: number;
-
   status: string;
-
   orderDate: string;
-
 }
-
 
 @Component({
   selector: 'app-profile-cust',
-
   standalone: true,
-
-  imports: [
-    CommonModule,
-    FormsModule
-  ],
-
+  imports: [CommonModule, FormsModule],
   templateUrl: './profile-cust.html',
-
-  styleUrl: './profile-cust.scss',
+  styleUrl: './profile-cust.scss'
 })
-export class ProfileCust implements OnInit {
+export class ProfileCust implements OnInit, OnDestroy {
 
-  // =========================================
-  // AUTH STATE
-  // =========================================
-
+  // AUTHENTICATION
   isGuest = true;
-
   authResolved = false;
-
   profileLoading = false;
 
-
-  // =========================================
-  // PROFILE DATA
-  // =========================================
-
+  // PROFILE INFORMATION
   uid = '';
-
   fullName = '';
-
   email = '';
-
   mobileNumber = '';
-
   completeAddress = '';
-
   role = 'customer';
+  memberSince = 'Not available';
 
-  memberSince = '';
-
-
-  // =========================================
-  // EDIT VALUES
-  // =========================================
-
+  // EDIT PROFILE
   editMode = false;
-
   editFullName = '';
-
   editMobileNumber = '';
-
   editCompleteAddress = '';
 
-
-  // =========================================
-  // PAGE STATE
-  // =========================================
-
   saving = false;
-
   successMessage = '';
-
   errorMessage = '';
 
-
-  // =========================================
-  // ORDERS
-  // =========================================
-
+  // RECENT ORDERS
   recentOrders: RecentOrder[] = [];
+  ordersLoading = false;
+  ordersError = '';
 
-
-  // =========================================
-  // AUTH POPUP
-  // =========================================
-
+  // AUTHENTICATION POPUP
   showAuthPopup = false;
-
-  authMode:
-    'login' | 'register' =
-    'login';
-
+  authMode: 'login' | 'register' = 'login';
   authLoading = false;
-
   authError = '';
 
-
-  // =========================================
-  // LOGIN POPUP VALUES
-  // =========================================
-
   authEmail = '';
-
   authPassword = '';
-
   showAuthPassword = false;
 
-
-  // =========================================
-  // REGISTER POPUP VALUES
-  // =========================================
-
+  // REGISTRATION
   registerFullName = '';
-
   registerEmail = '';
-
   registerMobile = '';
-
   registerAddress = '';
-
   registerPassword = '';
-
   registerConfirmPassword = '';
 
+  registerLoading = false;
   showRegisterPassword = false;
-
   showConfirmPassword = false;
 
-  registerLoading = false;
+  // SETTINGS MODAL
+  showSettings = false;
+  showPasswordForm = false;
+  changingPassword = false;
+  loggingOut = false;
 
+  // CHANGE PASSWORD
+  currentPassword = '';
+  newPassword = '';
+  confirmNewPassword = '';
+  passwordError = '';
 
-  // =========================================
-  // CONSTRUCTOR
-  // =========================================
+  showCurrentPassword = false;
+  showNewPassword = false;
+  showConfirmNewPassword = false;
+
+  // FIREBASE ACCOUNT INFORMATION
+  accountCreated = 'Not available';
+  lastSignIn = 'Not available';
+  loginProvider = 'Not available';
+
+  // LIFECYCLE
+  private authUnsubscribe: (() => void) | null = null;
+  private ordersSubscription: Subscription | null = null;
+  private sessionId = 0;
+  private destroyed = false;
 
   constructor(
     private auth: Auth,
     private authService: AuthServ,
     private userService: UserServ,
+    private orderService: OrderServ,
     private router: Router,
+    private injector: Injector,
+    private zone: NgZone,
     private cdr: ChangeDetectorRef
   ) {}
 
-
-  // =========================================
-  // ON INIT
-  // =========================================
-
-  ngOnInit(): void {
-
-    this.loadAuthenticatedUser();
-
+  private inContext<T>(callback: () => T): T {
+    return runInInjectionContext(this.injector, callback);
   }
 
-
-  // =========================================
-  // PROFILE INITIAL
-  // =========================================
-
-  get profileInitial(): string {
-
-    if (!this.fullName) {
-
-      return 'C';
-
+  private refresh(): void {
+    if (!this.destroyed) {
+      this.cdr.detectChanges();
     }
-
-
-    return this.fullName
-      .trim()
-      .charAt(0)
-      .toUpperCase();
-
   }
 
+  // COMPONENT LIFECYCLE
+  ngOnInit(): void {
+    this.loadAuthenticatedUser();
+  }
 
-  // =========================================
-  // CLEAR PROFILE DATA
-  // =========================================
+  ngOnDestroy(): void {
+    this.destroyed = true;
+    this.sessionId++;
 
+    this.authUnsubscribe?.();
+    this.ordersSubscription?.unsubscribe();
+  }
+
+  // PROFILE INITIAL
+  get profileInitial(): string {
+    const value = this.fullName || this.email || 'Customer';
+    return value.trim().charAt(0).toUpperCase();
+  }
+
+  // RESET CUSTOMER PROFILE
   clearProfile(): void {
-
     this.uid = '';
-
     this.fullName = '';
-
     this.email = '';
-
     this.mobileNumber = '';
-
     this.completeAddress = '';
-
     this.role = 'customer';
-
-    this.memberSince = '';
-
-
-    this.recentOrders = [];
-
+    this.memberSince = 'Not available';
 
     this.editMode = false;
-
     this.editFullName = '';
-
     this.editMobileNumber = '';
-
     this.editCompleteAddress = '';
 
-
+    this.saving = false;
     this.successMessage = '';
-
     this.errorMessage = '';
 
+    this.recentOrders = [];
+    this.ordersLoading = false;
+    this.ordersError = '';
+
+    this.showSettings = false;
+    this.showPasswordForm = false;
+    this.clearPasswordFields();
+
+    this.accountCreated = 'Not available';
+    this.lastSignIn = 'Not available';
+    this.loginProvider = 'Not available';
   }
 
-
-  // =========================================
-  // SET GUEST MODE
-  // =========================================
-
+  // GUEST MODE
   setGuestMode(): void {
+    this.sessionId++;
+
+    this.ordersSubscription?.unsubscribe();
+    this.ordersSubscription = null;
 
     this.isGuest = true;
-
     this.authResolved = true;
-
     this.profileLoading = false;
 
-
     this.clearProfile();
-
-
-    this.cdr.detectChanges();
-
+    this.refresh();
   }
 
-
-  // =========================================
-  // LOAD FIREBASE AUTH USER
-  // =========================================
-
+  // AUTHENTICATION LISTENER
   loadAuthenticatedUser(): void {
+    this.authUnsubscribe?.();
 
-    const guestMode =
-      sessionStorage.getItem(
-        'silkmartGuestMode'
-      );
+    this.authUnsubscribe = this.inContext(() =>
+      onAuthStateChanged(
+        this.auth,
 
+        user => this.zone.run(() => {
+          if (this.destroyed) return;
 
-    if (guestMode === 'true') {
+          const guestMode =
+            sessionStorage.getItem('silkmartGuestMode');
 
-      this.setGuestMode();
+          if (!user || guestMode === 'true') {
+            if (!this.isGuest || !this.authResolved) {
+              this.setGuestMode();
+            }
+            return;
+          }
 
-      return;
+          this.applyAuthenticatedUser(user);
+        }),
 
+        error => this.zone.run(() => {
+          console.error('Authentication error:', error);
+          this.setGuestMode();
+        })
+      )
+    );
+  }
+
+  // SET AUTHENTICATED CUSTOMER
+  private applyAuthenticatedUser(user: User): void {
+    const changedUser =
+      this.isGuest || this.uid !== user.uid;
+
+    if (changedUser) {
+      this.sessionId++;
+
+      this.ordersSubscription?.unsubscribe();
+      this.ordersSubscription = null;
+
+      this.clearProfile();
     }
 
+    this.isGuest = false;
+    this.authResolved = true;
 
-    onAuthStateChanged(
-      this.auth,
+    this.uid = user.uid;
+    this.email = user.email || '';
 
-      user => {
-
-        if (!user) {
-
-          this.setGuestMode();
-
-          return;
-
-        }
-
-
-        this.isGuest = false;
-
-        this.authResolved = true;
-
-
-        this.uid =
-          user.uid;
-
-
-        this.email =
-          user.email ?? '';
-
-
-        this.cdr.detectChanges();
-
-
-        this.loadRecentOrders();
-
-
-        void this.loadProfile();
-
-      }
+    this.accountCreated = this.formatAuthDate(
+      user.metadata.creationTime
     );
 
+    this.lastSignIn = this.formatAuthDate(
+      user.metadata.lastSignInTime
+    );
+
+    const providers = user.providerData.map(
+      provider => provider.providerId
+    );
+
+    this.loginProvider = providers.length
+      ? providers.map(provider =>
+          provider === 'password'
+            ? 'Email and Password'
+            : provider === 'google.com'
+              ? 'Google'
+              : provider
+        ).join(', ')
+      : 'Not available';
+
+    this.refresh();
+
+    if (changedUser) {
+      void this.loadProfile();
+      this.loadRecentOrders();
+    }
   }
 
-
-  // =========================================
-  // LOAD FIRESTORE PROFILE
-  // =========================================
-
+  // LOAD PROFILE FROM USER SERVICE
   async loadProfile(): Promise<void> {
+    if (this.isGuest || !this.uid) return;
 
-    if (
-      !this.uid ||
-      this.isGuest
-    ) {
+    const uid = this.uid;
+    const session = this.sessionId;
 
-      return;
-
-    }
-
+    this.profileLoading = true;
+    this.errorMessage = '';
+    this.refresh();
 
     try {
-
-      this.profileLoading = true;
-
-      this.errorMessage = '';
-
-
-      this.cdr.detectChanges();
-
-
       const profile =
-        await this.userService
-          .getUserProfile(
-            this.uid
-          );
-
+        await this.userService.getUserProfile(uid);
 
       if (
-        this.isGuest ||
-        !this.uid
-      ) {
-
-        return;
-
-      }
-
+        session !== this.sessionId ||
+        uid !== this.uid ||
+        this.isGuest
+      ) return;
 
       if (!profile) {
-
         this.errorMessage =
-          'Profile information could not be found.';
-
+          'Customer profile information could not be found.';
         return;
-
       }
 
+      this.fullName = profile.fullName || '';
+      this.mobileNumber = profile.mobileNumber || '';
+      this.completeAddress = profile.completeAddress || '';
+      this.role = profile.role || 'customer';
 
-      this.fullName =
-        profile.fullName ?? '';
-
-
-      this.email =
-        profile.email ||
-        this.email;
-
-
-      this.mobileNumber =
-        profile.mobileNumber ?? '';
-
-
-      this.completeAddress =
-        profile.completeAddress ?? '';
-
-
-      this.role =
-        profile.role ||
-        'customer';
-
-
-      this.memberSince =
-        this.formatCreatedDate(
-          profile.createdAt
-        );
-
-
-    } catch (error) {
-
-      console.error(
-        'Profile load error:',
-        error
+      this.memberSince = this.formatCreatedDate(
+        profile.createdAt
       );
 
+    } catch (error) {
+      console.error('Profile load error:', error);
 
-      if (!this.isGuest) {
-
+      if (session === this.sessionId) {
         this.errorMessage =
-          'Unable to load your profile.';
-
+          'Unable to load your customer profile.';
       }
-
 
     } finally {
-
-      this.profileLoading = false;
-
-      this.cdr.detectChanges();
-
+      if (session === this.sessionId) {
+        this.profileLoading = false;
+        this.refresh();
+      }
     }
-
   }
 
-
-  // =========================================
-  // FORMAT FIRESTORE DATE
-  // =========================================
-
-  formatCreatedDate(
-    value: any
-  ): string {
-
-    if (!value) {
-
-      return 'Not available';
-
-    }
-
+  // DATE FORMATTING
+  formatCreatedDate(value: any): string {
+    if (!value) return 'Not available';
 
     try {
-
       let date: Date;
 
-
-      if (
-        typeof value?.toDate ===
-        'function'
-      ) {
-
-        date =
-          value.toDate();
-
+      if (typeof value.toDate === 'function') {
+        date = value.toDate();
+      } else if (typeof value.seconds === 'number') {
+        date = new Date(value.seconds * 1000);
       } else {
-
-        date =
-          new Date(value);
-
+        date = new Date(value);
       }
 
+      if (!Number.isFinite(date.getTime())) {
+        return 'Not available';
+      }
 
-      return date.toLocaleDateString(
-        'en-US',
+      return date.toLocaleDateString('en-PH', {
+        month: 'long',
+        day: 'numeric',
+        year: 'numeric'
+      });
+
+    } catch {
+      return 'Not available';
+    }
+  }
+
+  formatAuthDate(value?: string): string {
+    if (!value) return 'Not available';
+
+    const date = new Date(value);
+
+    if (!Number.isFinite(date.getTime())) {
+      return 'Not available';
+    }
+
+    return date.toLocaleString('en-PH', {
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit'
+    });
+  }
+
+  // EDIT PERSONAL INFORMATION
+  enableEdit(): void {
+    if (
+      this.isGuest ||
+      this.profileLoading ||
+      this.saving
+    ) return;
+
+    this.editFullName = this.fullName;
+    this.editMobileNumber = this.mobileNumber;
+    this.editCompleteAddress = this.completeAddress;
+
+    this.successMessage = '';
+    this.errorMessage = '';
+    this.editMode = true;
+  }
+
+  cancelEdit(): void {
+    if (this.saving) return;
+
+    this.editMode = false;
+    this.successMessage = '';
+    this.errorMessage = '';
+  }
+
+  // SAVE PERSONAL INFORMATION
+  async saveProfile(): Promise<void> {
+    if (
+      this.isGuest ||
+      !this.uid ||
+      this.saving
+    ) return;
+
+    const fullName = this.editFullName.trim();
+    const mobileNumber = this.editMobileNumber.trim();
+    const completeAddress = this.editCompleteAddress.trim();
+
+    this.successMessage = '';
+    this.errorMessage = '';
+
+    if (!fullName) {
+      this.errorMessage = 'Full name is required.';
+      return;
+    }
+
+    if (fullName.length > 120) {
+      this.errorMessage =
+        'Full name must be 120 characters or fewer.';
+      return;
+    }
+
+    if (
+      mobileNumber &&
+      !/^[0-9+\s()-]{7,30}$/.test(mobileNumber)
+    ) {
+      this.errorMessage =
+        'Please enter a valid mobile number.';
+      return;
+    }
+
+    if (completeAddress.length > 500) {
+      this.errorMessage =
+        'Address must be 500 characters or fewer.';
+      return;
+    }
+
+    const uid = this.uid;
+    const session = this.sessionId;
+
+    this.saving = true;
+    this.refresh();
+
+    try {
+      await this.userService.updateUserProfile(
+        uid,
         {
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric'
+          fullName,
+          mobileNumber,
+          completeAddress
         }
       );
 
+      if (
+        session !== this.sessionId ||
+        uid !== this.uid
+      ) return;
 
-    } catch {
-
-      return 'Not available';
-
-    }
-
-  }
-
-
-  // =========================================
-  // EDIT PROFILE
-  // =========================================
-
-  enableEdit(): void {
-
-    if (
-      this.isGuest ||
-      this.profileLoading
-    ) {
-
-      return;
-
-    }
-
-
-    this.editFullName =
-      this.fullName;
-
-
-    this.editMobileNumber =
-      this.mobileNumber;
-
-
-    this.editCompleteAddress =
-      this.completeAddress;
-
-
-    this.successMessage = '';
-
-    this.errorMessage = '';
-
-    this.editMode = true;
-
-  }
-
-
-  // =========================================
-  // CANCEL EDIT
-  // =========================================
-
-  cancelEdit(): void {
-
-    this.editMode = false;
-
-    this.successMessage = '';
-
-    this.errorMessage = '';
-
-  }
-
-
-  // =========================================
-  // SAVE PROFILE
-  // =========================================
-
-  async saveProfile(): Promise<void> {
-
-    if (
-      this.isGuest ||
-      !this.uid
-    ) {
-
-      return;
-
-    }
-
-
-    this.successMessage = '';
-
-    this.errorMessage = '';
-
-
-    if (
-      !this.editFullName.trim()
-    ) {
-
-      this.errorMessage =
-        'Full name is required.';
-
-      return;
-
-    }
-
-
-    try {
-
-      this.saving = true;
-
-
-      await this.userService
-        .updateUserProfile(
-          this.uid,
-          {
-
-            fullName:
-              this.editFullName.trim(),
-
-            mobileNumber:
-              this.editMobileNumber.trim(),
-
-            completeAddress:
-              this.editCompleteAddress.trim()
-
-          }
-        );
-
-
-      this.fullName =
-        this.editFullName.trim();
-
-
-      this.mobileNumber =
-        this.editMobileNumber.trim();
-
-
-      this.completeAddress =
-        this.editCompleteAddress.trim();
-
+      this.fullName = fullName;
+      this.mobileNumber = mobileNumber;
+      this.completeAddress = completeAddress;
 
       this.editMode = false;
-
-
       this.successMessage =
-        'Profile updated successfully.';
-
+        'Your profile has been updated successfully.';
 
     } catch (error) {
+      console.error('Profile update error:', error);
 
-      console.error(
-        'Profile update error:',
-        error
-      );
-
-
-      this.errorMessage =
-        'Unable to update your profile.';
-
-
-    } finally {
-
-      this.saving = false;
-
-      this.cdr.detectChanges();
-
-    }
-
-  }
-
-
-  // =========================================
-  // LOAD RECENT LOCAL ORDERS
-  // =========================================
-
-  loadRecentOrders(): void {
-
-    // =====================================
-    // GUEST / NO CURRENT USER
-    // =====================================
-
-    if (
-      this.isGuest ||
-      !this.uid
-    ) {
-
-      this.recentOrders = [];
-
-      return;
-
-    }
-
-
-    // =====================================
-    // READ SAVED ORDERS
-    // =====================================
-
-    const savedOrders =
-      localStorage.getItem(
-        'silkOrders'
-      );
-
-
-    if (!savedOrders) {
-
-      this.recentOrders = [];
-
-      return;
-
-    }
-
-
-    try {
-
-      const parsed:
-        RecentOrder[] =
-        JSON.parse(
-          savedOrders
-        );
-
-
-      if (!Array.isArray(parsed)) {
-
-        this.recentOrders = [];
-
-        return;
-
+      if (session === this.sessionId) {
+        this.errorMessage =
+          'Unable to save your profile changes.';
       }
 
+    } finally {
+      if (session === this.sessionId) {
+        this.saving = false;
+        this.refresh();
+      }
+    }
+  }
 
-      // =====================================
-      // CURRENT CUSTOMER ORDERS ONLY
-      // =====================================
+  // LOAD RECENT ORDERS FROM FIRESTORE
+  loadRecentOrders(): void {
+    this.ordersSubscription?.unsubscribe();
+    this.ordersSubscription = null;
 
-      const customerOrders =
-        parsed.filter(
-          order =>
-            order.userId ===
-            this.uid
-        );
-
-
-      // =====================================
-      // SHOW ONLY THE LATEST 1 ORDER
-      // =====================================
-
-      this.recentOrders =
-        customerOrders
-          .slice()
-          .reverse()
-          .slice(0, 1);
-
-
-      this.cdr.detectChanges();
-
-
-    } catch {
-
+    if (this.isGuest || !this.uid) {
       this.recentOrders = [];
-
+      this.ordersLoading = false;
+      return;
     }
 
+    const uid = this.uid;
+    const session = this.sessionId;
+
+    this.ordersLoading = true;
+    this.ordersError = '';
+    this.refresh();
+
+    this.ordersSubscription = this.inContext(() =>
+      this.orderService.getMyOrders().subscribe({
+        next: (orders: SilkMartOrder[]) => {
+          this.zone.run(() => {
+            if (
+              session !== this.sessionId ||
+              uid !== this.uid ||
+              this.isGuest
+            ) return;
+
+            const myOrders = orders
+              .filter(order => order.customerId === uid)
+              .sort(
+                (a, b) =>
+                  this.getOrderTime(b.createdAt) -
+                  this.getOrderTime(a.createdAt)
+              );
+
+            this.recentOrders = myOrders
+              .slice(0, 1)
+              .map(order => ({
+                id: order.id,
+                name:
+                  order.items
+                    .map(item => item.name)
+                    .filter(Boolean)
+                    .join(', ') || 'SilkMart Order',
+                total: Number(order.total || 0),
+                status: order.status,
+                orderDate:
+                  this.formatCreatedDate(order.createdAt)
+              }));
+
+            this.ordersLoading = false;
+            this.ordersError = '';
+            this.refresh();
+          });
+        },
+
+        error: error => {
+          this.zone.run(() => {
+            if (session !== this.sessionId) return;
+
+            console.error('Order loading error:', error);
+
+            this.recentOrders = [];
+            this.ordersLoading = false;
+            this.ordersError =
+              'Unable to load your recent orders.';
+
+            this.refresh();
+          });
+        }
+      })
+    );
   }
 
+  private getOrderTime(value: any): number {
+    if (!value) return 0;
 
-  // =========================================
-  // OPEN SIGN IN POPUP
-  // =========================================
+    if (typeof value.toDate === 'function') {
+      return value.toDate().getTime();
+    }
 
+    if (typeof value.seconds === 'number') {
+      return value.seconds * 1000;
+    }
+
+    const date = new Date(value);
+
+    return Number.isFinite(date.getTime())
+      ? date.getTime()
+      : 0;
+  }
+
+  // GUEST AUTHENTICATION POPUP
   goToLogin(): void {
-
     this.authMode = 'login';
-
     this.authError = '';
-
     this.showAuthPopup = true;
-
   }
-
-
-  // =========================================
-  // OPEN CREATE ACCOUNT POPUP
-  // =========================================
 
   goToCreateAccount(): void {
-
     this.authMode = 'register';
-
     this.authError = '';
-
     this.showAuthPopup = true;
-
   }
 
-
-  // =========================================
-  // CLOSE AUTH POPUP
-  // =========================================
-
   closeAuthPopup(): void {
-
     if (
       this.authLoading ||
       this.registerLoading
-    ) {
-
-      return;
-
-    }
-
+    ) return;
 
     this.showAuthPopup = false;
-
     this.authError = '';
-
     this.showAuthPassword = false;
-
     this.showRegisterPassword = false;
-
     this.showConfirmPassword = false;
-
   }
-
-
-  // =========================================
-  // SWITCH TO LOGIN
-  // =========================================
 
   showLoginMode(): void {
-
-    if (this.registerLoading) {
-
-      return;
-
-    }
-
+    if (this.registerLoading) return;
 
     this.authMode = 'login';
-
     this.authError = '';
-
   }
-
-
-  // =========================================
-  // SWITCH TO REGISTER
-  // =========================================
 
   showRegisterMode(): void {
-
-    if (this.authLoading) {
-
-      return;
-
-    }
-
+    if (this.authLoading) return;
 
     this.authMode = 'register';
-
     this.authError = '';
-
   }
-
-
-  // =========================================
-  // TOGGLE LOGIN PASSWORD
-  // =========================================
 
   toggleAuthPassword(): void {
-
-    this.showAuthPassword =
-      !this.showAuthPassword;
-
+    this.showAuthPassword = !this.showAuthPassword;
   }
-
-
-  // =========================================
-  // TOGGLE REGISTER PASSWORD
-  // =========================================
 
   toggleRegisterPassword(): void {
-
-    this.showRegisterPassword =
-      !this.showRegisterPassword;
-
+    this.showRegisterPassword = !this.showRegisterPassword;
   }
-
-
-  // =========================================
-  // TOGGLE CONFIRM PASSWORD
-  // =========================================
 
   toggleConfirmPassword(): void {
-
-    this.showConfirmPassword =
-      !this.showConfirmPassword;
-
+    this.showConfirmPassword = !this.showConfirmPassword;
   }
 
-
-  // =========================================
-  // LOGIN FROM PROFILE POPUP
-  // =========================================
-
-  async signInFromProfile():
-    Promise<void> {
+  // CUSTOMER SIGN IN
+  async signInFromProfile(): Promise<void> {
+    if (this.authLoading) return;
 
     this.authError = '';
-
 
     if (
       !this.authEmail.trim() ||
       !this.authPassword
     ) {
-
       this.authError =
         'Please enter your email and password.';
-
       return;
-
     }
 
+    this.authLoading = true;
+    this.refresh();
 
     try {
-
-      this.authLoading = true;
-
-
-      const result =
-        await this.authService.login(
-          this.authEmail.trim(),
-          this.authPassword
-        );
-
-
-      sessionStorage.removeItem(
-        'silkmartGuestMode'
+      const result = await this.authService.login(
+        this.authEmail.trim(),
+        this.authPassword
       );
 
-
-      this.isGuest = false;
-
-      this.authResolved = true;
-
-
-      this.uid =
-        result.user.uid;
-
-
-      this.email =
-        result.user.email ?? '';
-
+      sessionStorage.removeItem('silkmartGuestMode');
 
       this.showAuthPopup = false;
-
-
       this.authEmail = '';
-
       this.authPassword = '';
-
       this.showAuthPassword = false;
 
-      this.authError = '';
-
-
-      this.cdr.detectChanges();
-
-
-      this.loadRecentOrders();
-
-
-      await this.loadProfile();
-
+      this.applyAuthenticatedUser(result.user);
 
     } catch (error: any) {
-
-      console.error(
-        'Profile login error:',
-        error
-      );
-
+      console.error('Customer sign-in error:', error);
 
       switch (error?.code) {
-
         case 'auth/invalid-email':
-
           this.authError =
             'Please enter a valid email address.';
-
           break;
-
 
         case 'auth/invalid-credential':
-
+        case 'auth/wrong-password':
           this.authError =
             'Incorrect email or password.';
-
           break;
-
 
         case 'auth/user-disabled':
-
           this.authError =
             'This account has been disabled.';
-
           break;
-
 
         case 'auth/too-many-requests':
-
           this.authError =
-            'Too many attempts. Please try again later.';
-
+            'Too many attempts. Try again later.';
           break;
-
 
         case 'auth/network-request-failed':
-
           this.authError =
             'Please check your internet connection.';
-
           break;
-
 
         default:
-
           this.authError =
             'Unable to sign in. Please try again.';
-
-          break;
-
       }
 
-
     } finally {
-
       this.authLoading = false;
-
-      this.cdr.detectChanges();
-
+      this.refresh();
     }
-
   }
 
-
-  // =========================================
-  // CREATE ACCOUNT FROM PROFILE POPUP
-  // =========================================
-
-  async createAccountFromProfile():
-    Promise<void> {
+  // CUSTOMER REGISTRATION
+  async createAccountFromProfile(): Promise<void> {
+    if (this.registerLoading) return;
 
     this.authError = '';
-
 
     if (
       !this.registerFullName.trim() ||
@@ -1052,259 +742,392 @@ export class ProfileCust implements OnInit {
       !this.registerPassword ||
       !this.registerConfirmPassword
     ) {
-
       this.authError =
         'Please complete all required fields.';
-
       return;
-
     }
-
 
     if (
       this.registerPassword !==
       this.registerConfirmPassword
     ) {
-
       this.authError =
         'Passwords do not match.';
-
       return;
-
     }
 
-
-    if (
-      this.registerPassword.length < 6
-    ) {
-
+    if (this.registerPassword.length < 6) {
       this.authError =
         'Password must contain at least 6 characters.';
-
       return;
-
     }
 
+    this.registerLoading = true;
+    this.refresh();
 
     try {
-
-      this.registerLoading = true;
-
-
-      const result =
-        await this.authService.register(
-          this.registerEmail
-            .trim()
-            .toLowerCase(),
-
-          this.registerPassword
-        );
-
-
-      await this.userService
-        .createUserProfile(
-          result.user.uid,
-          {
-
-            fullName:
-              this.registerFullName.trim(),
-
-            email:
-              this.registerEmail
-                .trim()
-                .toLowerCase(),
-
-            mobileNumber:
-              this.registerMobile.trim(),
-
-            completeAddress:
-              this.registerAddress.trim(),
-
-            role:
-              'customer'
-
-          }
-        );
-
-
-      sessionStorage.removeItem(
-        'silkmartGuestMode'
+      const result = await this.authService.register(
+        this.registerEmail.trim().toLowerCase(),
+        this.registerPassword
       );
 
+      await this.userService.createUserProfile(
+        result.user.uid,
+        {
+          fullName: this.registerFullName.trim(),
+          email: this.registerEmail.trim().toLowerCase(),
+          mobileNumber: this.registerMobile.trim(),
+          completeAddress: this.registerAddress.trim(),
+          role: 'customer'
+        }
+      );
 
-      this.isGuest = false;
-
-      this.authResolved = true;
-
-
-      this.uid =
-        result.user.uid;
-
-
-      this.email =
-        result.user.email ?? '';
-
+      sessionStorage.removeItem('silkmartGuestMode');
 
       this.showAuthPopup = false;
 
-
       this.registerFullName = '';
-
       this.registerEmail = '';
-
       this.registerMobile = '';
-
       this.registerAddress = '';
-
       this.registerPassword = '';
-
       this.registerConfirmPassword = '';
 
       this.showRegisterPassword = false;
-
       this.showConfirmPassword = false;
 
-      this.authError = '';
-
-
-      this.cdr.detectChanges();
-
-
-      this.loadRecentOrders();
-
-
-      await this.loadProfile();
-
+      this.applyAuthenticatedUser(result.user);
 
     } catch (error: any) {
-
-      console.error(
-        'Profile registration error:',
-        error
-      );
-
+      console.error('Customer registration error:', error);
 
       switch (error?.code) {
-
         case 'auth/email-already-in-use':
-
           this.authError =
-            'This email address already has a SilkMart account.';
-
+            'This email address already has an account.';
           break;
-
 
         case 'auth/invalid-email':
-
           this.authError =
             'Please enter a valid email address.';
-
           break;
-
 
         case 'auth/weak-password':
-
           this.authError =
-            'Please use a stronger password.';
-
+            'Please choose a stronger password.';
           break;
-
 
         case 'auth/network-request-failed':
-
           this.authError =
             'Please check your internet connection.';
-
           break;
-
 
         case 'permission-denied':
-
         case 'firestore/permission-denied':
-
           this.authError =
-            'The account was created, but the profile could not be saved.';
-
+            'Your account was created, but the profile could not be saved.';
           break;
-
 
         default:
-
           this.authError =
             'Unable to create your account. Please try again.';
-
-          break;
-
       }
 
-
     } finally {
-
       this.registerLoading = false;
-
-      this.cdr.detectChanges();
-
+      this.refresh();
     }
-
   }
 
-
-  // =========================================
-  // ORDERS
-  // =========================================
-
+  // CUSTOMER NAVIGATION
   goToOrders(): void {
-
     if (this.isGuest) {
-
       this.goToLogin();
-
       return;
-
     }
 
-
-    this.router.navigate([
-      '/home-cust/order'
-    ]);
-
+    void this.router.navigate(['/home-cust/order']);
   }
 
+  goToNotifications(): void {
+    if (this.isGuest) {
+      this.goToLogin();
+      return;
+    }
 
-  // =========================================
-  // LOGOUT
-  // =========================================
+    if (this.changingPassword || this.loggingOut) return;
 
-  async logout(): Promise<void> {
+    this.closeSettings();
+
+    void this.router.navigate(['/home-cust/notif-cust']);
+  }
+
+  // OPEN SETTINGS
+  openSettings(): void {
+    if (
+      this.isGuest ||
+      !this.uid ||
+      this.changingPassword ||
+      this.loggingOut
+    ) return;
+
+    this.showSettings = true;
+    this.showPasswordForm = false;
+
+    this.clearPasswordFields();
+    this.refresh();
+  }
+
+  // CLOSE SETTINGS
+  closeSettings(): void {
+    if (
+      this.changingPassword ||
+      this.loggingOut
+    ) return;
+
+    this.showSettings = false;
+    this.showPasswordForm = false;
+
+    this.clearPasswordFields();
+    this.refresh();
+  }
+
+  // TOGGLE CHANGE PASSWORD
+  togglePasswordForm(): void {
+    if (
+      this.changingPassword ||
+      this.loggingOut
+    ) return;
+
+    this.showPasswordForm = !this.showPasswordForm;
+    this.clearPasswordFields();
+    this.refresh();
+  }
+
+  // CLEAR PASSWORD DATA
+  private clearPasswordFields(): void {
+    this.currentPassword = '';
+    this.newPassword = '';
+    this.confirmNewPassword = '';
+
+    this.passwordError = '';
+
+    this.showCurrentPassword = false;
+    this.showNewPassword = false;
+    this.showConfirmNewPassword = false;
+  }
+
+  // CHANGE PASSWORD THROUGH FIREBASE
+  async changePassword(): Promise<void> {
+    if (
+      this.isGuest ||
+      !this.showSettings ||
+      !this.showPasswordForm ||
+      this.changingPassword ||
+      this.loggingOut
+    ) return;
+
+    const user = this.auth.currentUser;
+
+    if (!user || user.uid !== this.uid || !user.email) {
+      this.passwordError =
+        'Please sign in again before changing your password.';
+      return;
+    }
+
+    if (
+      !user.providerData.some(
+        provider => provider.providerId === 'password'
+      )
+    ) {
+      this.passwordError =
+        'This account does not have an email-and-password sign-in method.';
+      return;
+    }
+
+    if (
+      !this.currentPassword ||
+      !this.newPassword ||
+      !this.confirmNewPassword
+    ) {
+      this.passwordError =
+        'Please complete all password fields.';
+      return;
+    }
+
+    if (this.newPassword.length < 8) {
+      this.passwordError =
+        'The new password must contain at least 8 characters.';
+      return;
+    }
+
+    if (this.newPassword !== this.confirmNewPassword) {
+      this.passwordError =
+        'Your new passwords do not match.';
+      return;
+    }
+
+    if (this.newPassword === this.currentPassword) {
+      this.passwordError =
+        'Choose a password different from your current one.';
+      return;
+    }
+
+    const session = this.sessionId;
+
+    this.changingPassword = true;
+    this.passwordError = '';
+    this.refresh();
 
     try {
+      const credential = EmailAuthProvider.credential(
+        user.email,
+        this.currentPassword
+      );
 
+      await this.inContext(() =>
+        reauthenticateWithCredential(user, credential)
+      );
+
+      if (
+        session !== this.sessionId ||
+        this.auth.currentUser?.uid !== user.uid
+      ) return;
+
+      await this.inContext(() =>
+        updatePassword(user, this.newPassword)
+      );
+
+      if (session !== this.sessionId) return;
+
+      this.clearPasswordFields();
+
+      this.showPasswordForm = false;
+      this.showSettings = false;
+      this.changingPassword = false;
+
+      this.refresh();
+
+      await Swal.fire({
+        icon: 'success',
+        title: 'Password Updated',
+        text: 'Your SilkMart account password has been updated successfully.',
+        confirmButtonColor: '#287156',
+        heightAuto: false
+      });
+
+    } catch (error: any) {
+      console.error('Password update error:', error);
+
+      if (session !== this.sessionId) return;
+
+      const code = String(error?.code || '');
+
+      switch (code) {
+        case 'auth/wrong-password':
+        case 'auth/invalid-credential':
+          this.passwordError =
+            'Your current password is incorrect.';
+          break;
+
+        case 'auth/weak-password':
+          this.passwordError =
+            'Please choose a stronger password.';
+          break;
+
+        case 'auth/too-many-requests':
+          this.passwordError =
+            'Too many attempts. Please try again later.';
+          break;
+
+        case 'auth/requires-recent-login':
+          this.passwordError =
+            'Please sign in again before changing your password.';
+          break;
+
+        case 'auth/network-request-failed':
+          this.passwordError =
+            'Please check your internet connection.';
+          break;
+
+        default:
+          this.passwordError =
+            'Unable to update your password. Please try again.';
+      }
+
+      this.currentPassword = '';
+      this.showCurrentPassword = false;
+
+    } finally {
+      if (session === this.sessionId) {
+        this.changingPassword = false;
+        this.refresh();
+      }
+    }
+  }
+
+  // LOGOUT WITH CONFIRMATION
+  async logout(): Promise<void> {
+    if (
+      this.isGuest ||
+      this.loggingOut ||
+      this.changingPassword
+    ) return;
+
+    const wasSettingsOpen = this.showSettings;
+
+    this.showSettings = false;
+    this.refresh();
+
+    const confirmation = await Swal.fire({
+      icon: 'question',
+      title: 'Log out of SilkMart?',
+      text: 'You will be signed out of your customer account.',
+      showCancelButton: true,
+      confirmButtonText: 'Log Out',
+      cancelButtonText: 'Cancel',
+      confirmButtonColor: '#287156',
+      reverseButtons: true,
+      heightAuto: false
+    });
+
+    if (!confirmation.isConfirmed) {
+      this.showSettings = wasSettingsOpen;
+      this.refresh();
+      return;
+    }
+
+    this.loggingOut = true;
+    this.refresh();
+
+    try {
       await this.authService.logout();
-
 
       sessionStorage.setItem(
         'silkmartGuestMode',
         'true'
       );
 
-
       this.setGuestMode();
 
-
-      await this.router.navigate([
-        '/login'
-      ]);
-
+      await this.router.navigate(['/login']);
 
     } catch (error) {
+      console.error('Logout error:', error);
 
-      console.error(
-        'Logout error:',
-        error
-      );
+      await Swal.fire({
+        icon: 'error',
+        title: 'Logout Failed',
+        text: 'Unable to sign out. Please try again.',
+        confirmButtonColor: '#287156',
+        heightAuto: false
+      });
 
+      this.showSettings = wasSettingsOpen;
+
+    } finally {
+      this.loggingOut = false;
+      this.refresh();
     }
-
   }
-
 }
