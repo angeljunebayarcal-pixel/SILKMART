@@ -520,18 +520,9 @@
         Delivery Schedule
       </div>
 
-      <p
-        class="section-help"
-        *ngIf="selectedOrder.deliveryStatus === 'Ready to Schedule'"
-      >
-        This order is confirmed and ready to be scheduled.
-      </p>
-
-      <p
-        class="section-help warning-text"
-        *ngIf="selectedOrder.orderStatus === 'Pending'"
-      >
-        Confirm this order in Customer Orders before scheduling delivery.
+      <!-- Show the next available workflow action. -->
+      <p class="section-help" role="status">
+        {{ deliveryStepHint }}
       </p>
 
       <div class="field-grid">
@@ -543,7 +534,7 @@
             type="date"
             [(ngModel)]="editDate"
             [min]="today"
-            [disabled]="isClosed(selectedOrder)"
+            [disabled]="!canSaveSchedule"
           />
         </label>
 
@@ -552,7 +543,7 @@
 
           <select
             [(ngModel)]="editTimeSlot"
-            [disabled]="isClosed(selectedOrder)"
+            [disabled]="!canSaveSchedule"
           >
             <option
               *ngFor="let slot of timeSlots"
@@ -574,7 +565,7 @@
           [(ngModel)]="editArea"
           placeholder="e.g. Cagayan de Oro"
           maxlength="120"
-          [disabled]="isClosed(selectedOrder)"
+          [disabled]="!canSaveSchedule"
         />
 
       </label>
@@ -588,7 +579,7 @@
           rows="2"
           maxlength="1000"
           placeholder="Staff instructions or delivery details"
-          [disabled]="isClosed(selectedOrder)"
+          [disabled]="!canSaveSchedule"
         ></textarea>
 
       </label>
@@ -596,7 +587,7 @@
       <button
         class="primary-button"
         type="button"
-        [disabled]="saving || isClosed(selectedOrder) || selectedOrder.orderStatus !== 'Confirmed'"
+        [disabled]="!canSaveSchedule"
         (click)="saveSchedule()"
       >
         <i class="pi pi-calendar-plus"></i>
@@ -617,7 +608,7 @@
           <input
             type="checkbox"
             [(ngModel)]="prepQuantity"
-            [disabled]="isClosed(selectedOrder)"
+            [disabled]="!canEditPreparation"
           />
           Correct products and quantities checked
         </label>
@@ -626,7 +617,7 @@
           <input
             type="checkbox"
             [(ngModel)]="prepPackaging"
-            [disabled]="isClosed(selectedOrder)"
+            [disabled]="!canEditPreparation"
           />
           Packaging checked and secured
         </label>
@@ -635,7 +626,7 @@
           <input
             type="checkbox"
             [(ngModel)]="prepHandling"
-            [disabled]="isClosed(selectedOrder)"
+            [disabled]="!canEditPreparation"
           />
           Handling and delivery instructions reviewed
         </label>
@@ -645,7 +636,7 @@
       <button
         class="secondary-button"
         type="button"
-        [disabled]="saving || isClosed(selectedOrder)"
+        [disabled]="!canSavePreparation"
         (click)="savePreparation()"
       >
         Save Preparation Checklist
@@ -660,7 +651,7 @@
         <button
           type="button"
           class="primary-button"
-          [disabled]="saving || isClosed(selectedOrder)"
+          [disabled]="!canDispatch"
           (click)="dispatch()"
         >
           <i class="pi pi-truck"></i>
@@ -670,7 +661,7 @@
         <button
           type="button"
           class="secondary-button"
-          [disabled]="saving || selectedOrder.deliveryStatus !== 'Out for Delivery'"
+          [disabled]="!canConfirmDelivered"
           (click)="markDelivered()"
         >
           <i class="pi pi-check-circle"></i>

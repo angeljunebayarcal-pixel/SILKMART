@@ -64,7 +64,7 @@
       <div>
         <strong>{{ publishedProducts }}</strong>
         <h3>Published</h3>
-        <p>Available to customers</p>
+        <p>Visible catalog listings</p>
       </div>
     </div>
 
@@ -138,7 +138,6 @@
         </div>
 
         <div class="catalog-heading-actions">
-
           <button
             type="button"
             class="add-product-btn"
@@ -163,7 +162,9 @@
         <select
           [(ngModel)]="categoryFilter"
           aria-label="Filter by category">
-          <option value="All Categories">All Categories</option>
+          <option value="All Categories">
+            All Categories
+          </option>
           <option
             *ngFor="let category of categories"
             [value]="category">
@@ -228,6 +229,7 @@
       <div
         class="catalog-empty"
         *ngIf="!loading && errorMessage">
+
         <i class="pi pi-exclamation-circle"></i>
         <h3>Unable to load products</h3>
         <p>{{ errorMessage }}</p>
@@ -252,7 +254,7 @@
           "
           [class.selected]="selectedProduct?.id === product.id">
 
-          <!-- PRODUCT MAIN DETAILS -->
+          <!-- PRODUCT DETAILS IN ROW -->
           <button
             type="button"
             class="product-row-main"
@@ -292,10 +294,15 @@
 
             <div class="product-data-cell">
               <span>Stock</span>
-              <strong [class.stock-zero]="product.stock <= 0">
+              <strong
+                [class.stock-zero]="product.stock <= 0">
                 {{ product.stock | number }}
                 {{ getStockUnit(product) }}
               </strong>
+
+              <small class="product-stock-threshold">
+                Alert at {{ product.lowStockThreshold | number }}
+              </small>
             </div>
 
             <div class="product-status-cell">
@@ -326,6 +333,7 @@
             <button
               type="button"
               class="edit-row-btn"
+              [disabled]="saving"
               (click)="openEditProduct(product)">
               <i class="pi pi-pencil"></i>
               Edit
@@ -402,7 +410,7 @@
       </div>
     </section>
 
-    <!-- PRODUCT DETAILS -->
+    <!-- RIGHT SIDE PRODUCT DETAILS -->
     <aside class="product-details-card">
 
       <div class="details-heading">
@@ -423,7 +431,9 @@
             class="details-image-placeholder"
             *ngIf="!selected.imageUrl">
             <i class="pi pi-box"></i>
-            <span>{{ getProductInitials(selected.name) }}</span>
+            <span>
+              {{ getProductInitials(selected.name) }}
+            </span>
           </div>
         </div>
 
@@ -488,12 +498,37 @@
             </strong>
           </div>
 
+          <!-- NEW PRODUCT THRESHOLD -->
+          <div>
+            <span>
+              <i class="pi pi-exclamation-triangle"></i>
+              Low Stock Alert At
+            </span>
+            <strong>
+              {{ selected.lowStockThreshold | number }}
+              {{ getStockUnit(selected) }}
+            </strong>
+          </div>
+
+          <!-- LINKED SILKWORM SOURCE -->
+          <div *ngIf="selected.sourceSpeciesId">
+            <span>
+              <i class="pi pi-link"></i>
+              Linked Silkworm Batch
+            </span>
+            <strong>
+              {{ selected.sourceSpeciesId }}
+            </strong>
+          </div>
+
           <div>
             <span>
               <i class="pi pi-calendar"></i>
               Date Added
             </span>
-            <strong>{{ formatDate(selected.createdAt) }}</strong>
+            <strong>
+              {{ formatDate(selected.createdAt) }}
+            </strong>
           </div>
 
           <div>
@@ -501,7 +536,9 @@
               <i class="pi pi-refresh"></i>
               Last Updated
             </span>
-            <strong>{{ formatDate(selected.updatedAt) }}</strong>
+            <strong>
+              {{ formatDate(selected.updatedAt) }}
+            </strong>
           </div>
 
         </div>
@@ -509,21 +546,41 @@
         <!-- COLOR-SPECIFIC STOCK DETAILS -->
         <div
           class="product-color-details"
-          *ngIf="selected.colorStocks && selected.colorStocks.length > 0">
+          *ngIf="
+            selected.colorStocks &&
+            selected.colorStocks.length > 0
+          ">
 
-          <h4>Available Colors</h4>
+          <div class="color-details-summary">
+            <div>
+              <h4>Available Colors</h4>
+              <p>
+                Real-time quantity and low-stock thresholds
+                for each product color.
+              </p>
+            </div>
+            <button
+              type="button"
+              class="view-all-colors-btn"
+              [attr.aria-expanded]="showAllSelectedColors"
+              aria-controls="selected-product-color-list"
+              (click)="toggleSelectedColors()">
+              {{ showAllSelectedColors ? 'Hide All' : 'View All' }}
+              <i class="pi" [ngClass]="showAllSelectedColors ? 'pi-chevron-up' : 'pi-chevron-down'"></i>
+            </button>
+          </div>
 
-          <p>
-            Inventory quantity for each available color.
-          </p>
-
-          <div class="product-color-details-list">
+          <div
+            id="selected-product-color-list"
+            class="product-color-details-list"
+            *ngIf="showAllSelectedColors">
 
             <div
               class="product-color-details-row"
               *ngFor="let color of selected.colorStocks">
 
               <div class="product-color-details-name">
+
                 <span
                   class="product-color-dot"
                   [style.background-color]="
@@ -545,9 +602,22 @@
                 <span>{{ color.name }}</span>
               </div>
 
-              <strong>
-                {{ color.quantity | number }} pcs
-              </strong>
+              <div class="color-stock-details">
+                <strong>
+                  {{ color.quantity | number }} pcs
+                </strong>
+
+                <small>
+                  Alert at
+                  {{ color.lowStockThreshold || 0 }}
+                </small>
+
+                <span
+                  class="color-stock-state"
+                  [ngClass]="getColorStockClass(color)">
+                  {{ getColorStockLabel(color) }}
+                </span>
+              </div>
 
             </div>
 
@@ -580,8 +650,10 @@
             <p>
               {{
                 selected.published && selected.stock > 0
-                  ? 'Customers can see this listing when ShopSilk is connected.'
-                  : 'This item is currently unavailable in the customer catalog.'
+                  ? 'Customers can view this product and order available colors.'
+                  : selected.published
+                    ? 'Listing remains published but has no stock available.'
+                    : 'This product is currently a draft.'
               }}
             </p>
           </div>
@@ -592,7 +664,10 @@
             role="switch"
             [attr.aria-checked]="selected.published"
             [class.on]="selected.published"
-            [disabled]="saving || (!selected.published && selected.stock <= 0)"
+            [disabled]="
+              saving ||
+              (!selected.published && selected.stock <= 0)
+            "
             (click)="togglePublish(selected)">
             <span></span>
           </button>
@@ -603,6 +678,7 @@
         <button
           type="button"
           class="details-update-button"
+          [disabled]="saving"
           (click)="openEditProduct(selected)">
           <i class="pi pi-pencil"></i>
           Update Product
@@ -620,7 +696,10 @@
       </ng-container>
 
       <!-- NOTHING SELECTED -->
-      <div class="details-empty" *ngIf="!selectedProduct">
+      <div
+        class="details-empty"
+        *ngIf="!selectedProduct">
+
         <i class="pi pi-box"></i>
         <h3>Select a product</h3>
         <p>
@@ -646,9 +725,13 @@
     aria-labelledby="product-modal-title"
     (click)="$event.stopPropagation()">
 
+    <!-- MODAL HEADER -->
     <header class="product-modal-header">
       <div>
-        <span class="eyebrow">SILKMART CATALOG</span>
+        <span class="eyebrow">
+          SILKMART CATALOG
+        </span>
+
         <h2 id="product-modal-title">
           {{
             editingProductId
@@ -667,6 +750,7 @@
       </button>
     </header>
 
+    <!-- PRODUCT FORM -->
     <form
       class="product-form"
       (ngSubmit)="saveProduct()">
@@ -733,6 +817,24 @@
 
         </div>
 
+        <!-- LINKED SILKWORM INVENTORY -->
+        <div
+          class="linked-species-note"
+          *ngIf="productForm.sourceSpeciesId">
+
+          <i class="pi pi-link"></i>
+
+          <div>
+            <strong>Linked Silkworm Inventory</strong>
+            <small>
+              This product is connected to batch
+              {{ productForm.sourceSpeciesId }}.
+              The stock should remain synchronized
+              with the original silkworm inventory.
+            </small>
+          </div>
+        </div>
+
         <!-- COLOR-SPECIFIC PRODUCT INVENTORY -->
         <div
           class="product-color-stock"
@@ -741,11 +843,13 @@
           <div class="product-color-stock-heading">
             <strong>Available Product Colors</strong>
             <small>
-              Select the available colors and enter
-              the number of pieces for each color.
+              Select colors, enter each quantity,
+              and configure when low-stock alerts appear.
+              A selected color may have zero stock.
             </small>
           </div>
 
+          <!-- COLOR SELECTION -->
           <div class="product-color-options">
 
             <button
@@ -771,10 +875,9 @@
               </span>
 
             </button>
-
           </div>
 
-          <!-- QUANTITY FOR EACH SELECTED COLOR -->
+          <!-- COLOR QUANTITIES AND THRESHOLDS -->
           <div
             class="product-color-stock-list"
             *ngIf="productForm.colorStocks.length > 0">
@@ -794,12 +897,36 @@
                   type="number"
                   [name]="'productColorStock_' + color.name"
                   [ngModel]="color.quantity"
-                  (ngModelChange)="setProductColorQuantity(color.name, $event)"
+                  (ngModelChange)="
+                    setProductColorQuantity(color.name, $event)
+                  "
                   [disabled]="saving"
-                  min="1"
+                  min="0"
                   step="1"
                   required>
               </label>
+
+              <label class="color-threshold-field">
+                <span>Low Stock Alert At</span>
+
+                <input
+                  type="number"
+                  [name]="'productColorThreshold_' + color.name"
+                  [ngModel]="color.lowStockThreshold || 0"
+                  (ngModelChange)="
+                    setProductColorThreshold(color.name, $event)
+                  "
+                  [disabled]="saving"
+                  min="0"
+                  step="1"
+                  required>
+              </label>
+
+              <span
+                class="color-stock-state"
+                [ngClass]="getColorStockClass(color)">
+                {{ getColorStockLabel(color) }}
+              </span>
 
             </div>
 
@@ -813,8 +940,9 @@
           </div>
 
           <p class="product-color-note">
-            Only selected colors will be offered when
-            color selection is connected to ShopSilk.
+            Colors with zero available pieces remain
+            visible in Product Management but cannot
+            be ordered until restocked.
           </p>
 
         </div>
@@ -860,6 +988,34 @@
               [(ngModel)]="productForm.imageUrl"
               [disabled]="saving">
           </div>
+
+        </div>
+
+        <!-- NEW PRODUCT LOW STOCK THRESHOLD -->
+        <div class="form-field product-low-stock-field">
+
+          <label for="productLowStockThreshold">
+            <i class="pi pi-exclamation-triangle"></i>
+            Low Stock Alert Threshold
+          </label>
+
+          <input
+            id="productLowStockThreshold"
+            name="productLowStockThreshold"
+            type="number"
+            min="0"
+            max="100000000"
+            step="1"
+            placeholder="Enter warning quantity"
+            [(ngModel)]="productForm.lowStockThreshold"
+            [disabled]="saving"
+            required>
+
+          <small class="threshold-helper">
+            A low-stock warning appears when available
+            stock reaches this number or lower.
+            Zero stock is always marked Out of Stock.
+          </small>
 
         </div>
 
@@ -921,6 +1077,8 @@
             <small>
               Make the product eligible to appear in ShopSilk.
               Uncheck to save as draft.
+              A published item can reach zero stock
+              without automatically becoming a draft.
             </small>
           </span>
         </label>

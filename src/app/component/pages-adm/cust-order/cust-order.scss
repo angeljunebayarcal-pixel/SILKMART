@@ -1740,3 +1740,54 @@ button:disabled {
     font-size: 9px;
   }
 }
+
+
+/* CUSTOMER ORDER DELETE BUTTON */
+
+.order-status-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 7px;
+  width: 100%;
+  min-width: 0;
+}
+
+.order-status-row .status-badge {
+  align-self: center;
+}
+
+.delete-order-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 30px;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid #f1c8c6;
+  border-radius: 8px;
+  background: #fff5f4;
+  color: #bb4343;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background-color 0.2s ease,
+              border-color 0.2s ease,
+              transform 0.2s ease;
+}
+
+.delete-order-button:hover:not(:disabled) {
+  background: #ffe5e3;
+  border-color: #dc9794;
+  transform: translateY(-1px);
+}
+
+.delete-order-button:focus-visible {
+  outline: 2px solid #bb4343;
+  outline-offset: 2px;
+}
+
+.delete-order-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}

@@ -17,6 +17,16 @@ import {
   onAuthStateChanged
 } from '@angular/fire/auth';
 
+import {
+  Firestore,
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  serverTimestamp,
+  writeBatch
+} from '@angular/fire/firestore';
+
 import { Subscription } from 'rxjs';
 import Swal from 'sweetalert2';
 
@@ -110,6 +120,10 @@ export class CustOrder implements OnInit, OnDestroy {
   showAllOrders = false;
 
   updatingOrderId = '';
+  deletingOrderId = '';
+
+  // Hide successfully deleted orders from delayed Firestore snapshots.
+  private readonly deletedOrderIds = new Set<string>();
 
   // =========================================
   // CHAT
@@ -141,7 +155,8 @@ export class CustOrder implements OnInit, OnDestroy {
     private cdr: ChangeDetectorRef,
     private zone: NgZone,
     private orderService: OrderServ,
-    private chatService: OrderChatServ
+    private chatService: OrderChatServ,
+    private firestore: Firestore
   ) {}
 
   // =========================================
@@ -166,7 +181,11 @@ export class CustOrder implements OnInit, OnDestroy {
 
             this.authResolved = true;
 
-            this.currentUserId = user?.uid ?? '';
+            const nextUserId = user?.uid ?? '';
+            if (nextUserId !== this.currentUserId) {
+              this.deletedOrderIds.clear();
+            }
+            this.currentUserId = nextUserId;
 
             this.orders = [];
             this.selectedOrder = null;
@@ -263,9 +282,9 @@ export class CustOrder implements OnInit, OnDestroy {
 
             this.zone.run(() => {
 
-              this.orders = firebaseOrders.map(
-                order => this.convertOrder(order)
-              );
+              this.orders = firebaseOrders
+                .map(order => this.convertOrder(order))
+                .filter(order => !this.deletedOrderIds.has(order.id));
 
               // Keep selected profile updated.
 
@@ -778,6 +797,175 @@ export class CustOrder implements OnInit, OnDestroy {
         this.refreshUI();
       });
     }
+  }
+
+
+  // =========================================
+  // PERMANENTLY DELETE DELIVERED / REJECTED ORDER
+  // =========================================
+
+  async deleteCompletedOrder(order: CustomerOrder): Promise<void> {
+    if (
+      !this.currentUserId ||
+      this.auth.currentUser?.uid !== this.currentUserId ||
+      this.deletingOrderId ||
+      this.updatingOrderId ||
+      this.deletedOrderIds.has(order.id) ||
+      (order.status !== 'Delivered' && order.status !== 'Rejected')
+    ) {
+      return;
+    }
+
+    const confirmation = await Swal.fire({
+      icon: 'warning',
+      title: 'Permanently Delete Order?',
+      html:
+        `Order <strong>#${this.escapeHtml(order.id)}</strong> ` +
+        `(${this.escapeHtml(order.status)}) will be permanently removed, ` +
+        'including its saved order chat messages. ' +
+        '<br><br><strong>This cannot be undone.</strong> ' +
+        'It will not restore or change silkworm/product inventory.',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, Delete Permanently',
+      cancelButtonText: 'Cancel',
+      confirmButtonColor: '#c34747',
+      reverseButtons: true,
+      focusCancel: true
+    });
+
+    if (!confirmation.isConfirmed) return;
+
+    const orderId = order.id;
+    const actorUid = this.currentUserId;
+    this.deletingOrderId = orderId;
+    this.refreshUI();
+
+    try {
+      await runInInjectionContext(this.injector, async () => {
+        const orderRef = doc(this.firestore, 'orders', orderId);
+        const messagesRef = collection(
+          this.firestore, 'orders', orderId, 'messages'
+        );
+
+        // Check Firestore's latest status and retrieve messages before
+        // adding writes. A single batch removes the order and its chat
+        // messages, without touching any product or species stock.
+        const [orderSnapshot, messagesSnapshot] = await Promise.all([
+          getDoc(orderRef),
+          getDocs(messagesRef)
+        ]);
+
+        if (!orderSnapshot.exists()) {
+          throw new Error('This order has already been deleted.');
+        }
+
+        const currentStatus = String(
+          orderSnapshot.data()?.['status'] || ''
+        );
+
+        if (
+          currentStatus !== 'Delivered' &&
+          currentStatus !== 'Rejected'
+        ) {
+          throw new Error(
+            'Only Delivered or Rejected orders can be deleted.'
+          );
+        }
+
+        // Each message, the order and the audit entry consume one write.
+        // Refuse large deletions instead of partially removing data.
+        if (messagesSnapshot.size > 400) {
+          throw new Error(
+            'This order contains too many chat messages for safe one-step ' +
+            'deletion. Contact the system administrator.'
+          );
+        }
+
+        if (
+          !this.auth.currentUser ||
+          this.auth.currentUser.uid !== actorUid
+        ) {
+          throw new Error('Your signed-in account changed. Try again.');
+        }
+
+        const activityRef = doc(
+          collection(this.firestore, 'inventory_activity')
+        );
+        const batch = writeBatch(this.firestore);
+
+        for (const message of messagesSnapshot.docs) {
+          batch.delete(message.ref);
+        }
+
+        batch.delete(orderRef);
+        batch.set(activityRef, {
+          message: 'Customer order permanently deleted',
+          detail: `Order #${orderId} (${currentStatus}) permanently deleted by staff`,
+          type: 'remove',
+          actorUid,
+          createdAt: serverTimestamp()
+        });
+
+        await batch.commit();
+      });
+
+      this.zone.run(() => {
+        // The real-time subscription will also refresh this list.
+        // Update immediately for responsive feedback.
+        this.deletedOrderIds.add(orderId);
+        this.orders = this.orders.filter(item => item.id !== orderId);
+
+        if (this.detailOrder?.id === orderId) {
+          this.closeOrderDetails();
+        }
+
+        if (this.selectedOrder?.id === orderId) {
+          this.resetChat();
+          this.selectedOrder = null;
+        }
+
+        this.refreshUI();
+      });
+
+      await Swal.fire({
+        icon: 'success',
+        title: 'Order Deleted',
+        text: 'The order and its saved chat messages were deleted from Firestore.',
+        timer: 1800,
+        showConfirmButton: false
+      });
+
+    } catch (error: any) {
+      console.error('Delete customer order failed:', error);
+
+      await Swal.fire({
+        icon: 'error',
+        title: 'Unable to Delete Order',
+        text: error?.code === 'permission-denied'
+          ? 'Firestore denied deletion. Publish the updated Orders and Chat deletion rules and check your Admin/Staff permissions.'
+          : error?.message || 'Could not permanently delete this order.',
+        confirmButtonColor: '#28785b'
+      });
+
+    } finally {
+      this.zone.run(() => {
+        this.deletingOrderId = '';
+        this.refreshUI();
+      });
+    }
+  }
+
+  private escapeHtml(value: string): string {
+    return value.replace(/[&<>"']/g, character => {
+      const values: Record<string, string> = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+      };
+      return values[character];
+    });
   }
 
   // =========================================

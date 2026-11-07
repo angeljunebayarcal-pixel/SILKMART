@@ -1382,3 +1382,69 @@ button:disabled {
     transition: none !important;
   }
 }
+
+
+/* =========================================
+   DELIVERY MANAGEMENT — STAGE-BASED BUTTONS
+   ========================================= */
+
+/* Disabled workflow buttons */
+.editor-modal .primary-button:disabled,
+.editor-modal .secondary-button:disabled {
+  opacity: 0.4 !important;
+  cursor: not-allowed !important;
+  pointer-events: none;
+  box-shadow: none !important;
+  transform: none !important;
+  filter: grayscale(35%);
+}
+
+/* Enabled workflow buttons */
+.editor-modal .primary-button:not(:disabled),
+.editor-modal .secondary-button:not(:disabled) {
+  opacity: 1;
+  cursor: pointer;
+  filter: none;
+}
+
+/* Hover effect only for available actions */
+.editor-modal .primary-button:not(:disabled):hover,
+.editor-modal .secondary-button:not(:disabled):hover {
+  transform: translateY(-1px);
+}
+
+/* Disabled form fields */
+.editor-modal input:disabled,
+.editor-modal select:disabled,
+.editor-modal textarea:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  background-color: #f3f4ef;
+  color: #78837a;
+}
+
+/* Disabled checklist */
+.editor-modal .checklist input:disabled {
+  cursor: not-allowed;
+}
+
+.editor-modal .checklist label:has(input:disabled) {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* Keep workflow buttons easy to distinguish */
+.editor-modal .action-grid button {
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease,
+    background-color 0.2s ease;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 650px) {
+  .editor-modal .section-help[role="status"] {
+    padding: 9px 11px;
+    font-size: 11px;
+  }
+}

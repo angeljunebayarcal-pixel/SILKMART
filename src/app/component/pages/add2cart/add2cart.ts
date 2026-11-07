@@ -11,6 +11,7 @@ import {
 } from '@angular/core';
 import { Router } from '@angular/router';
 import { Auth, onAuthStateChanged } from '@angular/fire/auth';
+import { Firestore, doc, getDocFromServer } from '@angular/fire/firestore';
 import { OrderServ } from '../../../services/order.serv';
 
 interface CartItem {
@@ -61,6 +62,7 @@ export class Add2cart implements OnInit, OnDestroy {
   constructor(
     private router: Router,
     private auth: Auth,
+    private firestore: Firestore,
     private injector: Injector,
     private cdr: ChangeDetectorRef,
     private orderService: OrderServ
@@ -376,6 +378,132 @@ export class Add2cart implements OnInit, OnDestroy {
   }
 
   // =========================================
+  // VERIFY LIVE FIRESTORE STOCK BEFORE CHECKOUT
+  // =========================================
+
+  private async verifySelectedStock(
+    items: CartItem[]
+  ): Promise<void> {
+    const productIds = [...new Set(
+      items.map(item => String(item.productId || '').trim())
+    )];
+
+    if (productIds.includes('')) {
+      throw new Error(
+        'An item in your bag is from an older listing. ' +
+        'Remove it and add the product again from Shop Silk.'
+      );
+    }
+
+    const latestProducts = new Map<string, any>();
+
+    for (const productId of productIds) {
+      const productRef = runInInjectionContext(
+        this.injector,
+        () => doc(this.firestore, 'products', productId)
+      );
+
+      let snapshot;
+      try {
+        snapshot = await runInInjectionContext(
+          this.injector,
+          () => getDocFromServer(productRef)
+        );
+      } catch (error: any) {
+        if (error?.code === 'permission-denied') {
+          throw new Error(
+            'A product is no longer available for purchase. ' +
+            'Please review your shopping bag.'
+          );
+        }
+        throw error;
+      }
+
+      if (!snapshot.exists()) {
+        throw new Error(
+          'A product in your bag is no longer available. ' +
+          'Please remove it before ordering.'
+        );
+      }
+
+      const product = snapshot.data();
+      if (product['published'] !== true ||
+          !Number.isInteger(Number(product['stock'])) ||
+          Number(product['stock']) <= 0) {
+        throw new Error(
+          `${String(product['name'] || 'A product')} is out of stock or unpublished.`
+        );
+      }
+      latestProducts.set(productId, product);
+    }
+
+    const perProduct = new Map<string, number>();
+    const perColor = new Map<string, number>();
+
+    for (const item of items) {
+      const productId = String(item.productId).trim();
+      const product = latestProducts.get(productId);
+      const colors = Array.isArray(product['colorStocks'])
+        ? product['colorStocks']
+        : [];
+      const selectedColors = (item.colors || [])
+        .map(color => String(color).trim())
+        .filter(Boolean);
+
+      if (!Number.isInteger(item.quantity) || item.quantity < 1) {
+        throw new Error(`Invalid quantity for ${item.name}.`);
+      }
+
+      if (Number(product['price']) !== Number(item.price)) {
+        throw new Error(
+          `The price of ${item.name} has changed. ` +
+          'Remove it and add the updated product again.'
+        );
+      }
+
+      if (colors.length > 0) {
+        if (selectedColors.length !== 1) {
+          throw new Error(
+            `Please select one available color for ${item.name} in Shop Silk.`
+          );
+        }
+        const color = colors.find(
+          (entry: any) => entry?.name === selectedColors[0]
+        );
+        if (!color || !Number.isInteger(Number(color.quantity))) {
+          throw new Error(
+            `The selected color for ${item.name} is unavailable.`
+          );
+        }
+        const key = `${productId}::${selectedColors[0]}`;
+        const required = (perColor.get(key) || 0) + item.quantity;
+        if (required > Number(color.quantity)) {
+          throw new Error(
+            `Only ${Number(color.quantity)} ${selectedColors[0]} ` +
+            `${item.name} available. Please reduce your quantity.`
+          );
+        }
+        perColor.set(key, required);
+      } else if (selectedColors.length > 0) {
+        throw new Error(
+          `The color selection for ${item.name} has changed. ` +
+          'Please add the product again.'
+        );
+      }
+
+      const requiredTotal =
+        (perProduct.get(productId) || 0) + item.quantity;
+      if (requiredTotal > Number(product['stock'])) {
+        throw new Error(
+          `Only ${Number(product['stock'])} ${item.name} available. ` +
+          'Please reduce your quantity.'
+        );
+      }
+      perProduct.set(productId, requiredTotal);
+    }
+  }
+
+  // =========================================
   // CONFIRM CHECKOUT
   // =========================================
 
@@ -443,12 +571,23 @@ export class Add2cart implements OnInit, OnDestroy {
     this.cdr.detectChanges();
 
     try {
+      // Recheck Firestore immediately before creating the order.
+      // This is a preliminary check; the final order/stock update
+      // must use an atomic transaction in OrderServ.
+      await this.verifySelectedStock(purchasedItems);
+
+      if (this.currentUserId !== customerAtCheckout) {
+        throw new Error('Your account changed during checkout. Please retry.');
+      }
+
       // Pass the original product image from the cart.
       // Do not save an empty image string.
 
       const firebaseOrderId =
         await this.orderService.createOrder({
           items: purchasedItems.map(item => ({
+            productId: String(item.productId || ''),
+            selectedColor: item.colors?.[0] || '',
             name: item.name,
             category: item.category,
             price: Number(item.price),

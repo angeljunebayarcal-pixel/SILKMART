@@ -15,6 +15,8 @@ import {
   Firestore,
   collection,
   collectionData,
+  doc,
+  getDoc,
   query,
   where
 } from '@angular/fire/firestore';
@@ -532,6 +534,18 @@ export class Shopsilk implements OnInit, OnDestroy {
     );
   }
 
+  // Guests can request account creation before choosing a fabric color.
+  // Signed-in customers still require a valid color and quantity.
+  get canActivateProductActions(): boolean {
+    if (!this.selectedProduct) return false;
+
+    if (!this.authService.currentUser) {
+      return this.selectedProduct.stock > 0;
+    }
+
+    return this.quantityValid;
+  }
+
   increaseQuantity(): void {
     if (!this.selectedProduct) return;
 
@@ -714,9 +728,17 @@ export class Shopsilk implements OnInit, OnDestroy {
     this.pendingColors = [];
 
     if (!this.isValidSelection(product, quantity, colors)) {
-      alert(
-        'The selected color or quantity is no longer available.'
-      );
+      // Keep product details open after creating an account.
+      // A fabric color is required before adding to bag or ordering.
+      this.selectedProduct = product;
+      this.selectedColors = this.validSelectedColors(product, colors);
+      this.selectedQuantity = 1;
+
+      if (this.canChooseColors(product) && this.selectedColors.length === 0) {
+        alert('Account created. Please select an available color to continue.');
+      } else {
+        alert('Account created. Please review the available stock and quantity.');
+      }
       return;
     }
 
@@ -757,19 +779,23 @@ export class Shopsilk implements OnInit, OnDestroy {
   addSelectedProduct(): void {
     if (!this.selectedProduct) return;
 
-    this.normalizeQuantity();
-
-    if (!this.quantityValid) return;
-
     if (!this.authService.currentUser) {
+      if (this.selectedProduct.stock <= 0) return;
+
+      // Guests may open registration without a selected color.
+      // No cart item is saved until registration succeeds.
       this.openRegisterPopup(
         this.selectedProduct,
-        this.selectedQuantity,
+        Math.max(1, Math.floor(Number(this.selectedQuantity) || 1)),
         'add-bag',
         this.selectedColors
       );
       return;
     }
+
+    this.normalizeQuantity();
+
+    if (!this.quantityValid) return;
 
     this.confirmationProduct = this.selectedProduct;
     this.confirmationQuantity = this.selectedQuantity;
@@ -919,19 +945,21 @@ export class Shopsilk implements OnInit, OnDestroy {
   orderSelectedProduct(): void {
     if (!this.selectedProduct) return;
 
-    this.normalizeQuantity();
-
-    if (!this.quantityValid) return;
-
     if (!this.authService.currentUser) {
+      if (this.selectedProduct.stock <= 0) return;
+
       this.openRegisterPopup(
         this.selectedProduct,
-        this.selectedQuantity,
+        Math.max(1, Math.floor(Number(this.selectedQuantity) || 1)),
         'order-now',
         this.selectedColors
       );
       return;
     }
+
+    this.normalizeQuantity();
+
+    if (!this.quantityValid) return;
 
     this.openOrderConfirmation(
       this.selectedProduct,
@@ -1067,6 +1095,56 @@ export class Shopsilk implements OnInit, OnDestroy {
     }
   }
 
+  // Recheck the latest Firestore stock before an order is submitted.
+  // This rejects unavailable products and depleted selected colors.
+  // Final overselling protection requires the upcoming atomic order/stock
+  // transaction and matching Firestore rules.
+  private async getOrderableProduct(productId: string): Promise<Product> {
+    const snapshot = await runInInjectionContext(
+      this.injector,
+      () => getDoc(doc(this.firestore, 'products', productId))
+    );
+
+    if (!snapshot.exists()) {
+      throw new Error('This product is no longer available.');
+    }
+
+    const data = snapshot.data();
+    const stock = Number(data['stock']);
+
+    if (data['published'] !== true ||
+        !Number.isInteger(stock) || stock <= 0) {
+      throw new Error('This product is out of stock or unavailable.');
+    }
+
+    const colorStocks: ProductColorStock[] =
+      Array.isArray(data['colorStocks'])
+        ? data['colorStocks']
+            .filter((entry: any) =>
+              typeof entry?.name === 'string' &&
+              Number.isInteger(Number(entry?.quantity)) &&
+              Number(entry.quantity) >= 0
+            )
+            .map((entry: any) => ({
+              name: String(entry.name),
+              quantity: Number(entry.quantity)
+            }))
+        : [];
+
+    return {
+      id: snapshot.id,
+      name: String(data['name'] || ''),
+      category: String(data['category'] || 'Other'),
+      description: String(data['description'] || ''),
+      imageUrl: String(data['imageUrl'] || ''),
+      price: Number(data['price'] || 0),
+      stock,
+      featured: data['featured'] === true,
+      artClass: '',
+      colorStocks
+    };
+  }
+
   async saveOrder(
     product: Product,
     quantity: number,
@@ -1079,20 +1157,12 @@ export class Shopsilk implements OnInit, OnDestroy {
       );
     }
 
-    const latestProduct = this.products.find(
-      item => item.id === product.id
-    );
+    const latestProduct = await this.getOrderableProduct(product.id);
 
-    if (
-      !latestProduct ||
-      !this.isValidSelection(
-        latestProduct,
-        quantity,
-        colors
-      )
-    ) {
+    if (!this.isValidSelection(latestProduct, quantity, colors)) {
       throw new Error(
-        'The selected color or quantity is no longer available.'
+        'Insufficient stock for this product or selected color. ' +
+        'Please reduce the quantity or choose another item.'
       );
     }
 
@@ -1104,6 +1174,10 @@ export class Shopsilk implements OnInit, OnDestroy {
     return await this.orderService.createOrder({
       items: [
         {
+          productId: latestProduct.id,
+          ...(this.canChooseColors(latestProduct) && colors.length
+            ? { selectedColor: colors[0] }
+            : {}),
           name: latestProduct.name,
           category: latestProduct.category,
           price: latestProduct.price,

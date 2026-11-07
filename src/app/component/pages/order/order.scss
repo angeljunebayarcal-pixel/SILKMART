@@ -1845,3 +1845,168 @@
   color: #789b85;
   font-size: 22px;
 }
+
+
+
+/* =====================================
+   GUEST ORDERS — VISIBLE USER ICON
+   ===================================== */
+
+.order-page .empty-order .empty-icon:has(.guest-orders-user-icon) {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 66px !important;
+  height: 66px !important;
+  border-radius: 50% !important;
+  background: #e8f0e5 !important;
+}
+
+.order-page .empty-order .empty-icon .pi-user {
+  display: none !important;
+}
+
+.order-page .empty-order .empty-icon .guest-orders-user-icon {
+  display: block !important;
+  width: 28px !important;
+  height: 28px !important;
+  color: #287156 !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  flex-shrink: 0;
+}
+
+
+/* =========================================
+   CUSTOMER ORDERS — GUEST ICON FINAL FIX
+   ========================================= */
+
+.order-page .empty-order .empty-icon.guest-orders-icon {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  width: 66px !important;
+  height: 66px !important;
+  min-width: 66px;
+
+  margin: 0 auto 20px !important;
+
+  border-radius: 50% !important;
+  background: #e8f0e5 !important;
+  color: #287156 !important;
+
+  opacity: 1 !important;
+  visibility: visible !important;
+  flex-shrink: 0;
+}
+
+.order-page .empty-order .guest-orders-user-icon {
+  display: block !important;
+  width: 28px !important;
+  height: 28px !important;
+
+  fill: none !important;
+  stroke: #287156 !important;
+  color: #287156 !important;
+
+  opacity: 1 !important;
+  visibility: visible !important;
+  flex-shrink: 0;
+}
+
+/* Match Shopping Bag guest section spacing */
+.order-page .empty-order:has(.guest-orders-icon) {
+  min-height: 360px;
+  height: auto;
+}
+
+@media (max-width: 650px) {
+  .order-page .empty-order:has(.guest-orders-icon) {
+    min-height: 320px;
+    padding: 30px 18px;
+  }
+}
+
+
+/* =========================================
+   CUSTOMER ORDERS — COMPLETED DELETE ICON
+   ========================================= */
+
+.order-status-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 7px;
+  width: 100%;
+  min-width: 0;
+}
+
+.order-status-row .order-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+}
+
+.completed-order-delete {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 29px;
+  width: 29px;
+  height: 29px;
+  padding: 0;
+  margin: 0;
+
+  border: 1px solid #e9b6b1;
+  border-radius: 8px;
+  background: #fff3f1;
+  color: #b44c44;
+
+  cursor: pointer;
+
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.completed-order-delete svg {
+  display: block;
+  width: 16px;
+  height: 16px;
+  pointer-events: none;
+}
+
+.completed-order-delete:hover:not(:disabled) {
+  background: #ffe2de;
+  border-color: #d88981;
+  transform: translateY(-1px);
+}
+
+.completed-order-delete:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.completed-order-delete:focus-visible {
+  outline: 2px solid #b44c44;
+  outline-offset: 2px;
+}
+
+.completed-order-delete:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+@media (max-width: 650px) {
+  .order-status-row {
+    gap: 5px;
+  }
+
+  .completed-order-delete {
+    flex-basis: 27px;
+    width: 27px;
+    height: 27px;
+  }
+}

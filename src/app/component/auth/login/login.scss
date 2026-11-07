@@ -2022,3 +2022,134 @@ button:focus-visible {
   outline: 2px solid #287156;
   outline-offset: 3px;
 }
+
+
+
+/* ==========================================
+   FORGOT PASSWORD — SILKMART
+   ========================================== */
+
+/* Forgot password link below password field */
+
+.forgot-password-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+
+  margin-top: -5px;
+  margin-bottom: 15px;
+}
+
+.forgot-password-link {
+  padding: 5px 0;
+
+  border: none;
+  background: transparent;
+
+  color: #287156;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.forgot-password-link:hover {
+  color: #194d38;
+  text-decoration: underline;
+}
+
+.forgot-password-link:focus-visible {
+  outline: 2px solid #287156;
+  outline-offset: 4px;
+  border-radius: 3px;
+}
+
+/* Reset password heading */
+
+.forgot-password-heading {
+  margin-top: 33px;
+  margin-bottom: 25px;
+}
+
+.forgot-password-heading h2 {
+  font-size: 34px;
+  line-height: 1.15;
+}
+
+.forgot-password-heading p {
+  max-width: 350px;
+  line-height: 1.7;
+}
+
+/* Error feedback */
+
+.reset-password-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+
+  margin: 14px 0;
+  padding: 12px 14px;
+
+  border: 1px solid #efd3ce;
+  border-radius: 9px;
+
+  background: #f7e7e4;
+  color: #a25448;
+
+  font-size: 10px;
+  line-height: 1.6;
+}
+
+.reset-password-error i {
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+/* Reset email confirmation */
+
+.reset-password-success {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+
+  margin: 15px 0;
+  padding: 14px;
+
+  border: 1px solid #c9dfcb;
+  border-radius: 10px;
+
+  background: #e8f3e6;
+  color: #245d43;
+
+  font-size: 10px;
+  line-height: 1.7;
+}
+
+.reset-password-success i {
+  margin-top: 2px;
+  flex-shrink: 0;
+
+  color: #287156;
+  font-size: 15px;
+}
+
+/* Mobile responsiveness */
+
+@media (max-width: 600px) {
+  .forgot-password-heading h2 {
+    font-size: 29px;
+  }
+
+  .forgot-password-link {
+    font-size: 11px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .forgot-password-link {
+    transition: none;
+  }
+}

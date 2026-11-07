@@ -378,9 +378,6 @@ export class NotfAdm implements OnInit, OnDestroy {
         JSON.stringify(preferences)
       );
 
-      // Immediately tell the topbar to refresh.
-      // The storage event alone does not fire
-      // in the tab that saved the data.
       window.dispatchEvent(
         new CustomEvent(
           'silkmart-admin-notifications-changed'
@@ -410,9 +407,6 @@ export class NotfAdm implements OnInit, OnDestroy {
     }
   };
 
-  // One notification card per order conversation.
-  // New messages update that card rather than
-  // creating additional chat cards.
   private latestCustomerMessage(
     orderId: string
   ): OrderChatMessage | null {
@@ -443,6 +437,7 @@ export class NotfAdm implements OnInit, OnDestroy {
     })[0];
   }
 
+
   private rebuildNotifications(): void {
     const preferences = this.getPreferences();
     const output: AdminNotice[] = [];
@@ -454,8 +449,6 @@ export class NotfAdm implements OnInit, OnDestroy {
       const preference = preferences[item.id] || {};
 
       if (item.type === 'chat') {
-        // If a card was deleted, keep it hidden
-        // until another customer message arrives.
         if (
           preference.deleted === true &&
           preference.deletedMessageId ===
@@ -510,7 +503,7 @@ export class NotfAdm implements OnInit, OnDestroy {
         order.updatedAt
       );
 
-      // ORDER NOTIFICATION
+      // NEW ORDER NOTIFICATION
 
       push({
         id: `new-order:${order.id}`,
@@ -526,7 +519,7 @@ export class NotfAdm implements OnInit, OnDestroy {
         action: 'View order'
       });
 
-      // DELIVERY NOTIFICATIONS
+      // DELIVERY STATUS INFORMATION
 
       const status = String(
         order.status || 'Pending'
@@ -534,8 +527,16 @@ export class NotfAdm implements OnInit, OnDestroy {
 
       const raw = order as SilkMartOrder & {
         scheduledDeliveryDate?: string;
+        deliveryTimeSlot?: string;
         deliveryStatus?: string;
         deliveryUpdatedAt?: any;
+        dispatchedAt?: any;
+        deliveredAt?: any;
+        deliveryPreparation?: {
+          quantityChecked?: boolean;
+          packagingChecked?: boolean;
+          handlingChecked?: boolean;
+        };
       };
 
       const scheduledDate =
@@ -543,6 +544,8 @@ export class NotfAdm implements OnInit, OnDestroy {
 
       const deliveryStatus =
         String(raw.deliveryStatus || '');
+
+      // READY TO SCHEDULE
 
       if (
         status === 'Confirmed' &&
@@ -565,6 +568,154 @@ export class NotfAdm implements OnInit, OnDestroy {
           action: 'Open delivery'
         });
       }
+
+      // =========================================
+      // DELIVERY MILESTONE NOTIFICATIONS
+      // =========================================
+      // Each stage has a separate, stable ID.
+      // Previous stages remain visible after progress.
+      // The current delivery service stores the latest
+      // update time, but not every previous stage time.
+
+      const reachedScheduled =
+        !!scheduledDate &&
+        ['Scheduled', 'Preparing', 'Out for Delivery', 'Delivered']
+          .includes(deliveryStatus);
+
+      const reachedPreparing =
+        reachedScheduled &&
+        ['Preparing', 'Out for Delivery', 'Delivered']
+          .includes(deliveryStatus) &&
+        raw.deliveryPreparation != null;
+
+      const reachedDispatched =
+        ['Out for Delivery', 'Delivered']
+          .includes(deliveryStatus) &&
+        (raw.dispatchedAt != null ||
+          deliveryStatus === 'Out for Delivery');
+
+      const reachedDelivered =
+        status === 'Delivered' ||
+        deliveryStatus === 'Delivered';
+
+      const addDeliveryMilestone = (
+        id: string,
+        title: string,
+        message: string,
+        icon: string,
+        timestamp: any,
+        earlierLabel: string,
+        earlierSortOffset: number
+      ): void => {
+        const exactTime = this.toMillis(timestamp);
+
+        push({
+          id,
+          type: 'delivery',
+          orderId: order.id,
+          icon,
+          title,
+          message,
+          time: exactTime
+            ? this.showTime(timestamp)
+            : earlierLabel,
+          sortTime: exactTime ||
+            (createdTime + earlierSortOffset),
+          action: 'View delivery'
+        });
+      };
+
+      // 1. DELIVERY SCHEDULED
+
+      if (reachedScheduled) {
+        const scheduledTime =
+          deliveryStatus === 'Scheduled'
+            ? raw.deliveryUpdatedAt
+            : null;
+
+        addDeliveryMilestone(
+          `delivery-scheduled:${order.id}:${scheduledDate}`,
+          'Delivery scheduled',
+          `Order #${order.id} for ${customer} was scheduled ` +
+            `for ${this.prettyDate(scheduledDate)}.` +
+            (raw.deliveryTimeSlot
+              ? ` Time: ${raw.deliveryTimeSlot}.`
+              : ''),
+          'pi pi-calendar',
+          scheduledTime,
+          'Scheduled earlier',
+          1
+        );
+      }
+
+      // 2. ORDER PREPARATION
+
+      if (reachedPreparing) {
+        const preparationTime =
+          deliveryStatus === 'Preparing'
+            ? raw.deliveryUpdatedAt
+            : null;
+
+        const allChecksSaved =
+          raw.deliveryPreparation?.quantityChecked === true &&
+          raw.deliveryPreparation?.packagingChecked === true &&
+          raw.deliveryPreparation?.handlingChecked === true;
+
+        addDeliveryMilestone(
+          `delivery-preparing:${order.id}`,
+          'Order preparation updated',
+          `Staff updated the preparation checklist for ` +
+            `${customer}'s order #${order.id}. ` +
+            (allChecksSaved
+              ? 'All three preparation checks are complete.'
+              : 'Preparation is in progress.'),
+          'pi pi-box',
+          preparationTime,
+          'Prepared earlier',
+          2
+        );
+      }
+
+      // 3. ORDER DISPATCHED
+
+      if (reachedDispatched) {
+        const dispatchTime =
+          raw.dispatchedAt ||
+          (deliveryStatus === 'Out for Delivery'
+            ? raw.deliveryUpdatedAt : null);
+
+        addDeliveryMilestone(
+          `delivery-dispatched:${order.id}`,
+          'Order dispatched',
+          `${customer}'s order #${order.id} is ` +
+            'Out for Delivery.',
+          'pi pi-truck',
+          dispatchTime,
+          'Dispatched earlier',
+          3
+        );
+      }
+
+      // 4. DELIVERY COMPLETED
+
+      if (reachedDelivered) {
+        addDeliveryMilestone(
+          `delivery-delivered:${order.id}`,
+          'Delivery completed',
+          `Order #${order.id} for ${customer} ` +
+            'was successfully marked Delivered.',
+          'pi pi-check-circle',
+          raw.deliveredAt ||
+            raw.deliveryUpdatedAt ||
+            order.updatedAt,
+          'Delivered',
+          4
+        );
+      }
+
+      // =========================================
+      // EXISTING DELIVERY DATE REMINDERS
+      // =========================================
 
       const eligibleForReminder =
         status === 'Confirmed' &&
@@ -613,8 +764,9 @@ export class NotfAdm implements OnInit, OnDestroy {
         });
       }
 
-      // GROUPED CUSTOMER CHAT
-      // One card only for each order.
+      // =========================================
+      // CUSTOMER CHAT NOTIFICATIONS
+      // =========================================
 
       const latestMessage =
         this.latestCustomerMessage(order.id);
@@ -750,31 +902,39 @@ export class NotfAdm implements OnInit, OnDestroy {
     this.savePreferences(preferences);
   }
 
-  async deleteNotification(item: AdminNotice): Promise<void> {
 
-    const result = await Swal.fire({
-      title: 'Remove Notification?',
-      text: 'Are you sure you want to remove this notification from your list? This will not delete the actual customer order or message.',
-      icon: 'warning',
+async deleteNotification(item: AdminNotice): Promise<void> {
+  const userId = this.currentUserId;
 
-      showCancelButton: true,
+  if (!userId) return;
 
-      confirmButtonText: 'Yes, Remove',
-      cancelButtonText: 'Cancel',
+  const result = await Swal.fire({
+    title: 'Remove Notification?',
+    text: 'Are you sure you want to remove this notification from your list? This will not delete the actual customer order or message.',
+    icon: 'warning',
 
-      confirmButtonColor: '#287156',
-      cancelButtonColor: '#8b9a8f',
+    showCancelButton: true,
 
-      reverseButtons: true,
-      focusCancel: true,
+    confirmButtonText: 'Yes, Remove',
+    cancelButtonText: 'Cancel',
 
-      background: '#fbfaf4'
-    });
+    confirmButtonColor: '#287156',
+    cancelButtonColor: '#8b9a8f',
 
-    if (!result.isConfirmed) {
-      return;
-    }
+    reverseButtons: true,
+    focusCancel: true,
 
+    background: '#fbfaf4'
+  });
+
+  if (
+    !result.isConfirmed ||
+    userId !== this.currentUserId
+  ) {
+    return;
+  }
+
+  this.zone.run(() => {
     const preferences = this.getPreferences();
 
     if (item.type === 'chat') {
@@ -799,16 +959,21 @@ export class NotfAdm implements OnInit, OnDestroy {
       notice => notice.id !== item.id
     );
 
-    await Swal.fire({
-      icon: 'success',
-      title: 'Notification Removed',
-      text: 'The notification has been removed from your list.',
-      confirmButtonColor: '#287156',
-      background: '#fbfaf4',
-      timer: 1500,
-      showConfirmButton: false
-    });
-  }
+    this.rebuildNotifications();
+    this.refresh();
+  });
+
+  await Swal.fire({
+    icon: 'success',
+    title: 'Notification Removed',
+    text: 'The notification has been removed from your list.',
+    confirmButtonColor: '#287156',
+    background: '#fbfaf4',
+    timer: 1500,
+    showConfirmButton: false
+  });
+}
+
 
   openNotification(item: AdminNotice): void {
     this.markAsRead(item);
@@ -820,8 +985,6 @@ export class NotfAdm implements OnInit, OnDestroy {
       return;
     }
 
-    // The Customer Orders page contains
-    // the existing Admin/Staff chat interface.
     this.router.navigate([
       '/home-adm/cust-order'
     ]);

@@ -556,49 +556,75 @@ export class TopbarCust implements OnInit, OnDestroy {
     const preferences =
       this.getNotificationPreferences();
 
-    let unread = 0;
+    const unreadIds = new Set<string>();
+
+    const addIfUnread = (id: string): void => {
+      if (this.isNotificationUnread(id, preferences)) {
+        unreadIds.add(id);
+      }
+    };
 
     for (const order of this.firebaseOrders) {
+      const status = String(order.status || 'Pending');
 
-      const placedId = `placed:${order.id}`;
+      const raw = order as SilkMartOrder & {
+        deliveryStatus?: string;
+        scheduledDeliveryDate?: string;
+        dispatchedAt?: any;
+      };
 
-      if (
-        this.isNotificationUnread(
-          placedId,
-          preferences
-        )
-      ) {
-        unread++;
+      const deliveryStatus = String(raw.deliveryStatus || '');
+      const scheduledDate = raw.scheduledDeliveryDate || '';
+
+      // Same IDs used by notif-cust.ts.
+      addIfUnread(`placed:${order.id}`);
+
+      if (status === 'Confirmed' || status === 'Delivered') {
+        addIfUnread(`status:Confirmed:${order.id}`);
       }
 
-      const status = String(
-        order.status || 'Pending'
-      );
+      if (status === 'Rejected' || status === 'Cancelled') {
+        addIfUnread(`status:${status}:${order.id}`);
+        continue;
+      }
 
-      if (
-        [
-          'Confirmed',
-          'Rejected',
-          'Cancelled',
-          'Delivered'
-        ].includes(status)
-      ) {
+      const reachedScheduled =
+        !!scheduledDate &&
+        ['Scheduled', 'Preparing', 'Out for Delivery', 'Delivered']
+          .includes(deliveryStatus);
 
-        const statusId =
-          `status:${status}:${order.id}`;
+      const reachedPreparing =
+        reachedScheduled &&
+        ['Preparing', 'Out for Delivery', 'Delivered']
+          .includes(deliveryStatus);
 
-        if (
-          this.isNotificationUnread(
-            statusId,
-            preferences
-          )
-        ) {
-          unread++;
-        }
+      const reachedDispatched =
+        ['Out for Delivery', 'Delivered'].includes(deliveryStatus) ||
+        (status === 'Delivered' && !!raw.dispatchedAt);
+
+      const reachedDelivered =
+        status === 'Delivered' || deliveryStatus === 'Delivered';
+
+      if (reachedScheduled) {
+        addIfUnread(
+          `delivery-scheduled:${order.id}:${scheduledDate}`
+        );
+      }
+
+      if (reachedPreparing) {
+        addIfUnread(`delivery-preparing:${order.id}`);
+      }
+
+      if (reachedDispatched) {
+        addIfUnread(`delivery-dispatched:${order.id}`);
+      }
+
+      if (reachedDelivered) {
+        addIfUnread(`status:Delivered:${order.id}`);
       }
     }
 
-    return unread;
+    return unreadIds.size;
   }
 
   // =========================================

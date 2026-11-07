@@ -438,7 +438,7 @@
           <button
             type="button"
             class="modal-add-button"
-            [disabled]="!quantityValid"
+            [disabled]="!canActivateProductActions"
             (click)="addSelectedProduct()">
             Add to bag
           </button>
@@ -446,7 +446,7 @@
           <button
             type="button"
             class="modal-order-button"
-            [disabled]="!quantityValid"
+            [disabled]="!canActivateProductActions"
             (click)="orderSelectedProduct()">
             Order now
             <span>→</span>

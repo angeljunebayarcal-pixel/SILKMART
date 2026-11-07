@@ -94,7 +94,7 @@
           class="close-button"
           type="button"
           aria-label="Close"
-          [disabled]="loginLoading || registerLoading"
+          [disabled]="loginLoading || registerLoading || resetLoading"
           (click)="closeLogin()"
         >
           <i class="pi pi-times" aria-hidden="true"></i>
@@ -125,7 +125,7 @@
         </div>
 
         <!-- LOGIN FORM -->
-        <ng-container *ngIf="!showRegisterForm">
+        <ng-container *ngIf="!showRegisterForm && !showForgotPassword">
 
           <div class="login-heading">
             <div class="eyebrow">ACCOUNT</div>
@@ -192,6 +192,17 @@
               </div>
             </div>
 
+            <!-- FORGOT PASSWORD -->
+            <div class="forgot-password-row">
+              <button
+                class="forgot-password-link"
+                type="button"
+                (click)="openForgotPassword()"
+              >
+                Forgot Password?
+              </button>
+            </div>
+
             <button
               class="signin-button"
               type="submit"
@@ -232,6 +243,93 @@
             <span>Continue as customer</span>
             <i class="pi pi-arrow-right"></i>
           </button>
+
+        </ng-container>
+
+        <!-- FORGOT PASSWORD / RESET EMAIL -->
+        <ng-container *ngIf="!showRegisterForm && showForgotPassword">
+
+          <button
+            class="back-button"
+            type="button"
+            [disabled]="resetLoading"
+            (click)="backFromForgotPassword()"
+          >
+            <i class="pi pi-arrow-left"></i>
+            <span>Back to sign in</span>
+          </button>
+
+          <div class="login-heading forgot-password-heading">
+            <div class="eyebrow">ACCOUNT RECOVERY</div>
+            <h2>Reset your password.</h2>
+            <p>
+              Enter your registered SilkMart email address.
+              We'll email a secure link where you can create a new password.
+            </p>
+          </div>
+
+          <form
+            #resetForm="ngForm"
+            (ngSubmit)="sendResetEmail(resetForm)"
+            novalidate
+          >
+            <div class="form-group">
+              <label for="resetEmail">Email address</label>
+
+              <div class="input-container">
+                <span class="input-icon" aria-hidden="true">
+                  <i class="pi pi-envelope"></i>
+                </span>
+
+                <input
+                  id="resetEmail"
+                  name="resetEmail"
+                  type="email"
+                  [(ngModel)]="resetEmail"
+                  placeholder="you@example.com"
+                  autocomplete="email"
+                  [disabled]="resetLoading"
+                  required
+                  email
+                />
+              </div>
+            </div>
+
+            <p
+              class="reset-password-error"
+              *ngIf="resetError"
+              role="alert"
+            >
+              <i class="pi pi-exclamation-circle"></i>
+              {{ resetError }}
+            </p>
+
+            <p
+              class="reset-password-success"
+              *ngIf="resetSent"
+              role="status"
+            >
+              <i class="pi pi-check-circle"></i>
+              If an account uses this email address, a reset link will be sent.
+              Check your inbox and spam folder, then open the link
+              to set your new password.
+            </p>
+
+            <button
+              class="signin-button"
+              type="submit"
+              [disabled]="resetLoading || resetSent"
+            >
+              <i
+                class="pi"
+                [ngClass]="resetLoading ? 'pi-spin pi-spinner' : 'pi-envelope'"
+              ></i>
+
+              <span>
+                {{ resetLoading ? 'Sending...' : (resetSent ? 'Email Requested' : 'Send Reset Link') }}
+              </span>
+            </button>
+          </form>
 
         </ng-container>
 
@@ -463,80 +561,81 @@
               </div>
             </div>
 
+            <!-- STAFF VERIFICATION: STAFF ONLY -->
+            <div
+              class="staff-verification-group"
+              *ngIf="selectedAccountType === 'staff'"
+            >
+              <label for="staffVerificationId">
+                Staff Verification ID
+                <span class="required">*</span>
+              </label>
 
-<!-- STAFF VERIFICATION: STAFF ONLY -->
-<div
-  class="staff-verification-group"
-  *ngIf="selectedAccountType === 'staff'"
->
-  <label for="staffVerificationId">
-    Staff Verification ID
-    <span class="required">*</span>
-  </label>
+              <p class="staff-verification-description">
+                Upload a clear JPG photo of your work or school ID
+                for administrator review.
+              </p>
 
-  <p class="staff-verification-description">
-    Upload a clear JPG photo of your work or school ID
-    for administrator review.
-  </p>
+              <input
+                #staffIdInput
+                id="staffVerificationId"
+                type="file"
+                accept=".jpg,.jpeg,image/jpeg"
+                class="staff-verification-native-input"
+                [disabled]="registerLoading"
+                (change)="onStaffIdSelected($event)"
+              />
 
-  <input
-    #staffIdInput
-    id="staffVerificationId"
-    type="file"
-    accept=".jpg,.jpeg,image/jpeg"
-    class="staff-verification-native-input"
-    [disabled]="registerLoading"
-    (change)="onStaffIdSelected($event)"
-  />
+              <label
+                for="staffVerificationId"
+                class="staff-verification-choose"
+              >
+                <i class="pi pi-upload"></i>
+                Choose JPG File
+              </label>
 
-  <label
-    for="staffVerificationId"
-    class="staff-verification-choose"
-  >
-    <i class="pi pi-upload"></i>
-    Choose JPG File
-  </label>
+              <span
+                class="staff-verification-filename"
+                *ngIf="!staffIdFile"
+              >
+                No file selected
+              </span>
 
-  <span class="staff-verification-filename" *ngIf="!staffIdFile">
-    No file selected
-  </span>
+              <div
+                class="staff-verification-file"
+                *ngIf="staffIdFile"
+              >
+                <a
+                  [href]="staffIdPreviewUrl"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  [title]="staffIdFile.name"
+                >
+                  <i class="pi pi-paperclip"></i>
+                  {{ staffIdFile.name }}
+                </a>
 
-  <div
-    class="staff-verification-file"
-    *ngIf="staffIdFile"
-  >
-    <a
-      [href]="staffIdPreviewUrl"
-      target="_blank"
-      rel="noopener noreferrer"
-      [title]="staffIdFile.name"
-    >
-      <i class="pi pi-paperclip"></i>
-      {{ staffIdFile.name }}
-    </a>
+                <button
+                  type="button"
+                  [disabled]="registerLoading"
+                  (click)="clearStaffId(staffIdInput)"
+                >
+                  Remove
+                </button>
+              </div>
 
-    <button
-      type="button"
-      [disabled]="registerLoading"
-      (click)="clearStaffId(staffIdInput)"
-    >
-      Remove
-    </button>
-  </div>
+              <p
+                class="staff-verification-error"
+                *ngIf="staffIdError"
+              >
+                {{ staffIdError }}
+              </p>
 
-  <p
-    class="staff-verification-error"
-    *ngIf="staffIdError"
-  >
-    {{ staffIdError }}
-  </p>
-
-  <p class="staff-verification-privacy">
-    Your ID is for authorized administrator verification only.
-    Customers do not need to upload an ID.
-  </p>
-</div>
-
+              <p class="staff-verification-privacy">
+                Your ID is for authorized administrator verification only.
+                Customers do not need to upload an ID.
+              </p>
+            </div>
 
             <!-- CREATE ACCOUNT -->
             <button

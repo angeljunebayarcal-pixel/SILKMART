@@ -431,6 +431,12 @@ export class TopbarAdm implements OnInit, OnDestroy {
       const raw = order as SilkMartOrder & {
         scheduledDeliveryDate?: string;
         deliveryStatus?: string;
+        deliveryPreparation?: {
+          quantityChecked?: boolean;
+          packagingChecked?: boolean;
+          handlingChecked?: boolean;
+        };
+        dispatchedAt?: any;
       };
 
       // New order notification.
@@ -456,6 +462,47 @@ export class TopbarAdm implements OnInit, OnDestroy {
         addIfUnread(
           `schedule-required:${order.id}`
         );
+      }
+
+      // Match the delivery milestone IDs from notf-adm.ts.
+      // Count each reached stage once, unless read or deleted.
+      const reachedScheduled =
+        !!scheduledDate &&
+        ['Scheduled', 'Preparing', 'Out for Delivery', 'Delivered']
+          .includes(deliveryStatus);
+
+      const reachedPreparing =
+        reachedScheduled &&
+        ['Preparing', 'Out for Delivery', 'Delivered']
+          .includes(deliveryStatus) &&
+        raw.deliveryPreparation != null;
+
+      const reachedDispatched =
+        ['Out for Delivery', 'Delivered']
+          .includes(deliveryStatus) &&
+        (raw.dispatchedAt != null ||
+          deliveryStatus === 'Out for Delivery');
+
+      const reachedDelivered =
+        status === 'Delivered' ||
+        deliveryStatus === 'Delivered';
+
+      if (reachedScheduled) {
+        addIfUnread(
+          `delivery-scheduled:${order.id}:${scheduledDate}`
+        );
+      }
+
+      if (reachedPreparing) {
+        addIfUnread(`delivery-preparing:${order.id}`);
+      }
+
+      if (reachedDispatched) {
+        addIfUnread(`delivery-dispatched:${order.id}`);
+      }
+
+      if (reachedDelivered) {
+        addIfUnread(`delivery-delivered:${order.id}`);
       }
 
       const reminderEligible =

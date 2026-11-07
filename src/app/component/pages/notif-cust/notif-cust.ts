@@ -256,11 +256,10 @@ export class NotifCust implements OnInit, OnDestroy {
               order => order.customerId === uid
             );
 
-            // Rebuild notifications whenever
-            // Firestore updates an order.
+            // Update notifications whenever Firestore changes.
             this.rebuildNotifications();
 
-            // Keep order chats synchronized.
+            // Preserve real-time customer order chat.
             this.syncChatListeners(session);
 
             this.loadingNotifications = false;
@@ -306,53 +305,42 @@ export class NotifCust implements OnInit, OnDestroy {
   }
 
   // =========================================
-  // NOTIFICATION BUILDER
+  // CUSTOMER ORDER AND DELIVERY NOTIFICATIONS
   // =========================================
 
   private rebuildNotifications(): void {
-
     const preferences = this.getPreferences();
-
     const results: CustomerNotification[] = [];
 
     for (const order of this.customerOrders) {
-
       const productName =
         order.items?.[0]?.name || 'SilkMart products';
 
-      const count = order.items?.reduce(
-        (sum, item) =>
-          sum + Number(item.quantity || 0),
+      const count = (order.items || []).reduce(
+        (sum, item) => sum + Number(item.quantity || 0),
         0
-      ) ?? 0;
-
-      const createdAt = this.toMillis(
-        order.createdAt
       );
 
-      const updatedAt = this.toMillis(
-        order.updatedAt
-      );
+      const createdTime = this.toMillis(order.createdAt);
+      const updatedTime = this.toMillis(order.updatedAt);
+      const status = String(order.status || 'Pending');
+      const raw = order as SilkMartOrder & OrderDeliveryFields;
+      const stage = String(raw.deliveryStatus || '');
+      const scheduledDate = raw.scheduledDeliveryDate || '';
 
-      const raw = order as SilkMartOrder &
-        OrderDeliveryFields;
-
-      // Reusable notification creator.
-      const addNotification = (
+      // Separate notification ID for every milestone.
+      const addNotice = (
         id: string,
         title: string,
         message: string,
         icon: string,
         timestamp: any,
-        fallbackTime: number
+        fallbackSort: number,
+        fallbackLabel = 'Updated earlier'
       ): void => {
+        if (preferences[id]?.deleted === true) return;
 
-        if (preferences[id]?.deleted) {
-          return;
-        }
-
-        const actualTime =
-          this.toMillis(timestamp) || fallbackTime;
+        const actualTime = this.toMillis(timestamp);
 
         results.push({
           id,
@@ -362,11 +350,11 @@ export class NotifCust implements OnInit, OnDestroy {
           message,
           time: actualTime
             ? this.formatTimestamp(actualTime)
-            : 'Recently',
+            : fallbackLabel,
           read: preferences[id]?.read === true,
           actionLabel: 'View order',
-          sortTime: actualTime,
-          orderId: order.id
+          sortTime: actualTime || fallbackSort,
+          orderId: String(order.id)
         });
       };
 
@@ -374,203 +362,170 @@ export class NotifCust implements OnInit, OnDestroy {
       // 1. ORDER PLACED
       // =====================================
 
-      addNotification(
+      addNotice(
         `placed:${order.id}`,
         'Order placed successfully',
-        `Your order for ${count} item(s), including ` +
-          `${productName}, has been received. ` +
-          `Your preferred delivery date is ` +
-          `${this.formatDeliveryDate(
-            order.preferredDeliveryDate
-          )}. Awaiting staff confirmation.`,
+        `Your order for ${count} item(s), including ${productName}, ` +
+          `has been received. Your preferred delivery date is ` +
+          `${this.formatDeliveryDate(order.preferredDeliveryDate)}. ` +
+          'Awaiting staff confirmation.',
         'pi pi-shopping-bag',
         order.createdAt,
-        createdAt
+        createdTime,
+        'Order placed'
       );
 
       // =====================================
-      // 2. MAIN ORDER STATUS
+      // 2. ORDER CONFIRMED
       // =====================================
 
-      const status = String(
-        order.status || 'Pending'
-      );
-
-      const statusMessages: Record<
-        string,
-        {
-          title: string;
-          message: string;
-          icon: string;
-        }
-      > = {
-
-        Confirmed: {
-          title: 'Order confirmed',
-          message:
-            `Your order for ${productName} ` +
-            'has been confirmed by SilkMart staff.',
-          icon: 'pi pi-check-circle'
-        },
-
-        Rejected: {
-          title: 'Order rejected',
-          message:
-            `Your order for ${productName} ` +
-            'was not approved. Contact SilkMart staff for assistance.',
-          icon: 'pi pi-times-circle'
-        },
-
-        Cancelled: {
-          title: 'Order cancelled',
-          message:
-            `Your order for ${productName} ` +
-            'has been cancelled.',
-          icon: 'pi pi-ban'
-        },
-
-        Delivered: {
-          title: 'Order delivered',
-          message:
-            `Your SilkMart order for ${productName} ` +
-            'has been marked as delivered. Thank you for ordering!',
-          icon: 'pi pi-check-circle'
-        }
-      };
-
-      const statusInfo = statusMessages[status];
-
-      if (statusInfo) {
-
-        addNotification(
-          `status:${status}:${order.id}`,
-          statusInfo.title,
-          statusInfo.message,
-          statusInfo.icon,
-          order.updatedAt,
-          updatedAt || createdAt
+      if (status === 'Confirmed' || status === 'Delivered') {
+        addNotice(
+          `status:Confirmed:${order.id}`,
+          'Order confirmed',
+          `Your order for ${productName} has been confirmed ` +
+            'by SilkMart staff.',
+          'pi pi-check-circle',
+          status === 'Confirmed' ? order.updatedAt : null,
+          createdTime + 1,
+          'Confirmed earlier'
         );
       }
 
       // =====================================
-      // 3. DELIVERY INFORMATION
+      // ORDER REJECTED
       // =====================================
 
-      const deliveryStatus = String(
-        raw.deliveryStatus || ''
-      );
+      if (status === 'Rejected') {
+        addNotice(
+          `status:Rejected:${order.id}`,
+          'Order rejected',
+          `Your order for ${productName} was not approved. ` +
+            'Contact SilkMart staff for assistance.',
+          'pi pi-times-circle',
+          order.updatedAt,
+          updatedTime || createdTime,
+          'Order rejected'
+        );
+      }
 
-      const scheduledDate =
-        raw.scheduledDeliveryDate || '';
+      // =====================================
+      // ORDER CANCELLED
+      // =====================================
 
-      const deliveryDateText =
-        scheduledDate
-          ? this.formatDeliveryDate(scheduledDate)
-          : 'the confirmed delivery date';
+      if (status === 'Cancelled') {
+        addNotice(
+          `status:Cancelled:${order.id}`,
+          'Order cancelled',
+          `Your order for ${productName} has been cancelled.`,
+          'pi pi-ban',
+          order.updatedAt,
+          updatedTime || createdTime,
+          'Order cancelled'
+        );
+      }
 
-      const deliveryTimeText =
-        raw.deliveryTimeSlot
-          ? ` Expected delivery time: ${raw.deliveryTimeSlot}.`
-          : '';
-
-      // Prevent delivery notices for cancelled
-      // or rejected orders.
-      if (
-        status === 'Cancelled' ||
-        status === 'Rejected'
-      ) {
+      if (status === 'Rejected' || status === 'Cancelled') {
         continue;
       }
 
+      // Detect completed stages from Firestore.
+      const reachedScheduled =
+        Boolean(scheduledDate) &&
+        ['Scheduled', 'Preparing', 'Out for Delivery', 'Delivered']
+          .includes(stage);
+
+      const reachedPreparing =
+        reachedScheduled &&
+        ['Preparing', 'Out for Delivery', 'Delivered'].includes(stage);
+
+      const reachedDispatched =
+        ['Out for Delivery', 'Delivered'].includes(stage) ||
+        (status === 'Delivered' && !!raw.dispatchedAt);
+
+      const reachedDelivered =
+        status === 'Delivered' || stage === 'Delivered';
+
       // =====================================
-      // 4. DELIVERY SCHEDULED
+      // 3. DELIVERY SCHEDULED
       // =====================================
 
-      if (
-        scheduledDate &&
-        [
-          'Scheduled',
-          'Preparing',
-          'Out for Delivery',
-          'Delivered'
-        ].includes(deliveryStatus)
-      ) {
-
-        addNotification(
+      if (reachedScheduled) {
+        addNotice(
           `delivery-scheduled:${order.id}:${scheduledDate}`,
           'Your delivery has been scheduled',
-          `Your SilkMart order for ${productName} ` +
-            `has been scheduled for ${deliveryDateText}.` +
-            deliveryTimeText +
+          `Your SilkMart order for ${productName} has been scheduled ` +
+            `for ${this.formatDeliveryDate(scheduledDate)}.` +
+            (raw.deliveryTimeSlot
+              ? ` Expected delivery time: ${raw.deliveryTimeSlot}.`
+              : '') +
             ' Please prepare to receive your order.',
           'pi pi-calendar',
-          raw.deliveryUpdatedAt,
-          updatedAt || createdAt
+          stage === 'Scheduled' ? raw.deliveryUpdatedAt : null,
+          createdTime + 2,
+          'Scheduled earlier'
         );
       }
 
       // =====================================
-      // 5. ORDER PREPARATION
+      // 4. PREPARATION UPDATED
       // =====================================
 
-      if (
-        [
-          'Preparing',
-          'Out for Delivery',
-          'Delivered'
-        ].includes(deliveryStatus)
-      ) {
-
-        addNotification(
+      if (reachedPreparing) {
+        addNotice(
           `delivery-preparing:${order.id}`,
           'Your order is being prepared',
-          `SilkMart staff is preparing your order ` +
-            `for ${productName}. The products, quantities, ` +
-            'and packaging are being checked before dispatch.',
+          `SilkMart staff is preparing your order for ${productName}. ` +
+            'The products, quantities, and packaging are being checked.',
           'pi pi-box',
-          raw.deliveryUpdatedAt,
-          updatedAt || createdAt
+          stage === 'Preparing' ? raw.deliveryUpdatedAt : null,
+          createdTime + 3,
+          'Preparation started earlier'
         );
       }
 
       // =====================================
-      // 6. OUT FOR DELIVERY
+      // 5. OUT FOR DELIVERY
       // =====================================
 
-      if (
-        deliveryStatus === 'Out for Delivery' ||
-        deliveryStatus === 'Delivered' ||
-        status === 'Delivered'
-      ) {
-
-        addNotification(
+      if (reachedDispatched) {
+        addNotice(
           `delivery-dispatched:${order.id}`,
           'Your order is out for delivery!',
-          `Good news! Your SilkMart order for ` +
-            `${productName} has been dispatched ` +
-            'and is on its way. Please be ready ' +
-            'to receive your products.',
+          `Good news! Your SilkMart order for ${productName} ` +
+            'has been dispatched and is on its way. ' +
+            'Please be ready to receive your products.',
           'pi pi-truck',
-          raw.dispatchedAt || raw.deliveryUpdatedAt,
-          updatedAt || createdAt
+          raw.dispatchedAt ||
+            (stage === 'Out for Delivery' ? raw.deliveryUpdatedAt : null),
+          createdTime + 4,
+          'Dispatched earlier'
         );
       }
 
       // =====================================
-      // 7. DELIVERY COMPLETED
+      // 6. DELIVERY COMPLETED
       // =====================================
 
-      // The main order status already creates
-      // the "Order delivered" notification.
-      // We avoid adding an identical second card.
+      if (reachedDelivered) {
+        addNotice(
+          `status:Delivered:${order.id}`,
+          'Order delivered',
+          `Your SilkMart order for ${productName} has been ` +
+            'marked as delivered. Thank you for ordering!',
+          'pi pi-check-circle',
+          raw.deliveredAt || order.updatedAt,
+          updatedTime || createdTime + 5,
+          'Delivered'
+        );
+      }
     }
 
     this.notifications = results.sort(
-      (a, b) =>
-        b.sortTime - a.sortTime ||
-        a.id.localeCompare(b.id)
+      (a, b) => b.sortTime - a.sortTime || a.id.localeCompare(b.id)
     );
   }
+
 
   // =========================================
   // LIVE ORDER CHAT LISTENERS
@@ -1084,17 +1039,19 @@ export class NotifCust implements OnInit, OnDestroy {
     this.selectedDeleteNotification = null;
   }
 
-  confirmDeleteNotification(): void {
 
-    if (!this.selectedDeleteNotification) {
-      return;
-    }
+confirmDeleteNotification(): void {
+  const selected = this.selectedDeleteNotification;
+  const userId = this.currentUserId;
 
-    const id = this.selectedDeleteNotification.id;
+  if (!selected || !userId) return;
+
+  this.zone.run(() => {
+    if (this.currentUserId !== userId) return;
 
     const preferences = this.getPreferences();
 
-    preferences[id] = {
+    preferences[selected.id] = {
       read: true,
       deleted: true
     };
@@ -1102,11 +1059,16 @@ export class NotifCust implements OnInit, OnDestroy {
     this.savePreferences(preferences);
 
     this.notifications = this.notifications.filter(
-      item => item.id !== id
+      item => item.id !== selected.id
     );
 
     this.closeDeleteConfirmation();
-  }
+
+    this.rebuildNotifications();
+    this.refreshUI();
+  });
+}
+
 
   // =========================================
   // CUSTOMER CHAT POPUP

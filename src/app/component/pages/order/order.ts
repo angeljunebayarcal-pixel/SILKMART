@@ -10,6 +10,14 @@ import {
 } from '@angular/core';
 import { Router } from '@angular/router';
 import { Auth, onAuthStateChanged } from '@angular/fire/auth';
+import {
+  Firestore,
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  writeBatch
+} from '@angular/fire/firestore';
 import { Subscription } from 'rxjs';
 import {
   OrderServ,
@@ -31,6 +39,8 @@ interface SilkOrder {
   cancelReason: string;
   preferredDeliveryDate: string;
   products: string[];
+  stockDeducted: boolean;
+  stockRestored: boolean;
 }
 
 @Component({
@@ -41,13 +51,16 @@ interface SilkOrder {
   styleUrl: './order.scss'
 })
 export class Order implements OnInit, OnDestroy {
+
   currentUserId = '';
   authResolved = false;
 
   orders: SilkOrder[] = [];
   loadingOrders = true;
   orderError = '';
+
   saving = false;
+  deletingOrder = false;
 
   cancelOrderPopup = false;
   selectedOrder: SilkOrder | null = null;
@@ -55,9 +68,8 @@ export class Order implements OnInit, OnDestroy {
 
   deleteOrderPopup = false;
   selectedDeleteOrder: SilkOrder | null = null;
-  deletingOrder = false;
 
-  cancelReasons: string[] = [
+  readonly cancelReasons: string[] = [
     'I changed my mind',
     'I ordered by mistake',
     'I found another product',
@@ -70,16 +82,33 @@ export class Order implements OnInit, OnDestroy {
   private stopAuthListener: (() => void) | null = null;
   private ordersSubscription: Subscription | null = null;
 
+  private session = 0;
+  private destroyed = false;
+
+  private readonly deletedOrderIds = new Set<string>();
+
   constructor(
     private router: Router,
     private auth: Auth,
     private injector: Injector,
     private cdr: ChangeDetectorRef,
-    private orderService: OrderServ
+    private orderService: OrderServ,
+    private firestore: Firestore
   ) {}
 
+  // =========================================
+  // INITIALIZATION
+  // =========================================
+
   ngOnInit(): void {
+    this.destroyed = false;
     this.listenToAuthUser();
+  }
+
+  private refresh(): void {
+    if (!this.destroyed) {
+      this.cdr.detectChanges();
+    }
   }
 
   private listenToAuthUser(): void {
@@ -88,18 +117,32 @@ export class Order implements OnInit, OnDestroy {
       () => onAuthStateChanged(
         this.auth,
         user => {
+          this.session++;
+
           this.ordersSubscription?.unsubscribe();
           this.ordersSubscription = null;
+
           this.authResolved = true;
+
+          this.cancelOrderPopup = false;
+          this.selectedOrder = null;
+          this.selectedCancelReason = '';
+
+          this.deleteOrderPopup = false;
+          this.selectedDeleteOrder = null;
+
+          const nextUid = user?.uid ?? '';
+
+          if (nextUid !== this.currentUserId) {
+            this.deletedOrderIds.clear();
+          }
 
           if (!user) {
             this.currentUserId = '';
             this.orders = [];
             this.loadingOrders = false;
             this.orderError = '';
-            this.closeCancelPopup();
-            this.closeDeletePopup();
-            this.cdr.detectChanges();
+            this.refresh();
             return;
           }
 
@@ -107,19 +150,31 @@ export class Order implements OnInit, OnDestroy {
           this.orders = [];
           this.loadingOrders = true;
           this.orderError = '';
+
           this.loadOrders();
-          this.cdr.detectChanges();
+          this.refresh();
         },
         error => {
-          console.error('Authentication error:', error);
+          console.error(
+            'Authentication error:',
+            error
+          );
+
+          this.session++;
           this.authResolved = true;
           this.loadingOrders = false;
-          this.orderError = 'Unable to verify your account.';
-          this.cdr.detectChanges();
+          this.orderError =
+            'Unable to verify your account.';
+
+          this.refresh();
         }
       )
     );
   }
+
+  // =========================================
+  // LOAD CUSTOMER ORDERS
+  // =========================================
 
   loadOrders(): void {
     if (!this.currentUserId) {
@@ -129,35 +184,71 @@ export class Order implements OnInit, OnDestroy {
     }
 
     this.ordersSubscription?.unsubscribe();
+
     this.loadingOrders = true;
     this.orderError = '';
+
+    const uid = this.currentUserId;
+    const session = this.session;
 
     this.ordersSubscription = runInInjectionContext(
       this.injector,
       () => this.orderService.getMyOrders().subscribe({
         next: (firebaseOrders: SilkMartOrder[]) => {
+          if (
+            this.destroyed ||
+            session !== this.session ||
+            uid !== this.currentUserId
+          ) {
+            return;
+          }
+
           this.orders = firebaseOrders
-            .filter(
-              order => order.customerId === this.currentUserId
+            .filter(order =>
+              order.customerId === uid &&
+              !this.deletedOrderIds.has(String(order.id))
             )
-            .map(order => this.convertFirestoreOrder(order));
+            .map(order =>
+              this.convertFirestoreOrder(order)
+            );
+
+          this.synchronizePopups();
 
           this.loadingOrders = false;
           this.orderError = '';
-          this.cdr.detectChanges();
+
+          this.refresh();
         },
+
         error: error => {
-          console.error('Firestore orders error:', error);
+          if (
+            this.destroyed ||
+            session !== this.session
+          ) {
+            return;
+          }
+
+          console.error(
+            'Firestore orders error:',
+            error
+          );
+
           this.loadingOrders = false;
+
           this.orderError =
             error?.code === 'permission-denied'
               ? 'Firebase denied access to your orders.'
               : 'Unable to load orders. Check your connection.';
-          this.cdr.detectChanges();
+
+          this.refresh();
         }
       })
     );
   }
+
+  // =========================================
+  // CONVERT FIRESTORE ORDER
+  // =========================================
 
   private convertFirestoreOrder(
     order: SilkMartOrder
@@ -175,7 +266,7 @@ export class Order implements OnInit, OnDestroy {
     );
 
     const productNames = items
-      .map(item => item.name)
+      .map(item => String(item.name || ''))
       .filter(Boolean);
 
     let name = firstProduct?.name || 'Silk Product';
@@ -184,8 +275,6 @@ export class Order implements OnInit, OnDestroy {
       name += ` + ${items.length - 1} more`;
     }
 
-    // Read the actual product photo saved with the order.
-    // Older orders might not have an image field.
     const firstImage = firstProduct as any;
 
     const imageUrl = String(
@@ -196,23 +285,34 @@ export class Order implements OnInit, OnDestroy {
 
     return {
       id: String(order.id),
-      userId: order.customerId,
+      userId: String(order.customerId || ''),
       name,
       category:
-        firstProduct?.category || 'SILK COLLECTION',
+        firstProduct?.category ||
+        'SILK COLLECTION',
       price: Number(firstProduct?.price ?? 0),
       quantity,
       total: Number(order.total ?? 0),
       status: order.status || 'Pending',
-      orderDate: this.formatOrderDate(order.createdAt),
+      orderDate: this.formatOrderDate(
+        order.createdAt
+      ),
       artClass: firstProduct?.artClass || '',
       imageUrl,
       cancelReason: order.cancelReason || '',
       preferredDeliveryDate:
         order.preferredDeliveryDate || '',
-      products: productNames
+      products: productNames,
+      stockDeducted:
+        order.stockDeducted === true,
+      stockRestored:
+        order.stockRestored === true
     };
   }
+
+  // =========================================
+  // FORMAT ORDER DATE
+  // =========================================
 
   private formatOrderDate(value: any): string {
     if (!value) return 'Just now';
@@ -221,7 +321,9 @@ export class Order implements OnInit, OnDestroy {
 
     if (typeof value.toDate === 'function') {
       date = value.toDate();
-    } else if (typeof value.seconds === 'number') {
+    } else if (
+      typeof value.seconds === 'number'
+    ) {
       date = new Date(value.seconds * 1000);
     } else {
       date = new Date(value);
@@ -238,22 +340,106 @@ export class Order implements OnInit, OnDestroy {
     });
   }
 
+  // =========================================
+  // CHECK ORDER OWNERSHIP
+  // =========================================
+
+  private isOwnOrder(order: SilkOrder): boolean {
+    return Boolean(
+      this.currentUserId &&
+      this.auth.currentUser?.uid ===
+        this.currentUserId &&
+      order.userId === this.currentUserId
+    );
+  }
+
+  private findLatestOrder(
+    orderId: string
+  ): SilkOrder | undefined {
+    return this.orders.find(
+      order => order.id === orderId
+    );
+  }
+
+  // =========================================
+  // KEEP POPUPS SYNCHRONIZED
+  // =========================================
+
+  private synchronizePopups(): void {
+    if (this.selectedOrder) {
+      const latest = this.findLatestOrder(
+        this.selectedOrder.id
+      );
+
+      if (
+        !latest ||
+        latest.status !== 'Pending'
+      ) {
+        if (!this.saving) {
+          this.cancelOrderPopup = false;
+          this.selectedOrder = null;
+          this.selectedCancelReason = '';
+        }
+      } else {
+        this.selectedOrder = latest;
+      }
+    }
+
+    if (this.selectedDeleteOrder) {
+      const latest = this.findLatestOrder(
+        this.selectedDeleteOrder.id
+      );
+
+      if (
+        !latest ||
+        !['Cancelled', 'Delivered', 'Rejected'].includes(
+          latest.status
+        )
+      ) {
+        if (!this.deletingOrder) {
+          this.deleteOrderPopup = false;
+          this.selectedDeleteOrder = null;
+        }
+      } else {
+        this.selectedDeleteOrder = latest;
+      }
+    }
+  }
+
+  // =========================================
+  // CANCEL ORDER POPUP
+  // =========================================
+
   openCancelPopup(order: SilkOrder): void {
     if (
-      !this.currentUserId ||
-      order.userId !== this.currentUserId
+      this.saving ||
+      this.deletingOrder ||
+      !this.isOwnOrder(order)
     ) {
       return;
     }
 
-    if (order.status !== 'Pending') {
-      alert('Only pending orders can be cancelled.');
+    const latest = this.findLatestOrder(
+      order.id
+    );
+
+    if (!latest) {
+      alert('Order not found.');
       return;
     }
 
-    this.selectedOrder = order;
+    if (latest.status !== 'Pending') {
+      alert(
+        'Only pending orders can be cancelled.'
+      );
+      return;
+    }
+
+    this.selectedOrder = latest;
     this.selectedCancelReason = '';
     this.cancelOrderPopup = true;
+
+    this.refresh();
   }
 
   closeCancelPopup(): void {
@@ -262,69 +448,162 @@ export class Order implements OnInit, OnDestroy {
     this.cancelOrderPopup = false;
     this.selectedOrder = null;
     this.selectedCancelReason = '';
+
+    this.refresh();
   }
 
   selectCancelReason(reason: string): void {
+    if (
+      this.saving ||
+      !this.cancelReasons.includes(reason)
+    ) {
+      return;
+    }
+
     this.selectedCancelReason = reason;
+    this.refresh();
   }
+
+  // =========================================
+  // CONFIRM ORDER CANCELLATION
+  // =========================================
 
   async confirmCancellation(): Promise<void> {
     if (
       this.saving ||
+      this.deletingOrder ||
       !this.selectedOrder ||
       !this.currentUserId
     ) {
       return;
     }
 
+    const order = this.findLatestOrder(
+      this.selectedOrder.id
+    );
+
     if (
-      this.selectedOrder.userId !== this.currentUserId
+      !order ||
+      !this.isOwnOrder(order)
     ) {
+      alert(
+        'This order is no longer available.'
+      );
       return;
     }
 
-    if (!this.selectedCancelReason) {
-      alert('Please select a cancellation reason.');
+    if (order.status !== 'Pending') {
+      alert(
+        'Only pending orders can be cancelled.'
+      );
       return;
     }
+
+    const reason =
+      this.selectedCancelReason.trim();
+
+    if (
+      !reason ||
+      !this.cancelReasons.includes(reason)
+    ) {
+      alert(
+        'Please select a cancellation reason.'
+      );
+      return;
+    }
+
+    const session = this.session;
 
     this.saving = true;
+    this.refresh();
 
     try {
       await this.orderService.cancelMyOrder(
-        this.selectedOrder.id,
-        this.selectedCancelReason
+        order.id,
+        reason
       );
+
+      if (
+        this.destroyed ||
+        session !== this.session
+      ) {
+        return;
+      }
 
       this.saving = false;
       this.closeCancelPopup();
 
     } catch (error: any) {
-      console.error('Order cancellation failed:', error);
-      alert(
-        error?.message || 'Unable to cancel this order.'
+      console.error(
+        'Order cancellation failed:',
+        error
       );
-      this.saving = false;
-    }
 
-    this.cdr.detectChanges();
+      if (
+        !this.destroyed &&
+        session === this.session
+      ) {
+        alert(
+          error?.code === 'permission-denied'
+            ? 'Firebase denied cancellation. Check the order and inventory security rules.'
+            : error?.message ||
+              'Unable to cancel this order.'
+        );
+      }
+    } finally {
+      this.saving = false;
+      this.refresh();
+    }
   }
+
+  // =========================================
+  // DELETE ORDER POPUP
+  // =========================================
 
   deleteOrder(order: SilkOrder): void {
     if (
-      !this.currentUserId ||
-      order.userId !== this.currentUserId
+      this.saving ||
+      this.deletingOrder ||
+      !this.isOwnOrder(order)
     ) {
       return;
     }
 
-    if (order.status !== 'Cancelled') {
-      alert('Only cancelled orders can be deleted.');
+    const latest = this.findLatestOrder(
+      order.id
+    );
+
+    if (!latest) {
+      alert('Order not found.');
       return;
     }
 
-    this.selectedDeleteOrder = order;
+    if (
+      !['Cancelled', 'Delivered', 'Rejected'].includes(
+        latest.status
+      )
+    ) {
+      alert(
+        'Only Cancelled, Delivered or Rejected orders can be deleted.'
+      );
+      return;
+    }
+
+    if (
+      latest.status === 'Cancelled' &&
+      latest.stockDeducted &&
+      !latest.stockRestored
+    ) {
+      alert(
+        'This order cannot be deleted until its stock has been restored.'
+      );
+      return;
+    }
+
+    this.selectedDeleteOrder = latest;
     this.deleteOrderPopup = true;
+
+    this.refresh();
   }
 
   closeDeletePopup(): void {
@@ -332,35 +611,84 @@ export class Order implements OnInit, OnDestroy {
 
     this.deleteOrderPopup = false;
     this.selectedDeleteOrder = null;
+
+    this.refresh();
   }
+
+  // =========================================
+  // CONFIRM PERMANENT DELETION
+  // =========================================
 
   async confirmDeleteOrder(): Promise<void> {
     if (
       this.deletingOrder ||
+      this.saving ||
       !this.selectedDeleteOrder ||
       !this.currentUserId
     ) {
       return;
     }
 
-    const order = this.selectedDeleteOrder;
+    const order = this.findLatestOrder(
+      this.selectedDeleteOrder.id
+    );
 
-    if (order.userId !== this.currentUserId) {
-      return;
-    }
-
-    if (order.status !== 'Cancelled') {
+    if (
+      !order ||
+      !this.isOwnOrder(order)
+    ) {
       alert(
-        'Only cancelled orders can be deleted permanently.'
+        'This order is no longer available.'
       );
       return;
     }
 
+    if (
+      !['Cancelled', 'Delivered', 'Rejected'].includes(
+        order.status
+      )
+    ) {
+      alert(
+        'This order cannot be deleted in its current status.'
+      );
+      return;
+    }
+
+    if (
+      order.status === 'Cancelled' &&
+      order.stockDeducted &&
+      !order.stockRestored
+    ) {
+      alert(
+        'Inventory must be restored before deleting this order.'
+      );
+      return;
+    }
+
+    const session = this.session;
+
     this.deletingOrder = true;
-    this.cdr.detectChanges();
+    this.refresh();
 
     try {
-      await this.orderService.deleteMyCancelledOrder(order.id);
+      if (order.status === 'Cancelled') {
+        await this.orderService.deleteMyCancelledOrder(
+          order.id
+        );
+      } else {
+        await this.deleteCompletedOrderFromFirestore(
+          order
+        );
+      }
+
+      if (
+        this.destroyed ||
+        session !== this.session
+      ) {
+        return;
+      }
+
+      this.deletedOrderIds.add(order.id);
 
       this.orders = this.orders.filter(
         item => item.id !== order.id
@@ -370,40 +698,170 @@ export class Order implements OnInit, OnDestroy {
       this.closeDeletePopup();
 
     } catch (error: any) {
-      console.error('Permanent deletion failed:', error);
+      console.error(
+        'Permanent deletion failed:',
+        error
+      );
 
-      if (error?.code === 'permission-denied') {
+      if (
+        !this.destroyed &&
+        session === this.session
+      ) {
         alert(
-          'Firebase denied the deletion. Check your Firestore delete rule.'
-        );
-      } else {
-        alert(
-          error?.message ||
-          'Unable to permanently delete this order.'
+          error?.code === 'permission-denied'
+            ? 'Firebase denied deletion. Check your Firestore delete rule.'
+            : error?.message ||
+              'Unable to permanently delete this order.'
         );
       }
 
+    } finally {
       this.deletingOrder = false;
+      this.refresh();
+    }
+  }
+
+  // =========================================
+  // DELETE OWN DELIVERED / REJECTED ORDER
+  // =========================================
+
+  private async deleteCompletedOrderFromFirestore(
+    order: SilkOrder
+  ): Promise<void> {
+
+    if (
+      !this.isOwnOrder(order) ||
+      (
+        order.status !== 'Delivered' &&
+        order.status !== 'Rejected'
+      )
+    ) {
+      throw new Error(
+        'This completed order cannot be deleted.'
+      );
     }
 
-    this.cdr.detectChanges();
+    const userId = this.currentUserId;
+
+    const orderRef = doc(
+      this.firestore,
+      'orders',
+      order.id
+    );
+
+    const messagesRef = collection(
+      this.firestore,
+      'orders',
+      order.id,
+      'messages'
+    );
+
+    // Read the order and chat messages before deletion.
+    const [orderSnapshot, messagesSnapshot] =
+      await Promise.all([
+        runInInjectionContext(
+          this.injector,
+          () => getDoc(orderRef)
+        ),
+        runInInjectionContext(
+          this.injector,
+          () => getDocs(messagesRef)
+        )
+      ]);
+
+    if (!orderSnapshot.exists()) {
+      throw new Error(
+        'This order was already deleted. Refresh your orders.'
+      );
+    }
+
+    const latest = orderSnapshot.data();
+
+    if (
+      String(latest['customerId'] || '') !== userId
+    ) {
+      throw new Error(
+        'This is not your order.'
+      );
+    }
+
+    if (
+      !['Delivered', 'Rejected'].includes(
+        String(latest['status'] || '')
+      )
+    ) {
+      throw new Error(
+        'Only Delivered or Rejected orders can be deleted.'
+      );
+    }
+
+    // Keep the operation within a single batch.
+    if (messagesSnapshot.size > 400) {
+      throw new Error(
+        'This order has too many chat messages for one deletion. ' +
+        'Contact SilkMart staff.'
+      );
+    }
+
+    if (
+      this.auth.currentUser?.uid !== userId
+    ) {
+      throw new Error(
+        'Your login session changed. Try again.'
+      );
+    }
+
+    const batch = writeBatch(this.firestore);
+
+    for (const message of messagesSnapshot.docs) {
+      batch.delete(message.ref);
+    }
+
+    // Deleting an order must not restore or deduct stock.
+    batch.delete(orderRef);
+
+    await runInInjectionContext(
+      this.injector,
+      () => batch.commit()
+    );
   }
+
+  // =========================================
+  // SHOP COLLECTION
+  // =========================================
 
   shopCollection(): void {
-    this.router.navigate(['/home-cust/shopsilk']);
+    this.router.navigate([
+      '/home-cust/shopsilk'
+    ]);
   }
 
+  // =========================================
+  // TRACK / REFRESH ORDER
+  // =========================================
+
   trackOrder(): void {
-    if (this.currentUserId) {
+    if (
+      this.currentUserId &&
+      this.auth.currentUser
+    ) {
       this.loadOrders();
     } else {
       this.router.navigate(['/login']);
     }
   }
 
+  // =========================================
+  // CLEANUP
+  // =========================================
+
   ngOnDestroy(): void {
+    this.destroyed = true;
+    this.session++;
+
     this.ordersSubscription?.unsubscribe();
     this.ordersSubscription = null;
+
     this.stopAuthListener?.();
     this.stopAuthListener = null;
   }
