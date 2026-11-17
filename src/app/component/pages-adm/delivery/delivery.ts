@@ -54,7 +54,6 @@ interface DeliveryOrder {
     name: string;
     quantity: number;
   }[];
-  total: number;
   orderStatus: string;
   deliveryStatus: DeliveryStatus;
   preferredDate: string;
@@ -335,7 +334,6 @@ export class Delivery
         quantity: Number(item.quantity || 0)
       })),
 
-      total: Number(source.total || 0),
       orderStatus,
       deliveryStatus,
       preferredDate:

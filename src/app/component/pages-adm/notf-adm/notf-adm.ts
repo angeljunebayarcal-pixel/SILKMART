@@ -11,6 +11,7 @@ import {
 } from '@angular/core';
 import { Router } from '@angular/router';
 import { Auth, onAuthStateChanged } from '@angular/fire/auth';
+import { Firestore, collection, doc, getDoc, onSnapshot, orderBy, query } from '@angular/fire/firestore';
 import { Subscription } from 'rxjs';
 import Swal from 'sweetalert2';
 
@@ -31,10 +32,43 @@ type AdminFilter =
   | 'delivery'
   | 'chat';
 
+type SubmissionType = 'staff_registration' | 'visit_request' | 'job_application';
+
+interface SubmissionNotice {
+  id: string;
+  type: SubmissionType;
+  createdAt: number;
+}
+
+const submissionDetails = {
+  staff_registration: {
+    title: 'New staff registration',
+    message: 'A staff account application was submitted.',
+    icon: 'pi pi-user-plus',
+    route: '/home-adm/stf-aprv',
+    action: 'View staff approvals'
+  },
+  visit_request: {
+    title: 'New visit request',
+    message: 'A visitor submitted a request to visit SilkMart.',
+    icon: 'pi pi-calendar',
+    route: '/home-adm/visit',
+    action: 'View visit requests'
+  },
+  job_application: {
+    title: 'New job application',
+    message: 'A candidate submitted a job application.',
+    icon: 'pi pi-briefcase',
+    route: '/home-adm/jobapp',
+    action: 'View job applications'
+  }
+} as const;
+
 interface AdminNotice {
   id: string;
-  type: 'orders' | 'delivery' | 'chat';
-  orderId: string;
+  type: 'orders' | 'delivery' | 'chat' | 'submission';
+  orderId?: string;
+  submissionRoute?: string;
   title: string;
   message: string;
   icon: string;
@@ -65,6 +99,7 @@ export class NotfAdm implements OnInit, OnDestroy {
   authResolved = false;
   loading = true;
   error = '';
+  submissionError = '';
 
   selectedFilter: AdminFilter = 'all';
 
@@ -79,6 +114,10 @@ export class NotfAdm implements OnInit, OnDestroy {
 
   private ordersSubscription: Subscription | null = null;
   private stopAuth: (() => void) | null = null;
+  private stopSubmissions?: () => void;
+  private submissions: SubmissionNotice[] = [];
+  private canReviewStaff = false;
+  private canReviewJobs = false;
 
   private clockTimer:
     ReturnType<typeof setInterval> | null = null;
@@ -92,7 +131,8 @@ export class NotfAdm implements OnInit, OnDestroy {
     private chatService: OrderChatServ,
     private injector: Injector,
     private zone: NgZone,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private firestore: Firestore
   ) {}
 
   ngOnInit(): void {
@@ -111,6 +151,10 @@ export class NotfAdm implements OnInit, OnDestroy {
           this.orders = [];
           this.messagesByOrder = {};
           this.error = '';
+          this.submissions = [];
+          this.submissionError = '';
+          this.canReviewStaff = false;
+          this.canReviewJobs = false;
 
           if (user) {
             this.loadNotifications();
@@ -161,6 +205,8 @@ export class NotfAdm implements OnInit, OnDestroy {
   private clearListeners(): void {
     this.ordersSubscription?.unsubscribe();
     this.ordersSubscription = null;
+    this.stopSubmissions?.();
+    this.stopSubmissions = undefined;
 
     for (const subscription of this.chatSubscriptions.values()) {
       subscription.unsubscribe();
@@ -178,6 +224,9 @@ export class NotfAdm implements OnInit, OnDestroy {
     this.error = '';
 
     const currentSession = this.session;
+
+    this.listenToSubmissions(currentSession);
+    void this.loadReviewAccess(currentSession);
 
     this.ordersSubscription = runInInjectionContext(
       this.injector,
@@ -216,6 +265,68 @@ export class NotfAdm implements OnInit, OnDestroy {
         }
       })
     );
+  }
+
+  private listenToSubmissions(currentSession: number): void {
+    this.stopSubmissions?.();
+    this.submissionError = '';
+
+    this.stopSubmissions = runInInjectionContext(this.injector, () => onSnapshot(
+      query(collection(this.firestore, 'admin_notifications'), orderBy('createdAt', 'desc')),
+      snapshot => this.zone.run(() => {
+        if (currentSession !== this.session) return;
+
+        const submissions: SubmissionNotice[] = [];
+        for (const entry of snapshot.docs) {
+          const type = entry.get('type');
+          const createdAt = this.toMillis(entry.get('createdAt'));
+          if (type === 'staff_registration' || type === 'visit_request' || type === 'job_application') {
+            submissions.push({ id: `submission:${entry.id}`, type, createdAt });
+          }
+        }
+
+        this.submissions = submissions;
+        this.rebuildNotifications();
+        this.refresh();
+      }),
+      error => this.zone.run(() => {
+        if (currentSession !== this.session) return;
+
+        console.error('Unable to load submission notifications:', error);
+        this.submissionError = 'Unable to load staff, visit, and job submission notifications.';
+        this.submissions = [];
+        this.rebuildNotifications();
+        this.refresh();
+      })
+    ));
+  }
+
+  private async loadReviewAccess(currentSession: number): Promise<void> {
+    const user = this.auth.currentUser;
+    if (!user) return;
+
+    try {
+      const profile = await runInInjectionContext(this.injector, () =>
+        getDoc(doc(this.firestore, 'users', user.uid))
+      );
+      const role = profile.get('role');
+      const admin = role === 'admin' || role === 'administrator';
+      const canReviewJobs = admin || (
+        role === 'staff' &&
+        (await user.getIdTokenResult()).claims['reviewJobApplications'] === true
+      );
+
+      this.zone.run(() => {
+        if (currentSession !== this.session) return;
+
+        this.canReviewStaff = admin;
+        this.canReviewJobs = canReviewJobs;
+        this.rebuildNotifications();
+        this.refresh();
+      });
+    } catch (error) {
+      console.error('Unable to check submission review access:', error);
+    }
   }
 
   private syncChatListeners(currentSession: number): void {
@@ -481,6 +592,25 @@ export class NotfAdm implements OnInit, OnDestroy {
 
     const tomorrow = this.tomorrow();
     const today = this.localDate(new Date());
+
+    for (const item of this.submissions) {
+      const details = submissionDetails[item.type];
+      const canOpen = item.type === 'visit_request'
+        || (item.type === 'staff_registration' && this.canReviewStaff)
+        || (item.type === 'job_application' && this.canReviewJobs);
+
+      push({
+        id: item.id,
+        type: 'submission',
+        title: details.title,
+        message: details.message,
+        icon: details.icon,
+        time: this.showTime(item.createdAt),
+        sortTime: item.createdAt,
+        action: canOpen ? details.action : 'Mark as read',
+        ...(canOpen ? { submissionRoute: details.route } : {})
+      });
+    }
 
     for (const order of this.orders) {
       const customer =
@@ -910,7 +1040,9 @@ async deleteNotification(item: AdminNotice): Promise<void> {
 
   const result = await Swal.fire({
     title: 'Remove Notification?',
-    text: 'Are you sure you want to remove this notification from your list? This will not delete the actual customer order or message.',
+    text: item.type === 'submission'
+      ? 'Remove this notification from your list? The submission will stay in SilkMart.'
+      : 'Are you sure you want to remove this notification from your list? This will not delete the actual customer order or message.',
     icon: 'warning',
 
     showCancelButton: true,
@@ -977,6 +1109,11 @@ async deleteNotification(item: AdminNotice): Promise<void> {
 
   openNotification(item: AdminNotice): void {
     this.markAsRead(item);
+
+    if (item.type === 'submission') {
+      if (item.submissionRoute) void this.router.navigate([item.submissionRoute]);
+      return;
+    }
 
     if (item.type === 'delivery') {
       this.router.navigate([

@@ -1,4 +1,3 @@
-
 <header class="topbar-adm">
 
   <!-- LEFT: BRAND AND MENU -->
@@ -212,6 +211,42 @@
 
         <span>
           Delivery Management
+        </span>
+
+        <span class="dropdown-arrow">
+          ›
+        </span>
+
+      </a>
+
+      <!-- VISIT REQUESTS -->
+      <a
+        routerLink="/home-adm/visit"
+        routerLinkActive="active"
+        [attr.tabindex]="menuOpen ? 0 : -1"
+        (click)="closeMenu()"
+      >
+
+        <span>
+          Visit Requests
+        </span>
+
+        <span class="dropdown-arrow">
+          ›
+        </span>
+
+      </a>
+
+      <!-- JOB APPLICATIONS -->
+      <a
+        routerLink="/home-adm/jobapp"
+        routerLinkActive="active"
+        [attr.tabindex]="menuOpen ? 0 : -1"
+        (click)="closeMenu()"
+      >
+
+        <span>
+          Job Applications
         </span>
 
         <span class="dropdown-arrow">

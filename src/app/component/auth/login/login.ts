@@ -1,5 +1,4 @@
-
-import { CommonModule } from '@angular/common';
+import { CommonModule, Location } from '@angular/common';
 import {
   ChangeDetectorRef,
   Component,
@@ -22,13 +21,20 @@ import {
 
 import {
   Firestore,
+  collection,
   doc,
+  getDocsFromServer,
   writeBatch,
   serverTimestamp
 } from '@angular/fire/firestore';
 
 import { AuthServ } from '../../../services/auth.serv';
 import { UserServ } from '../../../services/user.serv';
+import { VisitServ } from '../../../services/visit.serv';
+import { JobbappServ } from '../../../services/jobbapp.serv';
+
+type PublicForm = 'visit' | 'job';
+type JobOpening = { id: string; title: string };
 
 @Component({
   selector: 'app-login',
@@ -38,6 +44,32 @@ import { UserServ } from '../../../services/user.serv';
   styleUrls: ['./login.scss']
 })
 export class Login implements OnDestroy {
+
+  publicForm: PublicForm | null = null;
+  publicLoading = false;
+  publicError = '';
+  publicSuccess = '';
+  visitTrackingUrl = '';
+  visitTrackingCopyMessage = '';
+  jobTrackingUrl = '';
+  jobTrackingCopyMessage = '';
+  openingsLoading = false;
+  openingsError = false;
+  jobOpenings: JobOpening[] = [];
+  readonly visitPurposes = ['Company Tour', 'School Visit', 'Business Meeting', 'Research', 'Other'];
+
+  visitor = {
+    fullName: '', email: '', organization: '', purpose: '', otherPurpose: '',
+    preferredDateTime: '', visitorCount: 1
+  };
+  applicant = {
+    fullName: '', email: '', mobileNumber: '', openingId: '',
+    desiredWork: '', skills: ''
+  };
+
+  resumeFile: File | null = null;
+  resumeFileError = '';
+  private readonly maxResumeBytes = 700 * 1024;
 
   showLoginForm = false;
   showRegisterForm = false;
@@ -81,7 +113,10 @@ export class Login implements OnDestroy {
     private firestore: Firestore,
     private injector: Injector,
     private cdr: ChangeDetectorRef,
-    private zone: NgZone
+    private zone: NgZone,
+    private visitService: VisitServ,
+    private location: Location,
+    private jobService: JobbappServ
   ) {}
 
   ngOnDestroy(): void {
@@ -128,7 +163,8 @@ export class Login implements OnDestroy {
     if (
       this.loginLoading ||
       this.registerLoading ||
-      this.resetLoading
+      this.resetLoading ||
+      this.publicLoading
     ) {
       return;
     }
@@ -141,6 +177,7 @@ export class Login implements OnDestroy {
     this.showPassword = false;
     this.showRegisterPassword = false;
     this.showConfirmPassword = false;
+    this.backFromPublicForm();
   }
 
   openRegister(): void {
@@ -196,8 +233,284 @@ export class Login implements OnDestroy {
     await this.router.navigate(['/home-cust']);
   }
 
+  openPublicForm(kind: PublicForm): void {
+    if (this.loginLoading || this.publicLoading) return;
+    this.publicForm = kind;
+    this.publicError = '';
+    this.publicSuccess = '';
+    this.visitTrackingUrl = '';
+    this.visitTrackingCopyMessage = '';
+    this.jobTrackingUrl = '';
+    this.jobTrackingCopyMessage = '';
+    if (kind === 'job') void this.loadPublicJobOpenings();
+  }
+
+  backFromPublicForm(): void {
+    if (this.publicLoading) return;
+    this.publicForm = null;
+    this.publicError = '';
+    this.publicSuccess = '';
+    this.visitTrackingUrl = '';
+    this.visitTrackingCopyMessage = '';
+    this.jobTrackingUrl = '';
+    this.jobTrackingCopyMessage = '';
+  }
+
+  async copyVisitTrackingLink(): Promise<void> {
+    if (!this.visitTrackingUrl) return;
+
+    const trackingUrl = this.visitTrackingUrl;
+    let message: string;
+
+    try {
+      await navigator.clipboard.writeText(trackingUrl);
+      message = 'Tracking link copied.';
+    } catch {
+      message = 'Select the tracking link above and copy it manually.';
+    }
+
+    if (!this.componentDestroyed && this.visitTrackingUrl === trackingUrl) {
+      this.visitTrackingCopyMessage = message;
+      this.cdr.detectChanges();
+    }
+  }
+
+  async copyJobTrackingLink(): Promise<void> {
+    if (!this.jobTrackingUrl) return;
+
+    const trackingUrl = this.jobTrackingUrl;
+    let message: string;
+
+    try {
+      await navigator.clipboard.writeText(trackingUrl);
+      message = 'Tracking link copied.';
+    } catch {
+      message = 'Select the tracking link above and copy it manually.';
+    }
+
+    if (!this.componentDestroyed && this.jobTrackingUrl === trackingUrl) {
+      this.jobTrackingCopyMessage = message;
+      this.cdr.detectChanges();
+    }
+  }
+
+  async loadPublicJobOpenings(): Promise<void> {
+    if (this.openingsLoading) return;
+    this.openingsLoading = true;
+    this.openingsError = false;
+
+    try {
+      const snapshot = await runInInjectionContext(
+        this.injector,
+        () => getDocsFromServer(collection(this.firestore, 'job_openings'))
+      );
+      const openings: JobOpening[] = [];
+      for (const opening of snapshot.docs) {
+        const title = opening.get('title');
+        if (typeof title === 'string' && title.trim()) {
+          openings.push({ id: opening.id, title: title.trim() });
+        }
+      }
+      this.jobOpenings = openings.sort((first, second) => first.title.localeCompare(second.title));
+      if (!this.jobOpenings.some(opening => opening.id === this.applicant.openingId)) {
+        this.applicant.openingId = '';
+      }
+    } catch {
+      this.openingsError = true;
+      this.applicant.openingId = '';
+      this.jobOpenings = [];
+    } finally {
+      this.openingsLoading = false;
+      if (!this.componentDestroyed) this.cdr.detectChanges();
+    }
+  }
+
+  onResumeSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0] ?? null;
+    this.resumeFile = null;
+    this.resumeFileError = '';
+
+    if (!file) return;
+
+    if (!/\.pdf$/i.test(file.name) || (file.type && file.type !== 'application/pdf')) {
+      this.resumeFileError = 'Choose a PDF for your résumé or portfolio.';
+    } else if (file.size === 0 || file.size > this.maxResumeBytes) {
+      this.resumeFileError = 'Choose a non-empty PDF no larger than 700 KB.';
+    } else {
+      this.resumeFile = file;
+      return;
+    }
+
+    input.value = '';
+  }
+
+  clearResumeFile(input: HTMLInputElement): void {
+    if (this.publicLoading) return;
+
+    this.resumeFile = null;
+    this.resumeFileError = '';
+    input.value = '';
+  }
+
+  async submitPublicForm(form: NgForm): Promise<void> {
+    const kind = this.publicForm;
+    if (!kind || this.publicLoading || this.publicSuccess) return;
+    this.publicError = '';
+
+    if (form.invalid) {
+      form.control.markAllAsTouched();
+      this.publicError = 'Complete the required fields and check the values you entered.';
+      return;
+    }
+
+    const submission = kind === 'visit'
+      ? { kind, payload: this.visitPayload() }
+      : { kind, payload: this.jobPayload() };
+    if (!submission.payload) return;
+
+    const resumeFile = this.resumeFile;
+    if (kind === 'job' && !resumeFile) {
+      this.resumeFileError ||= 'Choose a PDF for your résumé or portfolio.';
+      return;
+    }
+
+    this.publicLoading = true;
+    try {
+      if (submission.kind === 'visit') {
+        const { trackingToken } = await this.visitService.submitRequest(submission.payload);
+        const route = this.router.createUrlTree(['/track-visit', trackingToken]);
+        const path = this.location.prepareExternalUrl(this.router.serializeUrl(route));
+        this.visitTrackingUrl = new URL(path, document.baseURI).href;
+        this.visitor = {
+          fullName: '', email: '', organization: '', purpose: '', otherPurpose: '',
+          preferredDateTime: '', visitorCount: 1
+        };
+        this.publicSuccess = 'Visit request received. Our team will review your preferred schedule.';
+      } else {
+        if (!resumeFile) return;
+        const attachment = await this.encodeResumeFile(resumeFile);
+        if (!attachment) return;
+
+        const opening = this.jobOpenings.find(item => item.id === submission.payload?.openingId);
+        const { trackingToken } = await this.jobService.submitApplication({
+          ...submission.payload,
+          openingId: opening?.id ?? null,
+          openingTitle: opening?.title ?? null,
+          resumeFile: attachment
+        });
+        const route = this.router.createUrlTree(['/track-application', trackingToken]);
+        const path = this.location.prepareExternalUrl(this.router.serializeUrl(route));
+        this.jobTrackingUrl = new URL(path, document.baseURI).href;
+
+        this.applicant = {
+          fullName: '', email: '', mobileNumber: '', openingId: '',
+          desiredWork: '', skills: ''
+        };
+        this.resumeFile = null;
+        this.resumeFileError = '';
+        this.publicSuccess = 'Application received. Save your tracking link to check its status.';
+      }
+    } catch (error: unknown) {
+      const code = (error as { code?: string } | null)?.code;
+      if (kind === 'visit' && code === 'permission-denied') {
+        this.publicError = 'The visit request could not be saved. Check your details and try again.';
+      } else {
+        this.publicError = 'We couldn’t confirm your submission. Your entries are still here.';
+      }
+    } finally {
+      this.publicLoading = false;
+      if (!this.componentDestroyed) this.cdr.detectChanges();
+    }
+  }
+
+  private visitPayload() {
+    const visitor = this.visitor;
+    const fullName = visitor.fullName.trim();
+    const otherPurpose = visitor.purpose === 'Other' ? visitor.otherPurpose.trim() : '';
+    if (!fullName || !this.visitPurposes.includes(visitor.purpose) ||
+        (visitor.purpose === 'Other' && !otherPurpose) ||
+        !Number.isSafeInteger(visitor.visitorCount) || visitor.visitorCount < 1) {
+      this.publicError = 'Enter a name, a visit purpose, and a whole number of visitors of at least 1.';
+      return null;
+    }
+
+    const preferred = new Date(visitor.preferredDateTime + '+08:00');
+    if (!(preferred.getTime() > Date.now())) {
+      this.publicError = 'Choose a future visit date and time.';
+      return null;
+    }
+
+    return {
+      fullName,
+      email: visitor.email.trim(),
+      organization: visitor.organization.trim(),
+      purpose: visitor.purpose,
+      otherPurpose,
+      preferredDateTime: preferred.toISOString(),
+      visitorCount: visitor.visitorCount
+    };
+  }
+
+  private jobPayload() {
+    const applicant = this.applicant;
+    const fullName = applicant.fullName.trim();
+    const mobileNumber = applicant.mobileNumber.trim().replace(/[\s()-]/g, '');
+    const desiredWork = applicant.desiredWork.trim();
+    const skills = applicant.skills.trim();
+    if (!fullName || !/^\+?\d{7,15}$/.test(mobileNumber) || !desiredWork || !skills) {
+      this.publicError = 'Enter your name, a valid mobile number, the work you want, and your relevant skills.';
+      return null;
+    }
+
+    return {
+      fullName,
+      email: applicant.email.trim(),
+      mobileNumber,
+      openingId: applicant.openingId || null,
+      desiredWork,
+      skills
+    };
+  }
+
+  private async encodeResumeFile(file: File) {
+    try {
+      const header = await file.slice(0, 5).text();
+      if (header !== '%PDF-') {
+        this.resumeFileError = 'This file is not a valid PDF. Choose a different file.';
+        return null;
+      }
+
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result));
+        reader.onerror = () => reject(reader.error);
+        reader.onabort = () => reject(new Error('File read cancelled.'));
+        reader.readAsDataURL(file);
+      });
+      const encoded = dataUrl.split(',')[1];
+      if (!encoded) throw new Error('Missing file data.');
+
+      this.resumeFileError = '';
+      return {
+        fileName: file.name,
+        contentType: 'application/pdf',
+        size: file.size,
+        base64: `data:application/pdf;base64,${encoded}`
+      };
+    } catch {
+      this.resumeFileError = 'Unable to read this PDF. Choose the file again.';
+      return null;
+    }
+  }
+
   @HostListener('document:keydown.escape')
   onEscape(): void {
+    if (this.publicForm) {
+      this.backFromPublicForm();
+      return;
+    }
+
     if (
       this.showLoginForm &&
       !this.loginLoading &&
@@ -546,7 +859,20 @@ export class Login implements OnDestroy {
 
     await runInInjectionContext(
       this.injector,
-      () => batch.commit()
+      () => {
+        const notificationRef = doc(
+          this.firestore,
+          'admin_notifications',
+          'staff-registration-' + uid
+        );
+
+        batch.set(notificationRef, {
+          type: 'staff_registration',
+          createdAt: serverTimestamp()
+        });
+
+        return batch.commit();
+      }
     );
   }
 
@@ -1119,7 +1445,6 @@ export class Login implements OnDestroy {
 
         finished = true;
         clearTimeout(timeout);
-
         reject(error);
       }
     });

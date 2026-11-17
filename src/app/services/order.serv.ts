@@ -27,10 +27,13 @@ export interface OrderProduct {
   sourceSpeciesId?: string;
   name: string;
   category: string;
-  price: number;
   quantity: number;
   image: string;
   artClass: string;
+
+  // Legacy compatibility only.
+  // New orders do not save this field.
+  price?: number;
 }
 
 export interface OrderCustomer {
@@ -46,11 +49,7 @@ export interface SilkMartOrder {
   customerId: string;
   customer: OrderCustomer;
   items: OrderProduct[];
-  subtotal: number;
-  deliveryFee: number;
-  total: number;
   preferredDeliveryDate: string;
-  paymentMethod: string;
   notes: string;
   status: OrderStatus;
   cancelReason: string;
@@ -59,6 +58,13 @@ export interface SilkMartOrder {
   stockDeducted?: boolean;
   stockRestored?: boolean;
   inventoryVersion?: number;
+
+  // Legacy compatibility only.
+  // These fields are not saved for new orders.
+  subtotal?: number;
+  deliveryFee?: number;
+  total?: number;
+  paymentMethod?: string;
 }
 
 export interface CreateOrderInput {
@@ -67,6 +73,9 @@ export interface CreateOrderInput {
   deliveryAddress?: string;
   phoneNumber?: string;
   notes?: string;
+
+  // Accepted for compatibility with older cart code.
+  // Ignored when creating a new order.
   deliveryFee?: number;
 }
 
@@ -80,7 +89,6 @@ interface ProductRecord {
   id: string;
   name: string;
   category: string;
-  price: number;
   stock: number;
   imageUrl: string;
   published: boolean;
@@ -236,7 +244,6 @@ export class OrderServ {
       id: productId,
       name: String(data.name || ''),
       category: String(data.category || ''),
-      price: Number(data.price),
       stock: this.toValidStock(
         data.stock,
         data.name || productId
@@ -330,7 +337,9 @@ export class OrderServ {
   }
 
   // =========================================
-  // CREATE ORDER - DO NOT DEDUCT STOCK
+  // CREATE ORDER
+  // NO PRICING OR PAYMENT METHOD
+  // NO STOCK DEDUCTION AT CHECKOUT
   // =========================================
 
   async createOrder(
@@ -388,19 +397,6 @@ export class OrderServ {
       );
     }
 
-    const deliveryFee = Number(
-      input.deliveryFee ?? 0
-    );
-
-    if (
-      !Number.isFinite(deliveryFee) ||
-      deliveryFee < 0
-    ) {
-      throw new Error(
-        'Invalid delivery fee.'
-      );
-    }
-
     const requestedItems = input.items.map(item => ({
       ...item,
       productId: String(
@@ -429,8 +425,7 @@ export class OrderServ {
       this.firestore,
       async transaction => {
 
-        // Read all required Firestore documents
-        // before performing any transaction writes.
+        // Read all product documents before writes.
 
         const products = new Map<
           string,
@@ -464,24 +459,12 @@ export class OrderServ {
             );
           }
 
-          if (
-            !Number.isFinite(product.price) ||
-            product.price < 0
-          ) {
-            throw new Error(
-              `Invalid price for ${product.name}.`
-            );
-          }
-
           products.set(productId, product);
         }
 
         // =====================================
         // VALIDATE SHARED SILKWORM INVENTORY
         // =====================================
-
-        // Read the authoritative species stock.
-        // No stock is reserved or deducted here.
 
         const productBySpecies =
           new Map<string, string>();
@@ -573,9 +556,6 @@ export class OrderServ {
           );
         }
 
-        // All inventory reads are complete.
-        // No stock writes occur at checkout.
-
         // =====================================
         // VALIDATE REQUESTED QUANTITIES
         // =====================================
@@ -649,6 +629,8 @@ export class OrderServ {
               );
             }
 
+            // Only a local validation calculation.
+            // Firestore stock is not changed here.
             color.quantity -= change.quantity;
 
           } else if (change.selectedColor) {
@@ -680,7 +662,7 @@ export class OrderServ {
         }
 
         // =====================================
-        // BUILD ORDER USING CURRENT PRODUCT DATA
+        // BUILD ORDER WITHOUT PAYMENT FIELDS
         // =====================================
 
         const items: OrderProduct[] =
@@ -704,7 +686,6 @@ export class OrderServ {
                 : {}),
               name: product.name,
               category: product.category,
-              price: product.price,
               quantity: item.quantity,
               image: product.imageUrl,
               artClass: String(
@@ -713,25 +694,15 @@ export class OrderServ {
             };
           });
 
-        const subtotal = items.reduce(
-          (sum, item) =>
-            sum + item.price * item.quantity,
-          0
-        );
-
         // Inventory is NOT modified at checkout.
-        // Stock remains available until successful delivery.
+        // No payment or pricing information is saved.
 
         const newOrder: SilkMartOrder = {
           id: orderReference.id,
           customerId: user.uid,
           customer,
           items,
-          subtotal,
-          deliveryFee,
-          total: subtotal + deliveryFee,
           preferredDeliveryDate: preferredDate,
-          paymentMethod: 'Cash on Delivery',
           notes: String(input.notes || '').trim(),
           status: 'Pending',
           cancelReason: '',
@@ -755,7 +726,6 @@ export class OrderServ {
   // =========================================
   // RESTORE RESERVED INVENTORY
   // =========================================
-
 
   private async restoreStockInTransaction(
     transaction: any,
@@ -1026,6 +996,7 @@ export class OrderServ {
 
     // Only Delivery Management may mark an order Delivered.
     // A status-only update would bypass the stock transaction.
+
     if (status === 'Delivered') {
       throw new Error(
         'Complete this order through Delivery Management so stock is deducted exactly once.'
@@ -1089,6 +1060,7 @@ export class OrderServ {
         }
 
         // Confirmation does not deduct or reserve inventory.
+
         transaction.update(orderReference, {
           status: 'Confirmed',
           updatedAt: serverTimestamp()
@@ -1187,25 +1159,31 @@ export class OrderServ {
       orderId
     );
 
-    // Re-check ownership, status and stock restoration within
-    // the same atomic transaction that deletes the order.
     await runTransaction(
       this.firestore,
       async transaction => {
-        const snapshot = await transaction.get(orderReference);
+        const snapshot =
+          await transaction.get(orderReference);
 
         if (!snapshot.exists()) {
-          throw new Error('Order not found. It may already be deleted.');
+          throw new Error(
+            'Order not found. It may already be deleted.'
+          );
         }
 
-        const order = snapshot.data() as SilkMartOrder;
+        const order =
+          snapshot.data() as SilkMartOrder;
 
         if (order.customerId !== user.uid) {
-          throw new Error('You cannot delete another customer’s order.');
+          throw new Error(
+            'You cannot delete another customer’s order.'
+          );
         }
 
         if (order.status !== 'Cancelled') {
-          throw new Error('Only cancelled orders can be deleted permanently.');
+          throw new Error(
+            'Only cancelled orders can be deleted permanently.'
+          );
         }
 
         if (

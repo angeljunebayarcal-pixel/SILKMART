@@ -1,0 +1,41 @@
+<main class="tracking-page">
+  <section class="tracking-card" aria-labelledby="track-visit-heading">
+    <a class="home-link" routerLink="/">Back to SilkMart</a>
+    <h1 id="track-visit-heading">Track Your Visit</h1>
+
+    @if (state(); as current) {
+      @if (current.kind === 'loading') {
+        <p role="status">Checking your visit status…</p>
+      } @else if (current.kind === 'missing') {
+        <p>We couldn’t find this visit. Check that you opened the full tracking link.</p>
+      } @else if (current.kind === 'error') {
+        <p role="alert">We couldn’t load your visit status. Refresh this page to try again.</p>
+      } @else if (current.kind === 'ready') {
+        <p class="status" [attr.data-status]="current.visit.status" role="status">
+          {{ statusLabels[current.visit.status] }}
+        </p>
+
+        <dl>
+          <dt>Requested date and time</dt>
+          <dd>{{ current.visit.preferredDateTime | date:'MMM d, y, h:mm a':'+0800' }} PHT</dd>
+
+          @if (current.visit.scheduledDateTime) {
+            <dt>{{ current.visit.status === 'reschedule_proposed' ? 'Proposed date and time' : 'Scheduled date and time' }}</dt>
+            <dd>{{ current.visit.scheduledDateTime | date:'MMM d, y, h:mm a':'+0800' }} PHT</dd>
+          }
+
+          @if (current.visit.visitorNote) {
+            <dt>Note from SilkMart</dt>
+            <dd style="white-space: pre-wrap">{{ current.visit.visitorNote }}</dd>
+          }
+        </dl>
+
+        @if (current.visit.status === 'new') {
+          <p>Save your tracking link and open it again to check for updates.</p>
+        } @else if (current.visit.status === 'reschedule_proposed') {
+          <p>Check this link again to see whether the proposed time has been confirmed.</p>
+        }
+      }
+    }
+  </section>
+</main>

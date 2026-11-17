@@ -305,13 +305,6 @@ export class Shopsilk implements OnInit, OnDestroy {
     }
 
     switch (this.sortOption) {
-      case 'low':
-        result.sort((a, b) => a.price - b.price);
-        break;
-
-      case 'high':
-        result.sort((a, b) => b.price - a.price);
-        break;
 
       case 'name':
         result.sort((a, b) => a.name.localeCompare(b.name));

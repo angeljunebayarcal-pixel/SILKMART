@@ -1,36 +1,43 @@
-
-import { CommonModule } from '@angular/common';
+import { DecimalPipe, NgClass, NgTemplateOutlet } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import {
   ChangeDetectorRef,
   Component,
+  ElementRef,
   Injector,
   NgZone,
   OnDestroy,
   OnInit,
+  ViewChild,
   runInInjectionContext
 } from '@angular/core';
 import { Router } from '@angular/router';
 import { Auth, onAuthStateChanged } from '@angular/fire/auth';
 import {
+  type DocumentData,
+  type UpdateData,
   Firestore,
   collection,
-  collectionData,
+  type CollectionReference,
   doc,
-  docData,
   getDocs,
   getDocsFromServer,
+  onSnapshot,
   runTransaction,
   serverTimestamp,
   writeBatch
 } from '@angular/fire/firestore';
-import { Subscription } from 'rxjs';
 import Swal from 'sweetalert2';
+
+const inventorySources = ['species', 'products', 'cocoons', 'cocoonRegions'] as const;
+type InventorySource = typeof inventorySources[number];
+type InventoryListener = InventorySource | 'activity';
 
 type InventoryKind = 'species' | 'product';
 type ActivityType = 'add' | 'edit' | 'remove' | 'stock' | 'cocoon';
 type ProductionPeriod = 'daily' | 'monthly';
 type ProductionKey = 'silkworms' | 'products' | 'cocoons';
+const productionTimeZone = 'Asia/Manila';
 
 interface Species {
   id: string;
@@ -56,7 +63,6 @@ interface SilkProduct {
   description: string;
   quantity: number;
   threshold: number;
-  price: number;
   unit: string;
   imageUrl: string;
   published: boolean;
@@ -72,6 +78,29 @@ interface Cocoons {
   reserved: number;
   imageUrl: string;
   lowStockThreshold: number;
+}
+
+interface CocoonRegion extends Cocoons {
+  id: string;
+  name: string;
+}
+
+interface InventorySnapshot {
+  species: Species[];
+  products: SilkProduct[];
+  cocoons: Pick<Cocoons, 'imageUrl' | 'lowStockThreshold'>;
+  cocoonRegions: CocoonRegion[];
+}
+
+interface CocoonEditor {
+  region: CocoonRegion | null;
+  original: Cocoons;
+  name: string;
+  good: number | null;
+  minor: number | null;
+  unusable: number | null;
+  lowStockThreshold: number | null;
+  imageUrl: string;
 }
 
 interface ProductionTotals {
@@ -114,13 +143,18 @@ interface ProductionSeries {
 @Component({
   selector: 'app-inventory',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [NgClass, NgTemplateOutlet, DecimalPipe, FormsModule],
   templateUrl: './inventory.html',
   styleUrl: './inventory.scss'
 })
 export class Inventory implements OnInit, OnDestroy {
   currentUserId = '';
   loading = true;
+  inventoryReady = false;
+  inventorySyncing = false;
+  activityLoading = true;
+  activityReady = false;
+  activityError = '';
   saving = false;
   processingImage = false;
   errorMessage = '';
@@ -128,8 +162,19 @@ export class Inventory implements OnInit, OnDestroy {
 
   species: Species[] = [];
   products: SilkProduct[] = [];
-  cocoons: Cocoons = this.emptyCocoons();
+  private cocoonOverview = { imageUrl: '', lowStockThreshold: 10 };
+  cocoonRegions: CocoonRegion[] = [];
   activities: Activity[] = [];
+
+  get combinedCocoons(): Cocoons {
+    return this.cocoonRegions.reduce<Cocoons>((sum, region) => ({
+      ...sum,
+      good: sum.good + region.good,
+      minor: sum.minor + region.minor,
+      unusable: sum.unusable + region.unusable,
+      reserved: sum.reserved + region.reserved
+    }), { ...this.emptyCocoons(), ...this.cocoonOverview });
+  }
 
   searchSpecies = '';
   searchProducts = '';
@@ -142,12 +187,15 @@ export class Inventory implements OnInit, OnDestroy {
   speciesForm: Species = this.emptySpecies();
   productForm: SilkProduct = this.emptyProduct();
 
-  showCocoonEditor = false;
-  cocoonGoodChange = 0;
-  cocoonMinorChange = 0;
-  cocoonUnusableChange = 0;
-  cocoonLowStockThreshold = 10;
-  cocoonImageUrl = '';
+  cocoonEditor: CocoonEditor | null = null;
+  private selectedCocoonRegionId: string | null = null;
+
+  @ViewChild('cocoonBatchDialog', { static: true })
+  private cocoonBatchDialog!: ElementRef<HTMLDialogElement>;
+
+  get selectedCocoonRegion(): CocoonRegion | undefined {
+    return this.cocoonRegions.find(region => region.id === this.selectedCocoonRegionId);
+  }
 
   showAllActivity = false;
   showProductionStatistics = false;
@@ -231,12 +279,40 @@ export class Inventory implements OnInit, OnDestroy {
     }
   ];
 
+  private readonly productionDayFormat = new Intl.DateTimeFormat('en-CA', {
+    timeZone: productionTimeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  });
+
+  private readonly productionLabelFormats = {
+    daily: new Intl.DateTimeFormat('en-PH', {
+      timeZone: 'UTC', month: 'short', day: 'numeric'
+    }),
+    monthly: new Intl.DateTimeFormat('en-PH', {
+      timeZone: 'UTC', month: 'short', year: '2-digit'
+    })
+  };
+
+  private productionGraphCache: {
+    activities: Activity[];
+    period: ProductionPeriod;
+    day: string;
+    points: ProductionPoint[];
+    maximum: number;
+  } | null = null;
+
+  private readonly cocoonPercentFormat = new Intl.NumberFormat(undefined, {
+    style: 'percent',
+    maximumFractionDigits: 2
+  });
+
   private stopAuthListener: (() => void) | null = null;
-  private subscriptions: Subscription[] = [];
+  private stopInventoryListeners: (() => void)[] = [];
   private session = 0;
   private originalSpecies: Species | null = null;
   private originalProduct: SilkProduct | null = null;
-  private originalCocoons: Cocoons | null = null;
 
   constructor(
     private auth: Auth,
@@ -267,12 +343,21 @@ export class Inventory implements OnInit, OnDestroy {
           this.session++;
           this.stopSubscriptions();
 
+          if (this.currentUserId && this.currentUserId !== user?.uid) {
+            this.clearInventorySnapshot();
+          }
           this.currentUserId = user?.uid || '';
           this.species = [];
           this.products = [];
-          this.cocoons = this.emptyCocoons();
+          this.cocoonOverview = { imageUrl: '', lowStockThreshold: 10 };
+          this.closeCocoonBatch();
+          this.cocoonRegions = [];
+          this.cocoonEditor = null;
           this.activities = [];
           this.errorMessage = '';
+          this.inventoryReady = false;
+          this.inventorySyncing = false;
+          this.activityReady = false;
 
           if (!user) {
             this.loading = false;
@@ -283,10 +368,13 @@ export class Inventory implements OnInit, OnDestroy {
           }
 
           this.listenToInventory(this.session);
+          this.refresh();
         }),
         error => this.zone.run(() => {
           console.error('Authentication error:', error);
           this.loading = false;
+          this.inventorySyncing = false;
+          this.inventoryReady = false;
           this.errorMessage =
             'Unable to verify your account.';
           this.refresh();
@@ -302,10 +390,8 @@ export class Inventory implements OnInit, OnDestroy {
   }
 
   private stopSubscriptions(): void {
-    this.subscriptions.forEach(
-      subscription => subscription.unsubscribe()
-    );
-    this.subscriptions = [];
+    this.stopInventoryListeners.forEach(stop => stop());
+    this.stopInventoryListeners = [];
   }
 
   // =========================================
@@ -313,55 +399,103 @@ export class Inventory implements OnInit, OnDestroy {
   // =========================================
 
   private listenToInventory(session: number): void {
-    this.loading = true;
+    this.inventoryReady = this.restoreInventorySnapshot();
+    this.loading = !this.inventoryReady;
+    this.inventorySyncing = this.inventoryReady;
     this.errorMessage = '';
+    this.activityLoading = true;
+    this.activityReady = false;
+    this.activityError = '';
 
-    const loaded = new Set<string>();
+    const serverSources = new Set<InventoryListener>();
+    const confirmedSources = new Set<InventorySource>();
+    const snapshotOptions = { includeMetadataChanges: true };
 
-    const attach = (
-      key: string,
-      source: any,
-      callback: (data: any) => void
+    const applySnapshot = (
+      key: InventoryListener,
+      metadata: { fromCache: boolean; hasPendingWrites: boolean },
+      apply: () => void
+    ): void => this.zone.run(() => {
+      if (session !== this.session) return;
+      // Keep the last complete inventory while Firestore warms up its cache.
+      if (metadata.fromCache && !serverSources.has(key)) return;
+
+      if (!metadata.fromCache) serverSources.add(key);
+
+      if (key === 'activity') {
+        apply();
+        this.activityLoading = false;
+        this.activityReady = true;
+      } else if (!this.errorMessage) {
+        apply();
+        if (metadata.fromCache || metadata.hasPendingWrites) {
+          confirmedSources.delete(key);
+        } else {
+          confirmedSources.add(key);
+        }
+
+        const serverReady = inventorySources.every(source => serverSources.has(source));
+        this.inventoryReady ||= serverReady;
+        this.loading = !this.inventoryReady;
+        this.inventorySyncing = this.inventoryReady && !serverReady;
+
+        if (confirmedSources.size === inventorySources.length) {
+          this.saveInventorySnapshot();
+        }
+      }
+
+      this.refresh();
+    });
+
+    const reportError = (key: InventoryListener, error: { code?: string }): void => this.zone.run(() => {
+      if (session !== this.session) return;
+
+      console.error('Inventory listener error:', error);
+
+      if (key === 'activity') {
+        this.activityLoading = false;
+        this.activityReady = false;
+        this.activityError = 'Unable to load inventory activity.';
+      } else {
+        this.loading = false;
+        this.inventorySyncing = false;
+        if (error?.code === 'permission-denied' || error?.code === 'unauthenticated') {
+          this.clearInventorySnapshot();
+          this.closeCocoonBatch();
+          this.inventoryReady = false;
+          this.errorMessage = 'Firebase access denied. Check Admin/Staff permissions and Firestore rules.';
+        } else {
+          this.errorMessage = this.inventoryReady
+            ? 'Unable to sync with Firebase. Showing the last available inventory.'
+            : 'Unable to load inventory from Firebase.';
+        }
+      }
+
+      this.refresh();
+    });
+
+    const listenToCollection = (
+      key: InventoryListener,
+      reference: CollectionReference<DocumentData>,
+      apply: (records: DocumentData[]) => void
     ): void => {
-      const subscription: Subscription = source.subscribe({
-        next: (data: any) => this.zone.run(() => {
-          if (session !== this.session) return;
-
-          callback(data);
-          loaded.add(key);
-
-          if (loaded.size === 4) {
-            this.loading = false;
-          }
-
-          this.refresh();
+      this.stopInventoryListeners.push(onSnapshot(
+        reference,
+        snapshotOptions,
+        snapshot => applySnapshot(key, snapshot.metadata, () => {
+          apply(snapshot.docs.map(item => ({
+            ...item.data(key === 'activity' ? { serverTimestamps: 'estimate' } : undefined),
+            id: item.id
+          })));
         }),
-
-        error: (error: any) => this.zone.run(() => {
-          if (session !== this.session) return;
-
-          console.error('Inventory listener error:', error);
-          this.loading = false;
-
-          this.errorMessage =
-            error?.code === 'permission-denied'
-              ? 'Firebase access denied. Check Admin/Staff permissions and Firestore rules.'
-              : 'Unable to load inventory from Firebase.';
-
-          this.refresh();
-        })
-      });
-
-      this.subscriptions.push(subscription);
+        error => reportError(key, error)
+      ));
     };
 
     this.inContext(() => {
-      attach(
+      listenToCollection(
         'species',
-        collectionData(
-          collection(this.firestore, 'inventory_species'),
-          { idField: 'id' }
-        ),
+        collection(this.firestore, 'inventory_species'),
         (records: any[]) => {
           this.species = records.map(item => ({
             id: String(item.id || ''),
@@ -376,12 +510,9 @@ export class Inventory implements OnInit, OnDestroy {
         }
       );
 
-      attach(
+      listenToCollection(
         'products',
-        collectionData(
-          collection(this.firestore, 'products'),
-          { idField: 'id' }
-        ),
+        collection(this.firestore, 'products'),
         (records: any[]) => {
           this.products = records.map(item => {
             const category = String(
@@ -399,7 +530,6 @@ export class Inventory implements OnInit, OnDestroy {
                 Number(item.lowStockThreshold) >= 0
                   ? Number(item.lowStockThreshold)
                   : category === 'Silkworms' ? 10 : 100,
-              price: Number(item.price || 0),
               unit:
                 category === 'Silkworms'
                   ? 'worms'
@@ -433,34 +563,35 @@ export class Inventory implements OnInit, OnDestroy {
         }
       );
 
-      attach(
-        'cocoons',
-        docData(
-          doc(this.firestore, 'inventory', 'cocoons')
-        ),
-        (record: any) => {
-          this.cocoons = record
-            ? {
-                good: Number(record.good || 0),
-                minor: Number(record.minor || 0),
-                unusable: Number(record.unusable || 0),
-                reserved: Number(record.reserved || 0),
-                imageUrl: String(record.imageUrl || ''),
-                lowStockThreshold:
-                  this.validWholeNumber(record.lowStockThreshold)
-                    ? Number(record.lowStockThreshold)
-                    : 10
-              }
-            : this.emptyCocoons();
+      this.stopInventoryListeners.push(onSnapshot(
+        doc(this.firestore, 'inventory', 'cocoons'),
+        snapshotOptions,
+        snapshot => applySnapshot('cocoons', snapshot.metadata, () => {
+          const { imageUrl, lowStockThreshold } = this.readCocoons(snapshot.data());
+          this.cocoonOverview = { imageUrl, lowStockThreshold };
+        }),
+        error => reportError('cocoons', error)
+      ));
+
+      listenToCollection(
+        'cocoonRegions',
+        collection(this.firestore, 'cocoon_regions'),
+        (records: any[]) => {
+          this.cocoonRegions = records.map(record => ({
+            id: String(record.id || ''),
+            name: String(record.name || ''),
+            ...this.readCocoons(record)
+          })).sort((a, b) => a.name.localeCompare(b.name));
+
+          if (this.selectedCocoonRegionId !== null && !this.selectedCocoonRegion) {
+            this.closeCocoonBatch();
+          }
         }
       );
 
-      attach(
+      listenToCollection(
         'activity',
-        collectionData(
-          collection(this.firestore, 'inventory_activity'),
-          { idField: 'id' }
-        ),
+        collection(this.firestore, 'inventory_activity'),
         (records: any[]) => {
           this.activities = records.map(item => ({
             id: String(item.id || ''),
@@ -485,12 +616,79 @@ export class Inventory implements OnInit, OnDestroy {
     });
   }
 
+  private get inventorySnapshotKey(): string {
+    const app = this.firestore.app;
+    return `silkmart:inventory:v1:${app.options.projectId}:${app.name}:${this.currentUserId}`;
+  }
+
+  private restoreInventorySnapshot(): boolean {
+    try {
+      const value = sessionStorage.getItem(this.inventorySnapshotKey);
+      if (!value) return false;
+
+      const snapshot = JSON.parse(value) as InventorySnapshot | null;
+      if (!snapshot?.cocoons ||
+          !Array.isArray(snapshot.species) ||
+          !Array.isArray(snapshot.products) ||
+          !Array.isArray(snapshot.cocoonRegions)) return false;
+
+      this.species = snapshot.species;
+      this.products = snapshot.products;
+      const { imageUrl, lowStockThreshold } = snapshot.cocoons;
+      this.cocoonOverview = { imageUrl, lowStockThreshold };
+      this.cocoonRegions = snapshot.cocoonRegions;
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  private saveInventorySnapshot(): void {
+    const snapshot: InventorySnapshot = {
+      species: this.species,
+      products: this.products,
+      cocoons: this.cocoonOverview,
+      cocoonRegions: this.cocoonRegions
+    };
+
+    try {
+      sessionStorage.setItem(this.inventorySnapshotKey, JSON.stringify(snapshot));
+    } catch {
+      // Large uploaded photos can exceed the browser's per-tab storage quota.
+      try {
+        const withoutPhoto = <T extends { imageUrl: string }>(item: T): T => ({
+          ...item,
+          imageUrl: item.imageUrl.startsWith('data:') ? '' : item.imageUrl
+        });
+
+        sessionStorage.setItem(this.inventorySnapshotKey, JSON.stringify({
+          species: snapshot.species.map(withoutPhoto),
+          products: snapshot.products.map(withoutPhoto),
+          cocoons: withoutPhoto(snapshot.cocoons),
+          cocoonRegions: snapshot.cocoonRegions.map(withoutPhoto)
+        } satisfies InventorySnapshot));
+      } catch {
+        this.clearInventorySnapshot();
+      }
+    }
+  }
+
+  private clearInventorySnapshot(): void {
+    try {
+      sessionStorage.removeItem(this.inventorySnapshotKey);
+    } catch {
+      // Firestore listeners also work when browser storage is disabled.
+    }
+  }
+
   reload(): void {
     if (!this.currentUserId) return;
 
+    this.closeCocoonBatch();
     this.session++;
     this.stopSubscriptions();
     this.listenToInventory(this.session);
+    this.refresh();
   }
 
   // =========================================
@@ -518,7 +716,6 @@ export class Inventory implements OnInit, OnDestroy {
       description: '',
       quantity: 0,
       threshold: 100,
-      price: 0,
       unit: 'pcs',
       imageUrl: '',
       published: false,
@@ -536,6 +733,21 @@ export class Inventory implements OnInit, OnDestroy {
       reserved: 0,
       imageUrl: '',
       lowStockThreshold: 10
+    };
+  }
+
+  private readCocoons(record: Record<string, unknown> = {}): Cocoons {
+    const defaults = this.emptyCocoons();
+
+    return {
+      good: Number(record['good'] || defaults.good),
+      minor: Number(record['minor'] || defaults.minor),
+      unusable: Number(record['unusable'] || defaults.unusable),
+      reserved: Number(record['reserved'] || defaults.reserved),
+      imageUrl: String(record['imageUrl'] || defaults.imageUrl),
+      lowStockThreshold: this.validWholeNumber(record['lowStockThreshold'])
+        ? Number(record['lowStockThreshold'])
+        : defaults.lowStockThreshold
     };
   }
 
@@ -659,6 +871,7 @@ export class Inventory implements OnInit, OnDestroy {
 
     if (!file) return;
 
+    const cocoonEditor = this.cocoonEditor;
     this.imageError = '';
 
     if (![
@@ -690,8 +903,8 @@ export class Inventory implements OnInit, OnDestroy {
           this.speciesForm.imageUrl = base64;
         } else if (target === 'product') {
           this.productForm.imageUrl = base64;
-        } else {
-          this.cocoonImageUrl = base64;
+        } else if (cocoonEditor && this.cocoonEditor === cocoonEditor) {
+          cocoonEditor.imageUrl = base64;
         }
 
         this.imageError = '';
@@ -828,8 +1041,8 @@ export class Inventory implements OnInit, OnDestroy {
       this.productForm.imageUrl = '';
     }
 
-    if (target === 'cocoon') {
-      this.cocoonImageUrl = '';
+    if (target === 'cocoon' && this.cocoonEditor) {
+      this.cocoonEditor.imageUrl = '';
     }
 
     this.imageError = '';
@@ -891,19 +1104,16 @@ export class Inventory implements OnInit, OnDestroy {
     );
   }
 
-  get totalCocoons(): number {
-    return (
-      this.cocoons.good +
-      this.cocoons.minor +
-      this.cocoons.unusable
-    );
+  cocoonTotal(stock: Cocoons): number {
+    return stock.good + stock.minor + stock.unusable;
   }
 
   get availableCocoons(): number {
-    return Math.max(
-      0,
-      this.cocoons.good - this.cocoons.reserved
-    );
+    return this.availableCocoonStock(this.combinedCocoons);
+  }
+
+  private availableCocoonStock(stock: Cocoons): number {
+    return Math.max(0, stock.good - stock.reserved);
   }
 
   get totalSilkProducts(): number {
@@ -963,42 +1173,66 @@ export class Inventory implements OnInit, OnDestroy {
     );
 
     const cocoonAlerts: StockAlert[] =
-      this.availableCocoons <= this.cocoons.lowStockThreshold
+      this.cocoonRegions.length > 0 && this.availableCocoons <= this.cocoonOverview.lowStockThreshold
         ? [{
             name: 'Available Cocoons',
             quantity: this.availableCocoons,
-            threshold: this.cocoons.lowStockThreshold,
+            threshold: this.cocoonOverview.lowStockThreshold,
             unit: 'cocoons'
           }]
         : [];
 
+    for (const region of this.cocoonRegions) {
+      const quantity = this.availableCocoonStock(region);
+      if (quantity <= region.lowStockThreshold) {
+        cocoonAlerts.push({
+          name: `Available Cocoons — ${region.name}`,
+          quantity,
+          threshold: region.lowStockThreshold,
+          unit: 'cocoons'
+        });
+      }
+    }
+
     return [...worms, ...productAlerts, ...colorAlerts, ...cocoonAlerts];
   }
 
-  get cocoonQualityPercent(): number {
-    return this.totalCocoons > 0
-      ? Math.round(
-          this.cocoons.good /
-          this.totalCocoons * 100
-        )
-      : 0;
+  trackCocoonRegion(_index: number, region: CocoonRegion): string {
+    return region.id;
   }
 
-  get cocoonChartStyle(): string {
-    if (this.totalCocoons <= 0) {
-      return 'conic-gradient(#e5ede4 0% 100%)';
+  cocoonShare(quantity: number, stock: Cocoons): number {
+    const total = this.cocoonTotal(stock);
+    return total > 0 ? quantity / total : 0;
+  }
+
+  // The existing inventory template still uses this numeric binding.
+  cocoonQualityPercent(stock: Cocoons): number {
+    const share = this.cocoonShare(stock.good, stock);
+    if (share === 0 || share === 1) return share * 100;
+
+    return Math.min(99.99, Math.max(0.01, Math.round(share * 10000) / 100));
+  }
+
+  cocoonPercentLabel(quantity: number, stock: Cocoons): string {
+    const share = this.cocoonShare(quantity, stock);
+    if (share > 0 && share < 0.0001) return `<${this.cocoonPercentFormat.format(0.0001)}`;
+    if (share > 0.9999 && quantity < this.cocoonTotal(stock)) {
+      return `>${this.cocoonPercentFormat.format(0.9999)}`;
     }
+    return this.cocoonPercentFormat.format(share);
+  }
 
-    const good =
-      this.cocoons.good / this.totalCocoons * 100;
+  cocoonChartStyle(stock: Cocoons): string {
+    if (this.cocoonTotal(stock) <= 0) return 'conic-gradient(#e5ede4 0% 100%)';
 
-    const minor =
-      this.cocoons.minor / this.totalCocoons * 100;
+    const good = this.cocoonShare(stock.good, stock) * 100;
+    const minor = this.cocoonShare(stock.good + stock.minor, stock) * 100;
 
     return `conic-gradient(
       #28785b 0% ${good}%,
-      #cbdcca ${good}% ${good + minor}%,
-      #f2b9b6 ${good + minor}% 100%
+      #cbdcca ${good}% ${minor}%,
+      #f2b9b6 ${minor}% 100%
     )`;
   }
 
@@ -1225,10 +1459,6 @@ export class Inventory implements OnInit, OnDestroy {
           <p class="silkworm-selling-available">
             Shared species stock: ${item.quantity.toLocaleString('en-PH')} worms
           </p>
-          <label for="silkwormSellingPrice">Selling Price per Worm (₱)</label>
-          <input id="silkwormSellingPrice" class="swal2-input"
-            type="number" min="0" step="0.01"
-            placeholder="Enter selling price">
           <p class="silkworm-selling-note">
             All existing species stock is listed; no separate allocation.
             The product is initially a Draft. Stock decreases only on delivery.
@@ -1238,23 +1468,9 @@ export class Inventory implements OnInit, OnDestroy {
       confirmButtonText: 'Add to Products',
       cancelButtonText: 'Cancel',
       confirmButtonColor: '#287457',
-      reverseButtons: true,
-      focusConfirm: false,
-      preConfirm: () => {
-        const input = document.getElementById(
-          'silkwormSellingPrice'
-        ) as HTMLInputElement | null;
-        const value = input?.value.trim() || '';
-        const price = Number(value);
-        if (!value || !Number.isFinite(price) || price < 0) {
-          Swal.showValidationMessage('Enter a valid non-negative selling price.');
-          return false;
-        }
-        return { price };
-      }
+      reverseButtons: true
     });
-    if (!result.isConfirmed || !result.value) return;
-    const price = Number(result.value.price);
+    if (!result.isConfirmed) return;
 
     this.saving = true;
     this.refresh();
@@ -1292,7 +1508,6 @@ export class Inventory implements OnInit, OnDestroy {
             category: 'Silkworms',
             description: String(species['scientificName'] || '').trim() ||
               `${speciesName} silkworms`,
-            price,
             stock: quantity,
             lowStockThreshold: Number(species['threshold'] ?? 10),
             sourceSpeciesId: item.id,
@@ -1306,7 +1521,7 @@ export class Inventory implements OnInit, OnDestroy {
           this.addTransactionActivity(
             transaction, activityRef,
             'Silkworm added to Product Management',
-            `${speciesName} — ${quantity} shared worms at ₱${price.toFixed(2)} each`,
+            `${speciesName} — ${quantity} shared worms`,
             'add'
           );
         });
@@ -1666,7 +1881,6 @@ export class Inventory implements OnInit, OnDestroy {
 
   private async saveProduct(): Promise<void> {
     const form = this.productForm;
-    const price = Number(form.price);
 
     const supportsColors =
       this.canManageProductColors();
@@ -1718,8 +1932,6 @@ export class Inventory implements OnInit, OnDestroy {
       stock < 0 ||
       !Number.isInteger(threshold) ||
       threshold < 0 ||
-      !Number.isFinite(price) ||
-      price < 0 ||
       !this.validImage(form.imageUrl)
     ) {
       await this.warning('Check the product information.');
@@ -1791,7 +2003,6 @@ export class Inventory implements OnInit, OnDestroy {
           name: form.name.trim(),
           category: form.category,
           description: form.description.trim(),
-          price,
           stock,
           lowStockThreshold: threshold,
           colorStocks,
@@ -1961,11 +2172,10 @@ export class Inventory implements OnInit, OnDestroy {
                   )
                 );
 
-              const fields: Record<string, unknown> = {
+              const fields: UpdateData<DocumentData> = {
                 name: data.name,
                 category: data.category,
                 description: data.description,
-                price: data.price,
                 lowStockThreshold: data.lowStockThreshold,
                 imageUrl: data.imageUrl,
                 published: data.published,
@@ -2048,7 +2258,8 @@ export class Inventory implements OnInit, OnDestroy {
             this.addTransactionActivity(
               transaction, activityRef, 'Silk product added',
               `${data.name} — ${currentQuantity} shared worms (${chosenSpecies.name})`,
-              'add'
+              'add',
+              { silkworms: 0, products: 0, cocoons: 0 }
             );
           });
         } else {
@@ -2699,7 +2910,6 @@ export class Inventory implements OnInit, OnDestroy {
       description: String(entry.data()['description'] || ''),
       quantity: Number(entry.data()['stock'] || 0),
       threshold: Number(entry.data()['lowStockThreshold'] ?? 10),
-      price: Number(entry.data()['price'] || 0),
       unit: 'worms',
       imageUrl: String(entry.data()['imageUrl'] || ''),
       published: entry.data()['published'] === true,
@@ -2955,219 +3165,241 @@ export class Inventory implements OnInit, OnDestroy {
   // COCOON INVENTORY
   // =========================================
 
-  openCocoonEditor(): void {
+  openCocoonBatch(region: CocoonRegion): void {
+    this.selectedCocoonRegionId = region.id;
+    this.refresh();
+    this.cocoonBatchDialog.nativeElement.showModal();
+  }
+
+  closeCocoonBatch(): void {
+    this.selectedCocoonRegionId = null;
+    this.cocoonBatchDialog.nativeElement.close();
+  }
+
+  onCocoonBatchClosed(): void {
+    if (!this.cocoonBatchDialog.nativeElement.open) {
+      this.selectedCocoonRegionId = null;
+    }
+  }
+
+  openCocoonEditor(region: CocoonRegion): void {
+    this.openCocoonRegionForm(region);
+  }
+
+  addCocoonRegion(): void {
+    this.openCocoonRegionForm(null);
+  }
+
+  private openCocoonRegionForm(region: CocoonRegion | null): void {
     if (this.saving || this.processingImage) return;
 
-    // Show actual quantities instead of adjustment amounts.
-    this.originalCocoons = { ...this.cocoons };
-
-    this.cocoonGoodChange = this.cocoons.good;
-    this.cocoonMinorChange = this.cocoons.minor;
-    this.cocoonUnusableChange = this.cocoons.unusable;
-
-    this.cocoonLowStockThreshold =
-      this.cocoons.lowStockThreshold;
-
-    this.cocoonImageUrl = this.cocoons.imageUrl;
+    this.closeCocoonBatch();
+    const stock = region ?? this.emptyCocoons();
+    this.cocoonEditor = {
+      region,
+      original: { ...stock },
+      name: region?.name ?? '',
+      good: stock.good,
+      minor: stock.minor,
+      unusable: stock.unusable,
+      lowStockThreshold: stock.lowStockThreshold,
+      imageUrl: stock.imageUrl
+    };
     this.imageError = '';
-    this.showCocoonEditor = true;
   }
 
   closeCocoonEditor(): void {
     if (this.saving || this.processingImage) return;
+    this.finishCocoonEditor();
+  }
 
-    this.showCocoonEditor = false;
-    this.originalCocoons = null;
+  private finishCocoonEditor(): void {
+    this.cocoonEditor = null;
     this.imageError = '';
   }
 
-  adjustCocoons(): void {
-    this.openCocoonEditor();
-  }
-
   async saveCocoonChanges(): Promise<void> {
-    if (
-      this.saving ||
-      this.processingImage ||
-      !this.currentUserId
-    ) {
-      return;
-    }
+    const editor = this.cocoonEditor;
+    if (!editor || this.saving || this.processingImage || !this.currentUserId) return;
 
-    const original = this.originalCocoons;
-
-    if (!original) {
-      await this.warning(
-        'Reopen the cocoon editor before saving.'
-      );
-      return;
-    }
-
-    const good = Number(this.cocoonGoodChange);
-    const minor = Number(this.cocoonMinorChange);
-    const unusable = Number(this.cocoonUnusableChange);
-    const threshold =
-      Number(this.cocoonLowStockThreshold);
-    const imageUrl = this.cocoonImageUrl;
+    const { original, region, imageUrl } = editor;
+    const addingRegion = !region;
+    const name = editor.name.trim();
+    const regionName = name.toLowerCase();
+    const renamingRegion = !!region && name !== region.name;
 
     if (
-      !this.validWholeNumber(this.cocoonGoodChange) ||
-      !this.validWholeNumber(this.cocoonMinorChange) ||
-      !this.validWholeNumber(this.cocoonUnusableChange) ||
-      !this.validWholeNumber(this.cocoonLowStockThreshold) ||
+      !this.validWholeNumber(editor.good) ||
+      !this.validWholeNumber(editor.minor) ||
+      !this.validWholeNumber(editor.unusable) ||
+      !this.validWholeNumber(editor.lowStockThreshold) ||
       !this.validImage(imageUrl)
     ) {
-      await this.warning(
-        'Enter non-negative whole numbers and a valid image.'
-      );
+      await this.warning('Enter non-negative whole numbers and a valid image.');
       return;
     }
+
+    if (!name || name.length > 100) {
+      await this.warning('Enter a region name of up to 100 characters.');
+      return;
+    }
+
+    if ((addingRegion || renamingRegion) && this.cocoonRegions.some(item =>
+      item.id !== region?.id && item.name.trim().toLowerCase() === regionName
+    )) {
+      await this.warning('This region already exists. Open its card to edit its stock.');
+      return;
+    }
+
+    const good = Number(editor.good);
+    const minor = Number(editor.minor);
+    const unusable = Number(editor.unusable);
+    const threshold = Number(editor.lowStockThreshold);
+    const quantitiesChanged =
+      good !== original.good || minor !== original.minor || unusable !== original.unusable;
+    const thresholdChanged = threshold !== original.lowStockThreshold;
+    const imageChanged = imageUrl !== original.imageUrl;
+    const actorUid = this.currentUserId;
 
     this.saving = true;
     this.refresh();
 
     try {
       await this.inContext(async () => {
-        const reference = doc(
-          this.firestore,
-          'inventory',
-          'cocoons'
-        );
+        // A stable ID also prevents two editors from adding the same new region at once.
+        const namedRegionId = addingRegion || renamingRegion
+          ? `region-${encodeURIComponent(regionName)}`
+          : '';
+        const reference = doc(this.firestore, 'cocoon_regions', region?.id ?? namedRegionId);
+        const renamedReference = renamingRegion && region?.id !== namedRegionId
+          ? doc(this.firestore, 'cocoon_regions', namedRegionId)
+          : null;
+        const activityReference = doc(collection(this.firestore, 'inventory_activity'));
 
-        const activityReference = doc(
-          collection(this.firestore, 'inventory_activity')
-        );
+        await runTransaction(this.firestore, async transaction => {
+          const snapshot = await transaction.get(reference);
+          const renamedSnapshot = renamedReference ? await transaction.get(renamedReference) : null;
+          const record = snapshot.data();
 
-        await runTransaction(
-          this.firestore,
-          async transaction => {
-            const snapshot =
-              await transaction.get(reference);
+          if (this.currentUserId !== actorUid) {
+            throw new Error('Your account changed. Reopen the editor.');
+          }
 
-            const record = snapshot.exists()
-              ? snapshot.data()
-              : {};
+          if ((addingRegion && snapshot.exists()) || renamedSnapshot?.exists()) {
+            throw new Error('This region already exists. Open its card to edit its stock.');
+          }
+          if (region && (!snapshot.exists() || String(record?.['name'] ?? '') !== region.name)) {
+            throw new Error('This region changed. Reopen the editor and try again.');
+          }
 
-            const current: Cocoons = {
-              good: Number(record['good'] || 0),
-              minor: Number(record['minor'] || 0),
-              unusable: Number(record['unusable'] || 0),
-              reserved: Number(record['reserved'] || 0),
-              imageUrl: String(record['imageUrl'] || ''),
-              lowStockThreshold:
-                this.validWholeNumber(record['lowStockThreshold'])
-                  ? Number(record['lowStockThreshold'])
-                  : 10
-            };
+          const current = this.readCocoons(record);
+          const stockChanged =
+            current.good !== original.good ||
+            current.minor !== original.minor ||
+            current.unusable !== original.unusable;
 
-            const quantitiesChanged =
-              good !== original.good ||
-              minor !== original.minor ||
-              unusable !== original.unusable;
+          if (quantitiesChanged && stockChanged) {
+            throw new Error('Cocoon quantities changed while you were editing. Reopen the editor.');
+          }
+          if (thresholdChanged && current.lowStockThreshold !== original.lowStockThreshold &&
+              current.lowStockThreshold !== threshold) {
+            throw new Error('The cocoon threshold changed. Reopen the editor.');
+          }
+          if (imageChanged && current.imageUrl !== original.imageUrl && current.imageUrl !== imageUrl) {
+            throw new Error('The cocoon image changed. Reopen the editor.');
+          }
 
-            const remotelyChanged =
-              current.good !== original.good ||
-              current.minor !== original.minor ||
-              current.unusable !== original.unusable;
+          const next: Cocoons = {
+            good: quantitiesChanged ? good : current.good,
+            minor: quantitiesChanged ? minor : current.minor,
+            unusable: quantitiesChanged ? unusable : current.unusable,
+            reserved: current.reserved,
+            lowStockThreshold: thresholdChanged ? threshold : current.lowStockThreshold,
+            imageUrl: imageChanged ? imageUrl : current.imageUrl
+          };
 
-            // Do not overwrite stock modified by another session.
-            if (
-              quantitiesChanged &&
-              remotelyChanged
-            ) {
-              throw new Error(
-                'Cocoon quantities changed while you were editing. Reopen the editor.'
-              );
-            }
+          if (next.reserved > next.good) {
+            throw new Error('Good-quality cocoons cannot be fewer than reserved cocoons. Adjust reservations first.');
+          }
 
-            const thresholdChanged =
-              threshold !== original.lowStockThreshold;
+          const delta = Math.max(0, this.cocoonTotal(next) - this.cocoonTotal(current));
+          const data = {
+            ...next,
+            id: renamedReference?.id ?? reference.id,
+            name,
+            quantity: this.cocoonTotal(next),
+            updatedAt: serverTimestamp(),
+            updatedBy: actorUid
+          };
 
-            if (
-              thresholdChanged &&
-              current.lowStockThreshold !== original.lowStockThreshold &&
-              current.lowStockThreshold !== threshold
-            ) {
-              throw new Error(
-                'The cocoon threshold changed. Reopen the editor.'
-              );
-            }
+          if (renamedReference) {
+            transaction.set(renamedReference, {
+              ...data,
+              createdAt: serverTimestamp()
+            });
+            transaction.delete(reference);
+          } else if (snapshot.exists()) {
+            transaction.update(reference, data);
+          } else {
+            transaction.set(reference, { ...data, createdAt: serverTimestamp() });
+          }
 
-            const imageChanged =
-              imageUrl !== original.imageUrl;
-
-            if (
-              imageChanged &&
-              current.imageUrl !== original.imageUrl &&
-              current.imageUrl !== imageUrl
-            ) {
-              throw new Error(
-                'The cocoon image changed. Reopen the editor.'
-              );
-            }
-
-            const next: Cocoons = {
-              good: quantitiesChanged ? good : current.good,
-              minor: quantitiesChanged ? minor : current.minor,
-              unusable:
-                quantitiesChanged ? unusable : current.unusable,
-              reserved: current.reserved,
-              imageUrl: imageChanged
-                ? imageUrl
-                : current.imageUrl,
-              lowStockThreshold: thresholdChanged
-                ? threshold
-                : current.lowStockThreshold
-            };
-
-            if (next.reserved > next.good) {
-              throw new Error(
-                'Good-quality cocoons cannot be fewer than reserved cocoons. Adjust reservations first.'
-              );
-            }
-
-            const delta =
-              Math.max(0, next.good - current.good) +
-              Math.max(0, next.minor - current.minor) +
-              Math.max(0, next.unusable - current.unusable);
-
-            const updatedData = {
-              ...next,
-              updatedAt: serverTimestamp(),
-              updatedBy: this.currentUserId
-            };
-
-            if (snapshot.exists()) {
-              transaction.update(reference, updatedData);
-            } else {
-              transaction.set(reference, {
-                ...updatedData,
-                createdAt: serverTimestamp()
-              });
-            }
-
-            this.addTransactionActivity(
-              transaction,
-              activityReference,
-              'Cocoon inventory updated',
-              `Good: ${current.good} → ${next.good}, ` +
+          this.addTransactionActivity(
+            transaction,
+            activityReference,
+            addingRegion ? 'Cocoon region added' : 'Regional cocoon inventory updated',
+            `${name} — Good: ${current.good} → ${next.good}, ` +
               `Minor: ${current.minor} → ${next.minor}, ` +
               `Not usable: ${current.unusable} → ${next.unusable}`,
-              'cocoon',
-              {
-                silkworms: 0,
-                products: 0,
-                cocoons: delta
-              }
-            );
-          }
-        );
+            'cocoon',
+            { silkworms: 0, products: 0, cocoons: delta }
+          );
+        });
       });
 
-      this.showCocoonEditor = false;
-      this.originalCocoons = null;
+      if (this.cocoonEditor === editor) this.finishCocoonEditor();
+      await this.success(addingRegion ? 'Region Added' : 'Cocoon Inventory Saved');
+    } catch (error: any) {
+      await this.firebaseError(error);
+    } finally {
+      this.saving = false;
+      this.refresh();
+    }
+  }
 
-      await this.success('Cocoon Inventory Saved');
+  async deleteCocoonRegion(region: CocoonRegion): Promise<void> {
+    if (this.saving || this.processingImage || !this.currentUserId) return;
+    const actorUid = this.currentUserId;
+    const confirmation = await Swal.fire({
+      icon: 'warning',
+      title: 'Delete Region?',
+      text: `Delete ${region.name} and remove ${this.cocoonTotal(region)} cocoons from the combined total?`,
+      showCancelButton: true,
+      confirmButtonText: 'Delete Region',
+      confirmButtonColor: '#b94743'
+    });
+    if (!confirmation.isConfirmed || this.currentUserId !== actorUid || this.saving) return;
+
+    this.saving = true;
+    this.refresh();
+
+    try {
+      await this.inContext(async () => {
+        const reference = doc(this.firestore, 'cocoon_regions', region.id);
+        await runTransaction(this.firestore, async transaction => {
+          const snapshot = await transaction.get(reference);
+          const current = this.readCocoons(snapshot.data());
+          if (this.currentUserId !== actorUid || !snapshot.exists() ||
+              snapshot.data()?.['name'] !== region.name ||
+              (Object.keys(current) as (keyof Cocoons)[]).some(key => current[key] !== region[key])) {
+            throw new Error('Region stock changed. Reopen the editor and try again.');
+          }
+          transaction.delete(reference);
+        });
+      });
+
+      if (this.cocoonEditor?.region?.id === region.id) this.finishCocoonEditor();
+      await this.success('Region Removed');
     } catch (error: any) {
       await this.firebaseError(error);
     } finally {
@@ -3180,112 +3412,88 @@ export class Inventory implements OnInit, OnDestroy {
   // COCOON RESERVATIONS
   // =========================================
 
-  async updateReservations(): Promise<void> {
-    if (this.saving) return;
+  async updateReservations(region: CocoonRegion | null = null): Promise<void> {
+    if (this.saving || !this.currentUserId) return;
+    this.closeCocoonBatch();
+    const actorUid = this.currentUserId;
 
+    if (!region) {
+      if (!this.cocoonRegions.length) return;
+
+      const selection = await Swal.fire({
+        title: 'Manage Reserved Cocoons',
+        input: 'select',
+        inputOptions: new Map(this.cocoonRegions.map(item => [item.id, item.name])),
+        inputPlaceholder: 'Select a region',
+        inputValidator: value => value ? undefined : 'Select a region.',
+        showCancelButton: true,
+        confirmButtonText: 'Continue',
+        confirmButtonColor: '#28785b'
+      });
+      if (!selection.isConfirmed || this.currentUserId !== actorUid || this.saving) return;
+
+      region = this.cocoonRegions.find(item => item.id === selection.value) ?? null;
+      if (!region) {
+        await this.warning('This region is no longer available. Select another region.');
+        return;
+      }
+    }
+
+    const stock = region;
     const result = await Swal.fire({
       icon: 'question',
-      title: 'Manage Reserved Cocoons',
-      text:
-        `Good: ${this.cocoons.good}. ` +
-        `Reserved: ${this.cocoons.reserved}.`,
+      title: `Manage Reserved Cocoons — ${stock.name}`,
+      text: `Good: ${stock.good}. Reserved: ${stock.reserved}.`,
       input: 'number',
-      inputValue: String(this.cocoons.reserved),
-      inputAttributes: {
-        min: '0',
-        step: '1'
-      },
+      inputValue: String(stock.reserved),
+      inputAttributes: { min: '0', step: '1' },
       showCancelButton: true,
       confirmButtonText: 'Save Reservation',
       confirmButtonColor: '#287457',
       preConfirm: value => {
-        const number = Number(value);
-
-        if (
-          !String(value).trim() ||
-          !Number.isInteger(number) ||
-          number < 0
-        ) {
-          Swal.showValidationMessage(
-            'Enter a non-negative whole number.'
-          );
+        if (!String(value ?? '').trim() || !this.validWholeNumber(value)) {
+          Swal.showValidationMessage('Enter a non-negative whole number.');
           return false;
         }
-
-        return number;
+        return Number(value);
       }
     });
 
-    if (!result.isConfirmed) return;
+    if (!result.isConfirmed || this.currentUserId !== actorUid || this.saving) return;
 
     const reserved = Number(result.value);
     this.saving = true;
+    this.refresh();
 
     try {
       await this.inContext(async () => {
-        const reference = doc(
-          this.firestore,
-          'inventory',
-          'cocoons'
-        );
+        const reference = doc(this.firestore, 'cocoon_regions', stock.id);
+        const activityReference = doc(collection(this.firestore, 'inventory_activity'));
 
-        const activityReference = doc(
-          collection(this.firestore, 'inventory_activity')
-        );
-
-        await runTransaction(
-          this.firestore,
-          async transaction => {
-            const snapshot =
-              await transaction.get(reference);
-
-            const record = snapshot.exists()
-              ? snapshot.data()
-              : {};
-
-            const current: Cocoons = {
-              good: Number(record['good'] || 0),
-              minor: Number(record['minor'] || 0),
-              unusable: Number(record['unusable'] || 0),
-              reserved: Number(record['reserved'] || 0),
-              imageUrl: String(record['imageUrl'] || ''),
-              lowStockThreshold:
-                this.validWholeNumber(record['lowStockThreshold'])
-                  ? Number(record['lowStockThreshold'])
-                  : 10
-            };
-
-            if (reserved > current.good) {
-              throw new Error(
-                'Reservations exceed good cocoon stock.'
-              );
-            }
-
-            const data = {
-              ...current,
-              reserved,
-              updatedAt: serverTimestamp(),
-              updatedBy: this.currentUserId
-            };
-
-            if (snapshot.exists()) {
-              transaction.update(reference, data);
-            } else {
-              transaction.set(reference, {
-                ...data,
-                createdAt: serverTimestamp()
-              });
-            }
-
-            this.addTransactionActivity(
-              transaction,
-              activityReference,
-              'Cocoon reservations updated',
-              `${current.reserved} → ${reserved} reserved`,
-              'cocoon'
-            );
+        await runTransaction(this.firestore, async transaction => {
+          const snapshot = await transaction.get(reference);
+          if (this.currentUserId !== actorUid || !snapshot.exists()) {
+            throw new Error('The inventory changed. Reopen reservations and try again.');
           }
-        );
+
+          const current = this.readCocoons(snapshot.data());
+          if (current.reserved !== stock.reserved && current.reserved !== reserved) {
+            throw new Error('Reservations changed while you were editing. Reopen reservations.');
+          }
+          if (reserved > current.good) {
+            throw new Error('Reservations exceed good cocoon stock.');
+          }
+
+          transaction.update(reference, { reserved, updatedAt: serverTimestamp(), updatedBy: actorUid });
+
+          this.addTransactionActivity(
+            transaction,
+            activityReference,
+            'Cocoon reservations updated',
+            `${stock.name} — ${current.reserved} → ${reserved} reserved`,
+            'cocoon'
+          );
+        });
       });
 
       await this.success('Reservations Updated');
@@ -3363,321 +3571,145 @@ export class Inventory implements OnInit, OnDestroy {
     this.productionPeriod = period;
   }
 
-  private productionDate(
-    value: any
-  ): Date | null {
-    if (!value) return null;
+  private productionCalendarDate(date: Date): { year: number; month: number; day: number } {
+    const parts = this.productionDayFormat.formatToParts(date);
+    return {
+      year: Number(parts.find(part => part.type === 'year')?.value),
+      month: Number(parts.find(part => part.type === 'month')?.value) - 1,
+      day: Number(parts.find(part => part.type === 'day')?.value)
+    };
+  }
 
-    let date: Date;
+  private activityAmount(value: string | number | undefined): number {
+    const amount = Number(String(value ?? '').replace(/,/g, '').trim());
+    return Number.isSafeInteger(amount) ? amount : 0;
+  }
 
-    if (typeof value.toDate === 'function') {
-      date = value.toDate();
-    } else if (typeof value.seconds === 'number') {
-      date = new Date(value.seconds * 1000);
-    } else {
-      date = new Date(value);
+  private activityStockChange(detail: string, units: string): number | undefined {
+    const change = detail.match(new RegExp(
+      String.raw`:\s*([+-]?\d[\d,]*)(?:\s*(?:→|->)\s*([\d,]+))?\s*(?:${units})\b`,
+      'i'
+    ));
+    if (!change) return undefined;
+
+    const first = this.activityAmount(change[1]);
+    return change[2] === undefined ? first : this.activityAmount(change[2]) - first;
+  }
+
+  private getActivityProduction(activity: Activity): ProductionTotals {
+    const totals: ProductionTotals = { silkworms: 0, products: 0, cocoons: 0 };
+    const detail = activity.detail || '';
+    const message = activity.message.trim().toLowerCase();
+
+    if (
+      message === 'cocoon inventory updated' ||
+      message === 'regional cocoon inventory updated' ||
+      message === 'cocoon region added'
+    ) {
+      // Historical cocoon logs can include a quality transfer counted as new stock.
+      const changes = Array.from(detail.matchAll(
+        /(?:^|,\s*|—\s*)(?:Good|Minor|Not usable|Reject):\s*([+-]?\d[\d,]*)(?:\s*(?:→|->)\s*([\d,]+))?\s*(?=,|$)/gi
+      ));
+      if (changes.length === 3 || (!activity.productionDelta && changes.length > 0)) {
+        const change = changes.reduce((sum, match) => {
+          const first = this.activityAmount(match[1]);
+          return sum + (match[2] === undefined ? first : this.activityAmount(match[2]) - first);
+        }, 0);
+        return { ...totals, cocoons: Math.max(0, change) };
+      }
     }
 
-    return Number.isFinite(date.getTime())
-      ? date
-      : null;
-  }
-
-  private signedAmount(
-    value: string
-  ): number {
-    const amount = Number(
-      String(value).replace(/,/g, '').trim()
-    );
-
-    return Number.isFinite(amount)
-      ? amount
-      : 0;
-  }
-
-  private getActivityProduction(
-    activity: Activity
-  ): ProductionTotals {
-    const totals: ProductionTotals = {
-      silkworms: 0,
-      products: 0,
-      cocoons: 0
-    };
-
-    // Prefer numeric values stored with newer
-    // inventory activity records.
     if (activity.productionDelta) {
       return {
-        silkworms: Math.max(
-          0,
-          Number(activity.productionDelta.silkworms) || 0
-        ),
-        products: Math.max(
-          0,
-          Number(activity.productionDelta.products) || 0
-        ),
-        cocoons: Math.max(
-          0,
-          Number(activity.productionDelta.cocoons) || 0
-        )
+        silkworms: Math.max(0, this.activityAmount(activity.productionDelta.silkworms)),
+        products: Math.max(0, this.activityAmount(activity.productionDelta.products)),
+        cocoons: Math.max(0, this.activityAmount(activity.productionDelta.cocoons))
       };
     }
 
-    // Compatibility with older Firebase activity
-    // records that stored changes as text.
-    const detail = activity.detail || '';
-    const message = activity.message
-      .trim()
-      .toLowerCase();
-
+    // Some older activity records only contain a readable description.
     if (message === 'silkworm species added') {
-      const match = detail.match(
-        /—\s*([\d,]+)\s*worms/i
-      );
-
-      if (match) {
-        totals.silkworms =
-          this.signedAmount(match[1]);
-      }
-    }
-
-    if (message === 'silkworm stock adjusted') {
-      const match = detail.match(
-        /:\s*([+-]?\d[\d,]*)\s*worms/i
-      );
-
-      if (match) {
-        totals.silkworms =
-          this.signedAmount(match[1]);
-      }
-    }
-
-    if (message === 'silk product added') {
-      const match = detail.match(
-        /—\s*([\d,]+)\s*(?:pcs|worms|cocoons)/i
-      );
-
-      if (match) {
-        totals.products =
-          this.signedAmount(match[1]);
-      }
-    }
-
-    if (message === 'product stock adjusted') {
-      const match = detail.match(
-        /:\s*([+-]?\d[\d,]*)\s*(?:pcs|worms|cocoons)/i
-      );
-
-      if (match) {
-        totals.products =
-          this.signedAmount(match[1]);
-      }
-    }
-
-    if (message === 'cocoon inventory updated') {
-      // Old records: Good: +10, Minor: +5.
-      const oldGood = detail.match(
-        /Good:\s*([+-]?\d[\d,]*)\s*(?:,|$)/i
-      );
-
-      const oldMinor = detail.match(
-        /Minor:\s*([+-]?\d[\d,]*)\s*(?:,|$)/i
-      );
-
-      const oldUnusable = detail.match(
-        /Not usable:\s*([+-]?\d[\d,]*)\s*(?:,|$)/i
-      );
-
-      const oldValues = [
-        oldGood,
-        oldMinor,
-        oldUnusable
-      ];
-
-      if (oldValues.some(Boolean)) {
-        totals.cocoons = oldValues.reduce(
-          (sum, match) =>
-            sum + (
-              match
-                ? Math.max(
-                    0,
-                    this.signedAmount(match[1])
-                  )
-                : 0
-            ),
-          0
-        );
-
-        return totals;
-      }
-
-      // Newer text format: Good: 10 → 15.
-      // Structured productionDelta takes priority.
-      const changes = [
-        /Good:\s*([\d,]+)\s*→\s*([\d,]+)/i,
-        /Minor:\s*([\d,]+)\s*→\s*([\d,]+)/i,
-        /Not usable:\s*([\d,]+)\s*→\s*([\d,]+)/i
-      ];
-
-      totals.cocoons = changes.reduce(
-        (sum, expression) => {
-          const match = detail.match(expression);
-
-          if (!match) return sum;
-
-          return sum + Math.max(
-            0,
-            this.signedAmount(match[2]) -
-              this.signedAmount(match[1])
-          );
-        },
-        0
-      );
+      const match = detail.match(/—\s*([\d,]+)\s*worms\b/i);
+      totals.silkworms = this.activityAmount(match?.[1]);
+    } else if (message === 'silkworm stock adjusted') {
+      totals.silkworms = Math.max(0, this.activityStockChange(detail, 'worms') ?? 0);
+    } else if (message === 'silk product added') {
+      const match = detail.match(/—\s*([\d,]+)\s*(?:pcs|worms|cocoons)\b/i);
+      totals.products = this.activityAmount(match?.[1]);
+    } else if (message === 'product stock adjusted') {
+      totals.products = Math.max(0, this.activityStockChange(detail, 'pcs|worms|cocoons') ?? 0);
     }
 
     return totals;
   }
 
-  private sameGraphPeriod(
-    date: Date,
-    target: Date
-  ): boolean {
-    if (
-      date.getFullYear() !== target.getFullYear() ||
-      date.getMonth() !== target.getMonth()
-    ) {
-      return false;
+  private getProductionGraph(): { points: ProductionPoint[]; maximum: number } {
+    const now = new Date();
+    const day = this.productionDayFormat.format(now);
+    const period = this.productionPeriod;
+    const cached = this.productionGraphCache;
+    if (cached?.activities === this.activities && cached.period === period && cached.day === day) {
+      return cached;
     }
 
-    return (
-      this.productionPeriod === 'monthly' ||
-      date.getDate() === target.getDate()
-    );
-  }
+    const today = this.productionCalendarDate(now);
+    const daily = period === 'daily';
+    const count = daily ? 7 : 6;
+    const periodKey = (year: number, month: number, date: number): string =>
+      daily ? `${year}-${month}-${date}` : `${year}-${month}`;
 
-  private graphTotalsFor(
-    target: Date
-  ): ProductionTotals {
-    const totals: ProductionTotals = {
-      silkworms: 0,
-      products: 0,
-      cocoons: 0
-    };
+    const points: ProductionPoint[] = Array.from({ length: count }, (_, index) => {
+      const offset = count - index - 1;
+      const date = new Date(Date.UTC(
+        today.year,
+        daily ? today.month : today.month - offset,
+        daily ? today.day - offset : 1
+      ));
+      return {
+        silkworms: 0,
+        products: 0,
+        cocoons: 0,
+        date,
+        label: this.productionLabelFormats[period].format(date),
+        x: this.graphLeft + index * (this.graphRight - this.graphLeft) / (count - 1)
+      };
+    });
+
+    const byPeriod = new Map(points.map(point => [
+      periodKey(point.date.getUTCFullYear(), point.date.getUTCMonth(), point.date.getUTCDate()),
+      point
+    ]));
 
     for (const activity of this.activities) {
-      const date = this.productionDate(
-        activity.createdAt
-      );
+      const milliseconds = this.toMillis(activity.createdAt);
+      if (!Number.isFinite(milliseconds) || milliseconds <= 0) continue;
 
-      if (
-        !date ||
-        !this.sameGraphPeriod(date, target)
-      ) {
-        continue;
-      }
+      const date = this.productionCalendarDate(new Date(milliseconds));
+      const point = byPeriod.get(periodKey(date.year, date.month, date.day));
+      if (!point) continue;
 
-      const amounts =
-        this.getActivityProduction(activity);
-
-      totals.silkworms += Math.max(
-        0,
-        amounts.silkworms
-      );
-
-      totals.products += Math.max(
-        0,
-        amounts.products
-      );
-
-      totals.cocoons += Math.max(
-        0,
-        amounts.cocoons
-      );
+      const amounts = this.getActivityProduction(activity);
+      point.silkworms += amounts.silkworms;
+      point.products += amounts.products;
+      point.cocoons += amounts.cocoons;
     }
 
-    return totals;
+    const peak = Math.max(...points.flatMap(point => [point.silkworms, point.products, point.cocoons]));
+    const rawStep = Math.max(1, peak / 4);
+    const magnitude = 10 ** Math.floor(Math.log10(rawStep));
+    const step = ([1, 2, 5, 10].find(value => value * magnitude >= rawStep) ?? 10) * magnitude;
+    const maximum = step * 4;
+
+    this.productionGraphCache = { activities: this.activities, period, day, points, maximum };
+    return this.productionGraphCache;
   }
 
   get graphData(): ProductionPoint[] {
-    const today = new Date();
-
-    const count =
-      this.productionPeriod === 'daily'
-        ? 7
-        : 6;
-
-    const results: ProductionPoint[] = [];
-
-    for (let index = 0; index < count; index++) {
-      const target = new Date(today);
-
-      if (this.productionPeriod === 'daily') {
-        target.setDate(
-          today.getDate() - (count - index - 1)
-        );
-      } else {
-        target.setDate(1);
-        target.setMonth(
-          today.getMonth() - (count - index - 1)
-        );
-      }
-
-      const totals =
-        this.graphTotalsFor(target);
-
-      const label =
-        this.productionPeriod === 'daily'
-          ? target.toLocaleDateString(
-              'en-PH',
-              {
-                month: 'short',
-                day: 'numeric'
-              }
-            )
-          : target.toLocaleDateString(
-              'en-PH',
-              {
-                month: 'short',
-                year: '2-digit'
-              }
-            );
-
-      results.push({
-        ...totals,
-        date: target,
-        label,
-        x:
-          this.graphLeft +
-          index *
-            (this.graphRight - this.graphLeft) /
-            (count - 1)
-      });
-    }
-
-    return results;
+    return this.getProductionGraph().points;
   }
 
   get graphMaximum(): number {
-    const values = this.graphData.flatMap(
-      point => [
-        point.silkworms,
-        point.products,
-        point.cocoons
-      ]
-    );
-
-    const maximum = Math.max(0, ...values);
-
-    if (maximum <= 0) return 4;
-
-    const magnitude = Math.pow(
-      10,
-      Math.floor(Math.log10(maximum))
-    );
-
-    const step = magnitude / 2;
-
-    return Math.ceil(maximum / step) * step;
+    return this.getProductionGraph().maximum;
   }
 
   graphY(value: number): number {
@@ -3909,3 +3941,9 @@ export class Inventory implements OnInit, OnDestroy {
     });
   }
 }
+
+
+
+
+
+

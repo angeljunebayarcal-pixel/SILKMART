@@ -23,6 +23,8 @@ import {
   onAuthStateChanged
 } from '@angular/fire/auth';
 
+import { Firestore, collection, onSnapshot, orderBy, query } from '@angular/fire/firestore';
+
 import { Subscription, filter } from 'rxjs';
 
 import {
@@ -70,6 +72,8 @@ export class TopbarAdm implements OnInit, OnDestroy {
   private currentUserId = '';
 
   private currentOrders: SilkMartOrder[] = [];
+  private submissionNoticeIds: string[] = [];
+  private stopSubmissions?: () => void;
 
   private messagesByOrder:
     Record<string, OrderChatMessage[]> = {};
@@ -99,7 +103,8 @@ export class TopbarAdm implements OnInit, OnDestroy {
     private chatService: OrderChatServ,
     private cdr: ChangeDetectorRef,
     private injector: Injector,
-    private zone: NgZone
+    private zone: NgZone,
+    private firestore: Firestore
   ) {}
 
   ngOnInit(): void {
@@ -162,11 +167,13 @@ export class TopbarAdm implements OnInit, OnDestroy {
 
             this.notificationCount = 0;
             this.currentOrders = [];
+            this.submissionNoticeIds = [];
             this.messagesByOrder = {};
 
             if (user) {
               this.listenToProfile(user.uid);
               this.listenToOrders(this.accountSession);
+              this.listenToSubmissions(this.accountSession);
             }
 
             this.refresh();
@@ -236,12 +243,38 @@ export class TopbarAdm implements OnInit, OnDestroy {
             }
 
             this.currentOrders = [];
-            this.notificationCount = 0;
-            this.refresh();
+            this.updateNotificationCount();
           });
         }
       })
     );
+  }
+
+  private listenToSubmissions(session: number): void {
+    this.stopSubmissions = runInInjectionContext(this.injector, () => onSnapshot(
+      query(collection(this.firestore, 'admin_notifications'), orderBy('createdAt', 'desc')),
+      snapshot => this.zone.run(() => {
+        if (session !== this.accountSession) return;
+
+        const ids: string[] = [];
+        for (const entry of snapshot.docs) {
+          const type = entry.get('type');
+          if (type === 'staff_registration' || type === 'visit_request' || type === 'job_application') {
+            ids.push(`submission:${entry.id}`);
+          }
+        }
+
+        this.submissionNoticeIds = ids;
+        this.updateNotificationCount();
+      }),
+      error => this.zone.run(() => {
+        if (session !== this.accountSession) return;
+
+        console.error('Unable to count submission notifications:', error);
+        this.submissionNoticeIds = [];
+        this.updateNotificationCount();
+      })
+    ));
   }
 
   private syncChatListeners(session: number): void {
@@ -426,6 +459,10 @@ export class TopbarAdm implements OnInit, OnDestroy {
 
     const today = this.localDate(new Date());
     const tomorrow = this.tomorrow();
+
+    for (const id of this.submissionNoticeIds) {
+      addIfUnread(id);
+    }
 
     for (const order of this.currentOrders) {
       const raw = order as SilkMartOrder & {
@@ -620,6 +657,8 @@ export class TopbarAdm implements OnInit, OnDestroy {
   private stopDataListeners(): void {
     this.ordersSubscription?.unsubscribe();
     this.ordersSubscription = null;
+    this.stopSubmissions?.();
+    this.stopSubmissions = undefined;
 
     for (const subscription of
       this.chatSubscriptions.values()) {

@@ -625,3 +625,26 @@ button {
     transition: none !important;
   }
 }
+
+.notification-icon.submission {
+  background: #e8edfa;
+  color: #3c5084;
+}
+
+.submission-error {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid #ead7d2;
+  background: #fff5f1;
+  color: #8b3e34;
+  font-size: 12px;
+}
+
+.submission-error p {
+  flex: 1 1 200px;
+  margin: 0;
+  line-height: 1.5;
+}

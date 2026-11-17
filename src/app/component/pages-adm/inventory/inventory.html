@@ -1,4 +1,3 @@
-
 <div class="inventory-page">
   <!-- PAGE HEADER -->
   <header class="page-heading">
@@ -7,12 +6,14 @@
       <h1>Inventory Management</h1>
       <p>Manage silkworm stocks, cocoons, and silk products.</p>
     </div>
+
     <button type="button" class="outline-button production-statistics-button"
+      [disabled]="!inventoryReady || !activityReady"
       (click)="openProductionStatistics()" title="Daily and Monthly Production Statistics">
-      <svg viewBox="0 0 24 24" width="18" height="18" fill="none"
-        stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"
+        stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
         <path d="M4 20V12"/>
-        <path d="M10 20V7"/>
+        <path d="M10 20V8"/>
         <path d="M16 20V4"/>
         <path d="M22 20H2"/>
       </svg>
@@ -21,959 +22,966 @@
   </header>
 
   <!-- FIREBASE STATUS -->
-  <div class="inventory-loading" *ngIf="loading">
-    Loading your inventory from Firebase...
-  </div>
-  <div class="inventory-error" *ngIf="errorMessage">
-    <span>{{ errorMessage }}</span>
-    <button type="button" (click)="reload()">Retry</button>
-  </div>
+  @if (loading || inventorySyncing) {
+    <div class="inventory-loading" role="status">
+      {{ inventorySyncing ? 'Showing last synced inventory. Checking for updates…' : 'Loading inventory…' }}
+    </div>
+  }
 
-  <!-- FIVE SUMMARY CARDS -->
-  <section class="summary-grid">
-    <div class="summary-card">
-      <div class="summary-icon">
-        <svg viewBox="0 0 48 48" width="30" height="30" fill="none"
-          stroke="currentColor" stroke-width="2.4" stroke-linecap="round"
-          stroke-linejoin="round" aria-hidden="true">
-          <path d="M8 28C7 19 14 13 21 13c8 0 13 5 12 11-1 5-8 8-11 12"/>
-          <path d="M11 20l7 5M19 14l5 7M28 15l1 7M11 29l7 1"/>
-          <circle cx="36" cy="23" r="6"/>
-          <circle cx="38" cy="21" r="1" fill="currentColor" stroke="none"/>
-        </svg>
+  @if (loading) {
+    <div class="inventory-placeholder" aria-hidden="true">
+      <div class="summary-grid">
+        <div></div>
+        <div></div>
+        <div></div>
+        <div></div>
+        <div></div>
       </div>
-      <div>
-        <span>Total Silkworms</span>
-        <strong>{{ totalSilkworms | number }}</strong>
-        <small>Across all batches</small>
+      <div class="inventory-layout">
+        <div></div>
+        <div></div>
       </div>
     </div>
+  }
 
-    <div class="summary-card">
-      <div class="summary-icon">◈</div>
-      <div>
-        <span>Active Species</span>
-        <strong>{{ species.length }}</strong>
-        <small>Species / batches tracked</small>
-      </div>
+  @if (errorMessage) {
+    <div class="inventory-error">
+      <span>{{ errorMessage }}</span>
+      @if (currentUserId) {
+        <button type="button" (click)="reload()">Retry</button>
+      }
     </div>
+  }
 
-    <div class="summary-card">
-      <div class="summary-icon">
-        <svg viewBox="0 0 48 48" width="29" height="29" fill="none"
-          stroke="currentColor" stroke-width="2.2" aria-hidden="true">
-          <ellipse cx="16" cy="23" rx="9" ry="14" transform="rotate(-16 16 23)"/>
-          <ellipse cx="32" cy="26" rx="9" ry="13" transform="rotate(18 32 26)"/>
-          <path d="M11 17l9 11M27 21l9 10" stroke-width="1.5"/>
-        </svg>
+  @if (inventoryReady) {
+    <!-- SUMMARY CARDS -->
+    <section class="summary-grid">
+      <div class="summary-card">
+        <div class="summary-icon">
+          <svg viewBox="0 0 48 48" width="30" height="30" fill="none" stroke="currentColor"
+            stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M8 28C7 19 14 13 21 13c8 0 13 5 12 11-1 5-8 8-11 12"/>
+            <path d="M11 20l7 5M19 14l5 7M28 15l1 7M11 29l7 1"/>
+            <circle cx="36" cy="23" r="6"/>
+            <circle cx="38" cy="21" r="1" fill="currentColor" stroke="none"/>
+          </svg>
+        </div>
+        <div>
+          <span>Total Silkworms</span>
+          <strong>{{ totalSilkworms | number }}</strong>
+          <small>Across all batches</small>
+        </div>
       </div>
-      <div>
-        <span>Available Cocoons</span>
-        <strong>{{ availableCocoons | number }}</strong>
-        <small>Good-quality, unreserved</small>
+
+      <div class="summary-card">
+        <div class="summary-icon">◈</div>
+        <div>
+          <span>Active Species</span>
+          <strong>{{ species.length }}</strong>
+          <small>Species / batches tracked</small>
+        </div>
       </div>
-    </div>
 
-    <div class="summary-card">
-      <div class="summary-icon">▤</div>
-      <div>
-        <span>Silk Products</span>
-        <strong>{{ totalSilkProducts | number }}</strong>
-        <small>Total units in product catalog stock</small>
+      <div class="summary-card">
+        <div class="summary-icon">
+          <svg viewBox="0 0 48 48" width="29" height="29" fill="none" stroke="currentColor"
+            stroke-width="2.2" aria-hidden="true">
+            <ellipse cx="16" cy="23" rx="9" ry="14" transform="rotate(-16 16 23)"/>
+            <ellipse cx="32" cy="26" rx="9" ry="13" transform="rotate(18 32 26)"/>
+            <path d="M11 17l9 11M27 21l9 10" stroke-width="1.5"/>
+          </svg>
+        </div>
+        <div>
+          <span>Available Cocoons</span>
+          <strong>{{ availableCocoons | number }}</strong>
+          <small>Good-quality, unreserved</small>
+        </div>
       </div>
-    </div>
 
-    <button type="button" class="summary-card alert-summary" (click)="showAlerts()">
-      <div class="summary-icon alert-icon">!</div>
-      <div>
-        <span>Low Stock Alerts</span>
-        <strong>{{ lowStockCount }}</strong>
-        <small>Records requiring attention</small>
+      <div class="summary-card">
+        <div class="summary-icon">▤</div>
+        <div>
+          <span>Silk Products</span>
+          <strong>{{ totalSilkProducts | number }}</strong>
+          <small>Total units in product catalog stock</small>
+        </div>
       </div>
-    </button>
-  </section>
 
-  <!-- MAIN INVENTORY LAYOUT -->
-  <div class="inventory-layout">
-    <div class="inventory-main">
+      <button type="button" class="summary-card alert-summary" (click)="showAlerts()">
+        <div class="summary-icon alert-icon">!</div>
+        <div>
+          <span>Low Stock Alerts</span>
+          <strong>{{ lowStockCount }}</strong>
+          <small>Records requiring attention</small>
+        </div>
+      </button>
+    </section>
 
-      <!-- SILKWORM SPECIES -->
-      <section class="inventory-card">
-        <div class="card-heading">
-          <div class="heading-title">
-            <div class="section-icon">
-              <svg viewBox="0 0 48 48" width="30" height="30" fill="none"
-                stroke="currentColor" stroke-width="2.4"
-                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M8 28C7 19 14 13 21 13c8 0 13 5 12 11-1 5-8 8-11 12"/>
-                <path d="M11 20l7 5M19 14l5 7M28 15l1 7M11 29l7 1"/>
-                <circle cx="36" cy="23" r="6"/>
-                <circle cx="38" cy="21" r="1" fill="currentColor" stroke="none"/>
-              </svg>
+    <!-- MAIN INVENTORY LAYOUT -->
+    <div class="inventory-layout">
+      <div class="inventory-main">
+        <!-- SILKWORM SPECIES -->
+        <section class="inventory-card">
+          <div class="card-heading">
+            <div class="heading-title">
+              <div class="section-icon">
+                <svg viewBox="0 0 48 48" width="30" height="30" fill="none" stroke="currentColor"
+                  stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M8 28C7 19 14 13 21 13c8 0 13 5 12 11-1 5-8 8-11 12"/>
+                  <path d="M11 20l7 5M19 14l5 7M28 15l1 7M11 29l7 1"/>
+                  <circle cx="36" cy="23" r="6"/>
+                  <circle cx="38" cy="21" r="1" fill="currentColor" stroke="none"/>
+                </svg>
+              </div>
+              <div>
+                <h2>Silkworm Species</h2>
+                <p>Monitor silkworm quantities, varieties, and lifecycle stages.</p>
+              </div>
             </div>
-            <div>
-              <h2>Silkworm Species</h2>
-              <p>Monitor silkworm quantities, varieties, and lifecycle stages.</p>
-            </div>
+            <button type="button" class="primary-button"
+              [disabled]="inventorySyncing || !!errorMessage" (click)="openAddSpecies()">+ Add Species</button>
           </div>
-          <button type="button" class="primary-button" (click)="openAddSpecies()">
-            + Add Species
-          </button>
-        </div>
 
-        <div class="table-toolbar">
-          <label class="search-box">
-            <span>⌕</span>
-            <input type="search" placeholder="Search silkworms..."
-              [(ngModel)]="searchSpecies">
-          </label>
-          <span class="record-count">{{ filteredSpecies.length }} records</span>
-        </div>
-
-        <div class="table-scroll">
-          <table>
-            <thead>
-              <tr>
-                <th>Species / Batch</th>
-                <th>Lifecycle Stage</th>
-                <th>Quantity</th>
-                <th>Condition</th>
-                <th>Availability</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let item of filteredSpecies">
-                <td>
-                  <div class="item-name">
-                    <div class="item-avatar worm-avatar">
-                      <img *ngIf="item.imageUrl" [src]="item.imageUrl"
-                        [alt]="item.name" class="inventory-item-image">
-                      <span *ngIf="!item.imageUrl">♧</span>
-                    </div>
-                    <div>
-                      <strong>{{ item.name }}</strong>
-                      <small>{{ item.scientificName || 'No description' }}</small>
-                    </div>
-                  </div>
-                </td>
-                <td>
-                  <span class="stage-badge">{{ item.stage }}</span>
-                </td>
-                <td class="quantity-cell">{{ item.quantity | number }}</td>
-                <td>
-                  <span class="condition-dot"
-                    [class.condition-monitoring]="item.condition === 'Monitoring'"
-                    [class.condition-quarantined]="item.condition === 'Quarantined'">
-                  </span>
-                  {{ item.condition }}
-                </td>
-                <td>
-                  <span class="stock-badge"
-                    [ngClass]="getStockClass(item.quantity, item.threshold)">
-                    {{ getStockLabel(item.quantity, item.threshold) }}
-                  </span>
-                </td>
-                <td>
-                  <div class="action-group">
-                    <button type="button" class="table-action sell-species-action"
-                      [class.already-listed]="isSpeciesInProducts(item)"
-                      [disabled]="saving || item.quantity <= 0 || isSpeciesInProducts(item)"
-                      (click)="addSpeciesToProducts(item)"
-                      [title]="isSpeciesInProducts(item) ? 'Already added to Product Management' : 'Add this species for sale'">
-                      {{ isSpeciesInProducts(item) ? 'Listed' : '+ Add to Products' }}
-                    </button>
-                    <button type="button" class="table-action"
-                      [disabled]="saving" (click)="adjustSpecies(item)">Stock</button>
-                    <button type="button" class="table-action"
-                      [disabled]="saving" (click)="openEditSpecies(item)">Edit</button>
-                    <button type="button" class="table-action delete-action"
-                      [disabled]="saving" (click)="deleteSpecies(item)">Delete</button>
-                  </div>
-                </td>
-              </tr>
-              <tr *ngIf="filteredSpecies.length === 0">
-                <td colspan="6" class="empty-table">
-                  No silkworms added yet. Click Add Species to create a record.
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      <!-- PRODUCTS INVENTORY -->
-      <section class="inventory-card">
-        <div class="card-heading">
-          <div class="heading-title">
-            <div class="section-icon">▤</div>
-            <div>
-              <h2>Silk Products Inventory</h2>
-              <p>Shared with Product Management in Firebase.</p>
-            </div>
+          <div class="table-toolbar">
+            <label class="search-box">
+              <span>⌕</span>
+              <input type="search" placeholder="Search silkworms..." [(ngModel)]="searchSpecies">
+            </label>
+            <span class="record-count">{{ filteredSpecies.length }} records</span>
           </div>
-          <button type="button" class="primary-button" (click)="openAddProduct()">
-            + Add Product
-          </button>
-        </div>
 
-        <div class="table-toolbar">
-          <label class="search-box">
-            <span>⌕</span>
-            <input type="search" placeholder="Search products, silkworms, cocoons..."
-              [(ngModel)]="searchProducts">
-          </label>
-          <select class="filter-select" [(ngModel)]="productFilter">
-            <option value="All">All Categories</option>
-            <option *ngFor="let category of productCategoryOptions" [value]="category">
-              {{ category }}
-            </option>
-          </select>
-        </div>
+          <div class="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>Species / Batch</th>
+                  <th>Lifecycle Stage</th>
+                  <th>Quantity</th>
+                  <th>Condition</th>
+                  <th>Availability</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (item of filteredSpecies; track item.id) {
+                  <tr>
+                    <td>
+                      <div class="item-name">
+                        <div class="item-avatar worm-avatar">
+                          @if (item.imageUrl) {
+                            <img [src]="item.imageUrl" [alt]="item.name" class="inventory-item-image">
+                          }
+                          @if (!item.imageUrl) {
+                            <span>♧</span>
+                          }
+                        </div>
+                        <div>
+                          <strong>{{ item.name }}</strong>
+                          <small>{{ item.scientificName || 'No description' }}</small>
+                        </div>
+                      </div>
+                    </td>
+                    <td><span class="stage-badge">{{ item.stage }}</span></td>
+                    <td class="quantity-cell">{{ item.quantity | number }}</td>
+                    <td>
+                      <span class="condition-dot"
+                        [class.condition-monitoring]="item.condition === 'Monitoring'"
+                        [class.condition-quarantined]="item.condition === 'Quarantined'"></span>
+                      {{ item.condition }}
+                    </td>
+                    <td>
+                      <span class="stock-badge" [ngClass]="getStockClass(item.quantity, item.threshold)">
+                        {{ getStockLabel(item.quantity, item.threshold) }}
+                      </span>
+                    </td>
+                    <td>
+                      <div class="action-group">
+                        <button type="button" class="table-action sell-species-action"
+                          [class.already-listed]="isSpeciesInProducts(item)"
+                          [disabled]="saving || inventorySyncing || !!errorMessage || item.quantity <= 0 || isSpeciesInProducts(item)"
+                          (click)="addSpeciesToProducts(item)"
+                          [title]="isSpeciesInProducts(item) ? 'Already added to Product Management' : 'Add this species to products'">
+                          {{ isSpeciesInProducts(item) ? 'Listed' : '+ Add to Products' }}
+                        </button>
+                        <button type="button" class="table-action"
+                          [disabled]="saving || inventorySyncing || !!errorMessage" (click)="adjustSpecies(item)">Stock</button>
+                        <button type="button" class="table-action"
+                          [disabled]="saving || inventorySyncing || !!errorMessage" (click)="openEditSpecies(item)">Edit</button>
+                        <button type="button" class="table-action delete-action"
+                          [disabled]="saving || inventorySyncing || !!errorMessage" (click)="deleteSpecies(item)">Delete</button>
+                      </div>
+                    </td>
+                  </tr>
+                }
+                @if (filteredSpecies.length === 0) {
+                  <tr>
+                    <td colspan="6" class="empty-table">
+                      No silkworms added yet. Click Add Species to create a record.
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </section>
 
-        <div class="table-scroll">
-          <table>
-            <thead>
-              <tr>
-                <th>Product</th>
-                <th>Category</th>
-                <th>Stock Quantity</th>
-                <th>Price</th>
-                <th>Status</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let item of filteredProducts">
-                <td>
-                  <div class="item-name">
-                    <div class="item-avatar product-avatar">
-                      <img *ngIf="item.imageUrl" [src]="item.imageUrl"
-                        [alt]="item.name" class="inventory-item-image">
-                      <span *ngIf="!item.imageUrl">▤</span>
-                    </div>
-                    <div>
-                      <strong>{{ item.name }}</strong>
-                      <small>{{ item.description || 'No description' }}</small>
-                    </div>
-                  </div>
-                </td>
-                <td>
-                  <span class="category-badge">{{ item.category }}</span>
-                </td>
-                <td class="quantity-cell">
-                  {{ item.quantity | number }}
-                  <small>{{ item.unit }}</small>
-                </td>
-                <td>{{ item.price | currency:'PHP':'symbol':'1.2-2' }}</td>
-                <td>
-                  <span class="stock-badge"
-                    [ngClass]="getStockClass(item.quantity, item.threshold)">
-                    {{ getStockLabel(item.quantity, item.threshold) }}
-                  </span>
-                  <small class="published-label" *ngIf="item.published">Published</small>
-                  <small class="draft-label" *ngIf="!item.published">Draft</small>
-                </td>
-                <td>
-                  <div class="action-group">
-                    <button type="button" class="table-action" [disabled]="saving"
-                      (click)="adjustProduct(item)">Stock</button>
-                    <button type="button" class="table-action" [disabled]="saving"
-                      (click)="openEditProduct(item)">Edit</button>
-                    <button type="button" class="table-action delete-action"
-                      [disabled]="saving" (click)="deleteProduct(item)">Delete</button>
-                  </div>
-                </td>
-              </tr>
-              <tr *ngIf="filteredProducts.length === 0">
-                <td colspan="6" class="empty-table">
-                  No products added yet. Click Add Product to create one.
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+        <!-- PRODUCTS INVENTORY -->
+        <section class="inventory-card">
+          <div class="card-heading">
+            <div class="heading-title">
+              <div class="section-icon">▤</div>
+              <div>
+                <h2>Silk Products Inventory</h2>
+                <p>Shared with Product Management in Firebase.</p>
+              </div>
+            </div>
+            <button type="button" class="primary-button"
+              [disabled]="inventorySyncing || !!errorMessage" (click)="openAddProduct()">+ Add Product</button>
+          </div>
 
-        <div class="inventory-footer-action">
-          <button type="button" class="outline-button"
-            (click)="goToProductManagement()">
-            Open Product Management ↗
-          </button>
-        </div>
-      </section>
+          <div class="table-toolbar">
+            <label class="search-box">
+              <span>⌕</span>
+              <input type="search" placeholder="Search products, silkworms, cocoons..." [(ngModel)]="searchProducts">
+            </label>
+            <select class="filter-select" [(ngModel)]="productFilter">
+              <option value="All">All Categories</option>
+              @for (category of productCategoryOptions; track category) {
+                <option [value]="category">{{ category }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>Product</th>
+                  <th>Category</th>
+                  <th>Stock Quantity</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (item of filteredProducts; track item.id) {
+                  <tr>
+                    <td>
+                      <div class="item-name">
+                        <div class="item-avatar product-avatar">
+                          @if (item.imageUrl) {
+                            <img [src]="item.imageUrl" [alt]="item.name" class="inventory-item-image">
+                          }
+                          @if (!item.imageUrl) {
+                            <span>▤</span>
+                          }
+                        </div>
+                        <div>
+                          <strong>{{ item.name }}</strong>
+                          <small>{{ item.description || 'No description' }}</small>
+                        </div>
+                      </div>
+                    </td>
+                    <td><span class="category-badge">{{ item.category }}</span></td>
+                    <td class="quantity-cell">
+                      {{ item.quantity | number }}
+                      <small>{{ item.unit }}</small>
+                    </td>
+                    <td>
+                      <span class="stock-badge" [ngClass]="getStockClass(item.quantity, item.threshold)">
+                        {{ getStockLabel(item.quantity, item.threshold) }}
+                      </span>
+                      @if (item.published) {
+                        <small class="published-label">Published</small>
+                      }
+                      @if (!item.published) {
+                        <small class="draft-label">Draft</small>
+                      }
+                    </td>
+                    <td>
+                      <div class="action-group">
+                        <button type="button" class="table-action"
+                          [disabled]="saving || inventorySyncing || !!errorMessage" (click)="adjustProduct(item)">Stock</button>
+                        <button type="button" class="table-action"
+                          [disabled]="saving || inventorySyncing || !!errorMessage" (click)="openEditProduct(item)">Edit</button>
+                        <button type="button" class="table-action delete-action"
+                          [disabled]="saving || inventorySyncing || !!errorMessage" (click)="deleteProduct(item)">Delete</button>
+                      </div>
+                    </td>
+                  </tr>
+                }
+                @if (filteredProducts.length === 0) {
+                  <tr>
+                    <td colspan="5" class="empty-table">
+                      No products added yet. Click Add Product to create one.
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+
+          <div class="inventory-footer-action">
+            <button type="button" class="outline-button" (click)="goToProductManagement()">
+              Open Product Management ↗
+            </button>
+          </div>
+        </section>
+      </div>
+
+      <!-- COCOON INVENTORY AND ACTIVITY -->
+      <aside class="inventory-sidebar">
+        <ng-container *ngTemplateOutlet="cocoonCard; context: { $implicit: combinedCocoons, region: null }"></ng-container>
+
+        @if (cocoonRegions.length) {
+          <section class="inventory-card cocoon-batches">
+            <h2>Cocoon Regions</h2>
+            @for (region of cocoonRegions; track trackCocoonRegion($index, region)) {
+              <button type="button" class="cocoon-batch-row" aria-haspopup="dialog" (click)="openCocoonBatch(region)">
+                <span class="item-avatar cocoon-batch-avatar" aria-hidden="true">
+                  @if (region.imageUrl) {
+                    <img [src]="region.imageUrl" alt="" class="inventory-item-image">
+                  }
+                  @if (!region.imageUrl) {
+                    <span>◈</span>
+                  }
+                </span>
+                <span class="cocoon-batch-name">{{ region.name }}</span>
+                <span class="cocoon-batch-stock">{{ cocoonTotal(region) | number }} cocoons</span>
+                <span class="cocoon-batch-chevron" aria-hidden="true">›</span>
+              </button>
+            }
+          </section>
+        }
+
+        <section class="inventory-card activity-card">
+          <div class="card-heading">
+            <div class="heading-title">
+              <div class="section-icon">◷</div>
+              <div>
+                <h2>Recent Activity</h2>
+                <p>Latest inventory changes.</p>
+              </div>
+            </div>
+            <button type="button" class="activity-view-all" [disabled]="!activityReady" (click)="openAllActivity()">
+              View All
+            </button>
+          </div>
+
+          <div class="activity-list">
+            @for (activity of recentActivities; track activity.id) {
+              <div class="activity-item">
+                <div class="activity-symbol" [ngClass]="'activity-' + activity.type">
+                  {{ activity.type === 'remove' ? '−' : activity.type === 'edit' ? '✎' : '+' }}
+                </div>
+                <div class="activity-text">
+                  <strong>{{ activity.message }}</strong>
+                  <small>{{ activity.detail }}</small>
+                  <span>{{ formatDate(activity.createdAt) }}</span>
+                </div>
+              </div>
+            }
+            @if (activityLoading) {
+              <div class="no-activity" role="status">Loading inventory activity…</div>
+            }
+            @if (activityError) {
+              <div class="no-activity" role="status">
+                {{ activityError }}
+                <button type="button" class="activity-view-all" (click)="reload()">Retry</button>
+              </div>
+            }
+            @if (activityReady && recentActivities.length === 0) {
+              <div class="no-activity">No inventory activity yet.</div>
+            }
+          </div>
+        </section>
+
+        @if (stockAlerts.length > 0) {
+          <section class="inventory-card alert-list-card">
+            <div class="card-heading">
+              <div class="heading-title">
+                <div class="section-icon warning-icon">!</div>
+                <div>
+                  <h2>Needs Attention</h2>
+                  <p>Inventory records with low stock.</p>
+                </div>
+              </div>
+            </div>
+            @for (item of stockAlerts; track $index) {
+              <div class="alert-list-item">
+                <div>
+                  <strong>{{ item.name }}</strong>
+                  <small>Threshold: {{ item.threshold }} {{ item.unit }}</small>
+                </div>
+                <span>{{ item.quantity }} left</span>
+              </div>
+            }
+          </section>
+        }
+      </aside>
     </div>
+  }
 
-    <!-- RIGHT SIDE -->
-    <aside class="inventory-sidebar">
-      <!-- COCOON INVENTORY -->
-      <section class="inventory-card cocoon-card">
-        <div class="card-heading">
-          <div class="heading-title">
-            <button type="button" class="section-icon cocoon-icon-button"
-              title="Edit cocoon inventory" aria-label="Edit cocoons"
-              (click)="openCocoonEditor()">
-              <img *ngIf="cocoons.imageUrl" [src]="cocoons.imageUrl"
-                alt="Cocoons" class="cocoon-icon-image">
-              <span *ngIf="!cocoons.imageUrl">
-                <svg viewBox="0 0 48 48" width="29" height="29" fill="none"
-                  stroke="currentColor" stroke-width="2.2" aria-hidden="true">
-                  <ellipse cx="16" cy="23" rx="9" ry="14"
-                    transform="rotate(-16 16 23)"/>
-                  <ellipse cx="32" cy="26" rx="9" ry="13"
-                    transform="rotate(18 32 26)"/>
+  <!-- COCOON BATCH DETAILS -->
+  <dialog #cocoonBatchDialog class="cocoon-batch-dialog"
+    aria-labelledby="cocoon-batch-title" (close)="onCocoonBatchClosed()">
+    <button type="button" class="close-modal cocoon-batch-close" autofocus
+      aria-label="Close batch details" (click)="closeCocoonBatch()">×</button>
+    @if (selectedCocoonRegion; as region) {
+      <ng-container *ngTemplateOutlet="cocoonCard; context: { $implicit: region, region: region }"></ng-container>
+    }
+  </dialog>
+
+  <ng-template #cocoonCard let-stock let-region="region">
+    <section class="inventory-card cocoon-card" [class.cocoon-batch-details]="region">
+      <div class="card-heading">
+        <div class="heading-title">
+          <button type="button" class="section-icon cocoon-icon-button"
+            [attr.aria-label]="region ? 'Edit cocoons for ' + region.name : 'Add cocoon region'"
+            [disabled]="saving || processingImage || inventorySyncing || !!errorMessage"
+            (click)="region ? openCocoonEditor(region) : addCocoonRegion()">
+            @if (stock.imageUrl) {
+              <img [src]="stock.imageUrl" alt="Cocoons" class="cocoon-icon-image">
+            }
+            @if (!stock.imageUrl) {
+              <span>
+                <svg viewBox="0 0 48 48" width="29" height="29" fill="none" stroke="currentColor"
+                  stroke-width="2.2" aria-hidden="true">
+                  <ellipse cx="16" cy="23" rx="9" ry="14" transform="rotate(-16 16 23)"/>
+                  <ellipse cx="32" cy="26" rx="9" ry="13" transform="rotate(18 32 26)"/>
                 </svg>
               </span>
-            </button>
-            <div>
-              <h2>Cocoon Inventory</h2>
-              <p>Track production and quality.</p>
-            </div>
-          </div>
-        </div>
-
-        <div class="cocoon-metrics">
-          <div class="metric-tile">
-            <span>Total Cocoons</span>
-            <strong>{{ totalCocoons | number }}</strong>
-            <small>All recorded cocoons</small>
-          </div>
-          <div class="metric-tile">
-            <span>Good Quality</span>
-            <strong>{{ cocoons.good | number }}</strong>
-            <small>{{ cocoonQualityPercent }}% of stock</small>
-          </div>
-          <div class="metric-tile">
-            <span>Reserved</span>
-            <strong>{{ cocoons.reserved | number }}</strong>
-            <small>Good-quality cocoons</small>
-          </div>
-        </div>
-
-        <div class="quality-progress">
-          <div class="quality-progress-fill"
-            [style.width.%]="cocoonQualityPercent"></div>
-        </div>
-        <div class="quality-percent">
-          Good-quality cocoons
-          <strong>{{ cocoonQualityPercent }}%</strong>
-        </div>
-
-        <div class="quality-chart-panel">
-          <h3>Cocoon Quality Distribution</h3>
-          <div class="chart-area">
-            <div class="donut-chart" [style.--chart-fill]="cocoonChartStyle"
-              role="img"
-              [attr.aria-label]="'Good: ' + cocoons.good + ', Minor: ' + cocoons.minor + ', Unusable: ' + cocoons.unusable">
-              <div class="donut-center">
-                <strong>{{ totalCocoons | number }}</strong>
-                <small>Total</small>
-              </div>
-            </div>
-            <div class="chart-legend">
-              <div>
-                <span class="legend-dot good"></span>
-                <span>Good Quality</span>
-                <strong>{{ cocoons.good | number }}</strong>
-              </div>
-              <div>
-                <span class="legend-dot minor"></span>
-                <span>Minor Defects</span>
-                <strong>{{ cocoons.minor | number }}</strong>
-              </div>
-              <div>
-                <span class="legend-dot unusable"></span>
-                <span>Not Usable</span>
-                <strong>{{ cocoons.unusable | number }}</strong>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="cocoon-actions">
-          <button type="button" class="primary-button" [disabled]="saving"
-            (click)="openCocoonEditor()">
-            Edit Cocoons
+            }
           </button>
-          <button type="button" class="outline-button"
-            (click)="updateReservations()">
-            Manage Reserved
-          </button>
-        </div>
-      </section>
 
-      <!-- RECENT ACTIVITY -->
-      <section class="inventory-card activity-card">
-        <div class="card-heading">
-          <div class="heading-title">
-            <div class="section-icon">◷</div>
-            <div>
-              <h2>Recent Activity</h2>
-              <p>Latest inventory changes.</p>
-            </div>
-          </div>
-          <button type="button" class="activity-view-all"
-            (click)="openAllActivity()">View All</button>
-        </div>
-        <div class="activity-list">
-          <div class="activity-item" *ngFor="let activity of recentActivities">
-            <div class="activity-symbol" [ngClass]="'activity-' + activity.type">
-              {{
-                activity.type === 'remove' ? '−' :
-                activity.type === 'edit' ? '✎' : '+'
-              }}
-            </div>
-            <div class="activity-text">
-              <strong>{{ activity.message }}</strong>
-              <small>{{ activity.detail }}</small>
-              <span>{{ formatDate(activity.createdAt) }}</span>
-            </div>
-          </div>
-          <div class="no-activity" *ngIf="recentActivities.length === 0">
-            No inventory activity yet.
-          </div>
-        </div>
-      </section>
-
-      <!-- LOW STOCK -->
-      <section class="inventory-card alert-list-card" *ngIf="stockAlerts.length > 0">
-        <div class="card-heading">
-          <div class="heading-title">
-            <div class="section-icon warning-icon">!</div>
-            <div>
-              <h2>Needs Attention</h2>
-              <p>Inventory records with low stock.</p>
-            </div>
-          </div>
-        </div>
-        <div class="alert-list-item" *ngFor="let item of stockAlerts">
           <div>
-            <strong>{{ item.name }}</strong>
-            <small>Threshold: {{ item.threshold }} {{ item.unit }}</small>
+            <h2 [attr.id]="region ? 'cocoon-batch-title' : null">{{ region ? region.name : 'Cocoon Inventory' }}</h2>
+            <p>{{ region ? 'Cocoon Inventory' : 'Combined stock from all cocoon regions.' }}</p>
           </div>
-          <span>{{ item.quantity }} left</span>
         </div>
-      </section>
-    </aside>
-  </div>
+      </div>
+
+      <div class="cocoon-metrics">
+        <div class="metric-tile">
+          <span>Total Cocoons</span>
+          <strong>{{ cocoonTotal(stock) | number }}</strong>
+          <small>{{ region ? 'All cocoons in this region' : 'All cocoons across regions' }}</small>
+        </div>
+        <div class="metric-tile">
+          <span>Good Quality</span>
+          <strong>{{ stock.good | number }}</strong>
+          <small>{{ cocoonPercentLabel(stock.good, stock) }} of stock</small>
+        </div>
+        <div class="metric-tile">
+          <span>Reserved</span>
+          <strong>{{ stock.reserved | number }}</strong>
+          <small>Good-quality cocoons</small>
+        </div>
+      </div>
+
+      <div class="quality-progress">
+        <div class="quality-progress-fill" [style.width.%]="cocoonShare(stock.good, stock) * 100"></div>
+      </div>
+
+      <div class="quality-percent">
+        Good-quality cocoons
+        <strong>{{ cocoonPercentLabel(stock.good, stock) }}</strong>
+      </div>
+
+      <div class="quality-chart-panel">
+        <h3>Cocoon Quality Distribution</h3>
+        <div class="chart-area">
+          <div class="donut-chart" [style.--chart-fill]="cocoonChartStyle(stock)" role="img"
+            [attr.aria-label]="'Good: ' + stock.good + ', Minor: ' + stock.minor + ', Reject: ' + stock.unusable">
+            <div class="donut-center">
+              <strong>{{ cocoonTotal(stock) | number }}</strong>
+              <small>Total</small>
+            </div>
+          </div>
+          <div class="chart-legend">
+            <div>
+              <span class="legend-dot good"></span>
+              <span>Good Quality</span>
+              <strong>{{ stock.good | number }}</strong>
+              <span class="chart-percentage">{{ cocoonPercentLabel(stock.good, stock) }}</span>
+            </div>
+            <div>
+              <span class="legend-dot minor"></span>
+              <span>Minor Defects</span>
+              <strong>{{ stock.minor | number }}</strong>
+              <span class="chart-percentage">{{ cocoonPercentLabel(stock.minor, stock) }}</span>
+            </div>
+            <div>
+              <span class="legend-dot unusable"></span>
+              <span>Reject</span>
+              <strong>{{ stock.unusable | number }}</strong>
+              <span class="chart-percentage">{{ cocoonPercentLabel(stock.unusable, stock) }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="cocoon-actions">
+        <button type="button" class="primary-button"
+          [disabled]="saving || processingImage || inventorySyncing || !!errorMessage"
+          (click)="region ? openCocoonEditor(region) : addCocoonRegion()">{{ region ? 'Edit Cocoons' : '+ Add Region' }}</button>
+        <button type="button" class="outline-button"
+          [disabled]="saving || processingImage || inventorySyncing || !!errorMessage || (!region && !cocoonRegions.length)"
+          (click)="updateReservations(region)">Manage Reserved</button>
+      </div>
+    </section>
+  </ng-template>
 
   <!-- ADD / EDIT SPECIES OR PRODUCT -->
-  <div class="modal-backdrop" *ngIf="showEditor" (click)="closeEditor()">
-    <section class="editor-modal" role="dialog" aria-modal="true"
-      aria-labelledby="inventory-editor-title" (click)="$event.stopPropagation()">
-
-      <div class="modal-heading">
-        <div>
-          <div class="eyebrow">INVENTORY RECORD</div>
-          <h2 id="inventory-editor-title">
-            {{ editingId ? 'Edit' : 'Add' }}
-            {{ editorKind === 'species' ? 'Silkworm Species' : 'Product' }}
-          </h2>
-          <p>Information is saved in Firebase Firestore.</p>
-        </div>
-        <button type="button" class="close-modal"
-          [disabled]="saving || processingImage" (click)="closeEditor()">×</button>
-      </div>
-
-      <!-- SPECIES FORM -->
-      <form *ngIf="editorKind === 'species'" (ngSubmit)="saveEditor()">
-        <div class="form-grid">
-          <label class="full-field">
-            Species / Batch Name
-            <input type="text" name="speciesName" [(ngModel)]="speciesForm.name"
-              maxlength="100" required>
-          </label>
-          <label class="full-field">
-            Scientific Name / Description
-            <input type="text" name="scientificName"
-              [(ngModel)]="speciesForm.scientificName" maxlength="150">
-          </label>
-
-          <div class="full-field image-upload-field">
-            <label for="speciesImageUpload">Silkworm Image</label>
-            <input id="speciesImageUpload" type="file"
-              accept="image/jpeg,image/png,image/webp"
-              [disabled]="saving || processingImage"
-              (change)="onImageSelected($event, 'species')">
-            <small>JPG, PNG, or WebP. Compressed and saved in Firestore.</small>
-            <div class="inventory-form-preview" *ngIf="speciesForm.imageUrl">
-              <img [src]="speciesForm.imageUrl" alt="Silkworm preview">
-              <button type="button" class="remove-image-button"
-                [disabled]="saving || processingImage"
-                (click)="removeImage('species')">Remove Image</button>
-            </div>
+  @if (showEditor) {
+    <div class="modal-backdrop" (click)="closeEditor()">
+      <section class="editor-modal" role="dialog" aria-modal="true"
+        aria-labelledby="inventory-editor-title" (click)="$event.stopPropagation()">
+        <div class="modal-heading">
+          <div>
+            <div class="eyebrow">INVENTORY RECORD</div>
+            <h2 id="inventory-editor-title">
+              {{ editingId ? 'Edit' : 'Add' }}
+              {{ editorKind === 'species' ? 'Silkworm Species' : 'Product' }}
+            </h2>
+            <p>Information is saved in Firebase Firestore.</p>
           </div>
-
-          <label>
-            Lifecycle Stage
-            <select name="speciesStage" [(ngModel)]="speciesForm.stage">
-              <option *ngFor="let stage of stages" [value]="stage">
-                {{ stage }}
-              </option>
-            </select>
-          </label>
-          <label>
-            Condition
-            <select name="speciesCondition" [(ngModel)]="speciesForm.condition">
-              <option *ngFor="let condition of conditions" [value]="condition">
-                {{ condition }}
-              </option>
-            </select>
-          </label>
-          <label>
-            Current Quantity
-            <input type="number" name="speciesQuantity"
-              [(ngModel)]="speciesForm.quantity" min="0" step="1" required>
-          </label>
-          <label>
-            Low Stock Alert Threshold
-            <input type="number" name="speciesThreshold"
-              [(ngModel)]="speciesForm.threshold" min="0" step="1" required>
-          </label>
+          <button type="button" class="close-modal" [disabled]="saving || processingImage" (click)="closeEditor()">×</button>
         </div>
 
-        <div class="image-processing" *ngIf="processingImage">
-          Compressing image...
-        </div>
-        <div class="image-error" *ngIf="imageError">{{ imageError }}</div>
-        <div class="modal-actions">
-          <button type="button" class="outline-button"
-            [disabled]="saving || processingImage" (click)="closeEditor()">
-            Cancel
-          </button>
-          <button type="submit" class="primary-button"
-            [disabled]="saving || processingImage">
-            {{
-              processingImage ? 'Processing Image...' :
-              saving ? 'Saving...' :
-              editingId ? 'Save Changes' : 'Add Species'
-            }}
-          </button>
-        </div>
-      </form>
-
-      <!-- PRODUCT FORM -->
-      <form *ngIf="editorKind === 'product'" (ngSubmit)="saveEditor()">
-        <div class="form-grid">
-          <label class="full-field">
-            Product Name
-            <input type="text" name="productName" [(ngModel)]="productForm.name"
-              maxlength="120" placeholder="Silk product, silkworm, or cocoons" required>
-          </label>
-
-          <label class="full-field">
-            Description
-            <textarea name="productDescription"
-              [(ngModel)]="productForm.description"
-              maxlength="2000" rows="3"></textarea>
-          </label>
-
-          <div class="full-field image-upload-field">
-            <label for="productImageUpload">Product Image</label>
-            <input id="productImageUpload" type="file"
-              accept="image/jpeg,image/png,image/webp"
-              [disabled]="saving || processingImage"
-              (change)="onImageSelected($event, 'product')">
-            <small>Compressed and saved as Base64 in Firestore.</small>
-            <div class="inventory-form-preview" *ngIf="productForm.imageUrl">
-              <img [src]="productForm.imageUrl" alt="Product preview">
-              <button type="button" class="remove-image-button"
-                [disabled]="saving || processingImage"
-                (click)="removeImage('product')">Remove Image</button>
+        <!-- SPECIES FORM -->
+        @if (editorKind === 'species') {
+          <form (ngSubmit)="saveEditor()">
+            <div class="form-grid">
+              <label class="full-field">
+                Species / Batch Name
+                <input type="text" name="speciesName" [(ngModel)]="speciesForm.name" maxlength="100" required>
+              </label>
+              <label class="full-field">
+                Scientific Name / Description
+                <input type="text" name="scientificName" [(ngModel)]="speciesForm.scientificName" maxlength="150">
+              </label>
+              <div class="full-field image-upload-field">
+                <label for="speciesImageUpload">Silkworm Image</label>
+                <input id="speciesImageUpload" type="file" accept="image/jpeg,image/png,image/webp"
+                  [disabled]="saving || processingImage" (change)="onImageSelected($event, 'species')">
+                <small>JPG, PNG, or WebP. Compressed and saved in Firestore.</small>
+                @if (speciesForm.imageUrl) {
+                  <div class="inventory-form-preview">
+                    <img [src]="speciesForm.imageUrl" alt="Silkworm preview">
+                    <button type="button" class="remove-image-button"
+                      [disabled]="saving || processingImage" (click)="removeImage('species')">Remove Image</button>
+                  </div>
+                }
+              </div>
+              <label>
+                Lifecycle Stage
+                <select name="speciesStage" [(ngModel)]="speciesForm.stage">
+                  @for (stage of stages; track stage) {
+                    <option [value]="stage">{{ stage }}</option>
+                  }
+                </select>
+              </label>
+              <label>
+                Condition
+                <select name="speciesCondition" [(ngModel)]="speciesForm.condition">
+                  @for (condition of conditions; track condition) {
+                    <option [value]="condition">{{ condition }}</option>
+                  }
+                </select>
+              </label>
+              <label>
+                Current Quantity
+                <input type="number" name="speciesQuantity" [(ngModel)]="speciesForm.quantity" min="0" step="1" required>
+              </label>
+              <label>
+                Low Stock Alert Threshold
+                <input type="number" name="speciesThreshold" [(ngModel)]="speciesForm.threshold" min="0" step="1" required>
+              </label>
             </div>
-          </div>
-
-          <label>
-            Category
-            <select name="productCategory" [(ngModel)]="productForm.category">
-              <option *ngFor="let category of productCategories" [value]="category">
-                {{ category }}
-              </option>
-            </select>
-          </label>
-
-          <label>
-            Selling Price (₱)
-            <input type="number" name="productPrice"
-              [(ngModel)]="productForm.price" min="0" step="0.01" required>
-          </label>
-
-          <!-- PRODUCT COLOR AVAILABILITY -->
-          <div class="full-field inventory-color-stock"
-            *ngIf="canManageProductColors()">
-            <div class="inventory-color-heading">
-              <strong>Available Product Colors</strong>
-              <small>
-                Select the colors currently available and enter
-                the number of pieces for each.
-              </small>
-            </div>
-
-            <div class="inventory-color-options">
-              <button type="button" class="inventory-color-choice"
-                *ngFor="let color of availableProductColors"
-                [class.selected]="hasSelectedProductColor(color.name)"
-                [attr.aria-pressed]="hasSelectedProductColor(color.name)"
-                [disabled]="saving" (click)="toggleProductColor(color.name)">
-                <span class="inventory-color-dot"
-                  [style.background-color]="color.hex"></span>
-                <span>{{ color.name }}</span>
-                <span class="inventory-color-check"
-                  *ngIf="hasSelectedProductColor(color.name)">✓</span>
+            @if (processingImage) {
+              <div class="image-processing">Compressing image...</div>
+            }
+            @if (imageError) {
+              <div class="image-error">{{ imageError }}</div>
+            }
+            <div class="modal-actions">
+              <button type="button" class="outline-button" [disabled]="saving || processingImage" (click)="closeEditor()">
+                Cancel
+              </button>
+              <button type="submit" class="primary-button" [disabled]="saving || processingImage">
+                {{
+                  processingImage ? 'Processing Image...' :
+                  saving ? 'Saving...' :
+                  editingId ? 'Save Changes' : 'Add Species'
+                }}
               </button>
             </div>
+          </form>
+        }
 
-            <div class="inventory-color-stock-list"
-              *ngIf="productForm.colorStocks.length > 0">
-              <div class="inventory-color-stock-row"
-                *ngFor="let color of productForm.colorStocks">
-                <span class="inventory-color-stock-name">{{ color.name }}</span>
-
-                <label>
-                  <span>Available Pieces</span>
-                  <input type="number" [name]="'colorStock_' + color.name"
-                    [ngModel]="color.quantity"
-                    (ngModelChange)="setProductColorQuantity(color.name, $event)"
-                    min="0" step="1" required>
-                </label>
-
-                <label>
-                  <span>Low Stock Threshold</span>
-                  <input type="number" [name]="'colorThreshold_' + color.name"
-                    [ngModel]="color.lowStockThreshold ?? 10"
-                    (ngModelChange)="setProductColorThreshold(color.name, $event)"
-                    min="0" step="1" required>
-                </label>
+        <!-- PRODUCT FORM -->
+        @if (editorKind === 'product') {
+          <form (ngSubmit)="saveEditor()">
+            <div class="form-grid">
+              <label class="full-field">
+                Product Name
+                <input type="text" name="productName" [(ngModel)]="productForm.name"
+                  maxlength="120" placeholder="Silk product, silkworm, or cocoons" required>
+              </label>
+              <label class="full-field">
+                Description
+                <textarea name="productDescription" [(ngModel)]="productForm.description" maxlength="2000" rows="3"></textarea>
+              </label>
+              <div class="full-field image-upload-field">
+                <label for="productImageUpload">Product Image</label>
+                <input id="productImageUpload" type="file" accept="image/jpeg,image/png,image/webp"
+                  [disabled]="saving || processingImage" (change)="onImageSelected($event, 'product')">
+                <small>Compressed and saved as Base64 in Firestore.</small>
+                @if (productForm.imageUrl) {
+                  <div class="inventory-form-preview">
+                    <img [src]="productForm.imageUrl" alt="Product preview">
+                    <button type="button" class="remove-image-button"
+                      [disabled]="saving || processingImage" (click)="removeImage('product')">Remove Image</button>
+                  </div>
+                }
               </div>
+              <label>
+                Category
+                <select name="productCategory" [(ngModel)]="productForm.category">
+                  @for (category of productCategories; track category) {
+                    <option [value]="category">{{ category }}</option>
+                  }
+                </select>
+              </label>
 
-              <div class="inventory-color-stock-total">
-                <span>Total Stock</span>
-                <strong>{{ productColorStockTotal | number }} pcs</strong>
-              </div>
+              @if (canManageProductColors()) {
+                <div class="full-field inventory-color-stock">
+                  <div class="inventory-color-heading">
+                    <strong>Available Product Colors</strong>
+                    <small>Select the colors currently available and enter the number of pieces for each.</small>
+                  </div>
+                  <div class="inventory-color-options">
+                    @for (color of availableProductColors; track color.name) {
+                      <button type="button" class="inventory-color-choice"
+                        [class.selected]="hasSelectedProductColor(color.name)"
+                        [attr.aria-pressed]="hasSelectedProductColor(color.name)"
+                        [disabled]="saving" (click)="toggleProductColor(color.name)">
+                        <span class="inventory-color-dot" [style.background-color]="color.hex"></span>
+                        <span>{{ color.name }}</span>
+                        @if (hasSelectedProductColor(color.name)) {
+                          <span class="inventory-color-check">✓</span>
+                        }
+                      </button>
+                    }
+                  </div>
+                  @if (productForm.colorStocks.length > 0) {
+                    <div class="inventory-color-stock-list">
+                      @for (color of productForm.colorStocks; track color) {
+                        <div class="inventory-color-stock-row">
+                          <span class="inventory-color-stock-name">{{ color.name }}</span>
+                          <label>
+                            <span>Available Pieces</span>
+                            <input type="number" [name]="'colorStock_' + color.name" [ngModel]="color.quantity"
+                              (ngModelChange)="setProductColorQuantity(color.name, $event)" min="0" step="1" required>
+                          </label>
+                          <label>
+                            <span>Low Stock Threshold</span>
+                            <input type="number" [name]="'colorThreshold_' + color.name" [ngModel]="color.lowStockThreshold ?? 10"
+                              (ngModelChange)="setProductColorThreshold(color.name, $event)" min="0" step="1" required>
+                          </label>
+                        </div>
+                      }
+                      <div class="inventory-color-stock-total">
+                        <span>Total Stock</span>
+                        <strong>{{ productColorStockTotal | number }} pcs</strong>
+                      </div>
+                    </div>
+                  }
+                  <p class="inventory-color-note">
+                    Only these selected colors will be available to customers after the ShopSilk integration.
+                  </p>
+                </div>
+              }
+
+              <label>
+                {{ hasProductColorStock() ? 'Total Stock (Calculated)' : 'Stock Quantity' }}
+                <input type="number" name="productQuantity" [(ngModel)]="productForm.quantity"
+                  [readonly]="hasProductColorStock()" [class.inventory-readonly-stock]="hasProductColorStock()"
+                  min="0" step="1" required>
+              </label>
+              <label>
+                Low Stock Alert Threshold
+                <input type="number" name="productLowStockThreshold" [(ngModel)]="productForm.threshold"
+                  min="0" step="1" required>
+              </label>
+              <label class="full-field inventory-check-row">
+                <input type="checkbox" name="productPublished" [(ngModel)]="productForm.published">
+                Publish this product
+              </label>
             </div>
-
-            <p class="inventory-color-note">
-              Only these selected colors will be available to customers
-              after the ShopSilk integration.
-            </p>
-          </div>
-
-          <label>
-            {{ hasProductColorStock() ? 'Total Stock (Calculated)' : 'Stock Quantity' }}
-            <input type="number" name="productQuantity"
-              [(ngModel)]="productForm.quantity"
-              [readonly]="hasProductColorStock()"
-              [class.inventory-readonly-stock]="hasProductColorStock()"
-              min="0" step="1" required>
-          </label>
-
-          <label>
-            Low Stock Alert Threshold
-            <input type="number" name="productLowStockThreshold"
-              [(ngModel)]="productForm.threshold" min="0" step="1" required>
-          </label>
-
-          <label class="full-field inventory-check-row">
-            <input type="checkbox" name="productPublished"
-              [(ngModel)]="productForm.published">
-            Publish this product
-          </label>
-        </div>
-
-        <div class="image-processing" *ngIf="processingImage">
-          Compressing image...
-        </div>
-        <div class="image-error" *ngIf="imageError">{{ imageError }}</div>
-
-        <div class="modal-actions">
-          <button type="button" class="outline-button"
-            [disabled]="saving || processingImage" (click)="closeEditor()">
-            Cancel
-          </button>
-          <button type="submit" class="primary-button"
-            [disabled]="saving || processingImage">
-            {{
-              processingImage ? 'Processing Image...' :
-              saving ? 'Saving...' :
-              editingId ? 'Save Changes' : 'Add Product'
-            }}
-          </button>
-        </div>
-      </form>
-    </section>
-  </div>
+            @if (processingImage) {
+              <div class="image-processing">Compressing image...</div>
+            }
+            @if (imageError) {
+              <div class="image-error">{{ imageError }}</div>
+            }
+            <div class="modal-actions">
+              <button type="button" class="outline-button" [disabled]="saving || processingImage" (click)="closeEditor()">
+                Cancel
+              </button>
+              <button type="submit" class="primary-button" [disabled]="saving || processingImage">
+                {{
+                  processingImage ? 'Processing Image...' :
+                  saving ? 'Saving...' :
+                  editingId ? 'Save Changes' : 'Add Product'
+                }}
+              </button>
+            </div>
+          </form>
+        }
+      </section>
+    </div>
+  }
 
   <!-- COCOON EDITOR -->
-  <div class="modal-backdrop" *ngIf="showCocoonEditor"
-    (click)="closeCocoonEditor()">
-    <section class="editor-modal" role="dialog" aria-modal="true"
-      aria-labelledby="cocoon-editor-title" (click)="$event.stopPropagation()">
-
-      <div class="modal-heading">
-        <div>
-          <div class="eyebrow">COCOON INVENTORY</div>
-          <h2 id="cocoon-editor-title">Edit Cocoon Inventory</h2>
-          <p>Edit cocoon quantities and the low-stock alert threshold.</p>
+  @if (cocoonEditor; as editor) {
+    <div class="modal-backdrop" (click)="closeCocoonEditor()">
+      <section class="editor-modal" role="dialog" aria-modal="true"
+        aria-labelledby="cocoon-editor-title" (click)="$event.stopPropagation()">
+        <div class="modal-heading">
+          <div>
+            <div class="eyebrow">COCOON INVENTORY</div>
+            <h2 id="cocoon-editor-title">
+              {{ editor.region ? 'Edit Cocoon Region' : 'Add Cocoon Region' }}
+            </h2>
+          </div>
+          <button type="button" class="close-modal" aria-label="Close cocoon editor"
+            [disabled]="saving || processingImage" (click)="closeCocoonEditor()">×</button>
         </div>
-        <button type="button" class="close-modal"
-          [disabled]="saving || processingImage"
-          (click)="closeCocoonEditor()">×</button>
-      </div>
 
-      <form (ngSubmit)="saveCocoonChanges()">
-        <div class="form-grid">
-
-          <label class="full-field">
-            Good Quality
-            <input type="number" name="cocoonGoodChange"
-              [(ngModel)]="cocoonGoodChange" min="0" step="1" required>
-            <small>
-              Current: {{ cocoons.good | number }}.
-              Enter the updated total quantity.
-            </small>
-          </label>
-
-          <label class="full-field">
-            Minor Defects
-            <input type="number" name="cocoonMinorChange"
-              [(ngModel)]="cocoonMinorChange" min="0" step="1" required>
-            <small>
-              Current: {{ cocoons.minor | number }}.
-              Enter the updated total quantity.
-            </small>
-          </label>
-
-          <label class="full-field">
-            Not Usable
-            <input type="number" name="cocoonUnusableChange"
-              [(ngModel)]="cocoonUnusableChange" min="0" step="1" required>
-            <small>
-              Current: {{ cocoons.unusable | number }}.
-              Enter the updated total quantity.
-            </small>
-          </label>
-
-          <label class="full-field">
-            Low Stock Alert Threshold
-            <input type="number" name="cocoonLowStockThreshold"
-              [(ngModel)]="cocoonLowStockThreshold"
-              min="0" step="1" [disabled]="saving" required>
-            <small>
-              Alert when good-quality, unreserved cocoons
-              are at or below this quantity.
-            </small>
-          </label>
-
-          <div class="full-field image-upload-field">
-            <label for="cocoonImageUpload">Cocoon Image</label>
-            <input id="cocoonImageUpload" type="file"
-              accept="image/jpeg,image/png,image/webp"
-              [disabled]="saving || processingImage"
-              (change)="onImageSelected($event, 'cocoon')">
-            <small>Compressed and saved as Base64 in Firestore.</small>
-
-            <div class="inventory-form-preview" *ngIf="cocoonImageUrl">
-              <img [src]="cocoonImageUrl" alt="Cocoon preview">
-              <button type="button" class="remove-image-button"
-                [disabled]="saving || processingImage"
-                (click)="removeImage('cocoon')">Remove Image</button>
+        <form (ngSubmit)="saveCocoonChanges()">
+          <div class="form-grid">
+            <label class="full-field">
+              Region Name
+              <input type="text" name="cocoonRegionName" [(ngModel)]="editor.name" maxlength="100"
+                placeholder="Enter a region name" [disabled]="saving" required>
+            </label>
+            <label class="full-field">
+              Good Quality
+              <input type="number" name="cocoonGood" [(ngModel)]="editor.good" min="0" step="1" [disabled]="saving" required>
+              <small>Current: {{ editor.original.good | number }}. Enter the updated total quantity.</small>
+            </label>
+            <label class="full-field">
+              Minor Defects
+              <input type="number" name="cocoonMinor" [(ngModel)]="editor.minor" min="0" step="1" [disabled]="saving" required>
+              <small>Current: {{ editor.original.minor | number }}. Enter the updated total quantity.</small>
+            </label>
+            <label class="full-field">
+              Reject
+              <input type="number" name="cocoonUnusable" [(ngModel)]="editor.unusable" min="0" step="1" [disabled]="saving" required>
+              <small>Current: {{ editor.original.unusable | number }}. Enter the updated total quantity.</small>
+            </label>
+            <label class="full-field">
+              Low Stock Alert Threshold
+              <input type="number" name="cocoonLowStockThreshold" [(ngModel)]="editor.lowStockThreshold"
+                min="0" step="1" [disabled]="saving" required>
+              <small>Alert when good-quality, unreserved cocoons are at or below this quantity.</small>
+            </label>
+            <div class="full-field image-upload-field">
+              <label for="cocoonImageUpload">Cocoon Image</label>
+              <input id="cocoonImageUpload" type="file" accept="image/jpeg,image/png,image/webp"
+                [disabled]="saving || processingImage" (change)="onImageSelected($event, 'cocoon')">
+              <small>Choose a JPG, PNG, or WebP image up to 5 MB.</small>
+              @if (editor.imageUrl) {
+                <div class="inventory-form-preview">
+                  <img [src]="editor.imageUrl" alt="Cocoon preview">
+                  <button type="button" class="remove-image-button" [disabled]="saving || processingImage"
+                    (click)="removeImage('cocoon')">Remove Image</button>
+                </div>
+              }
             </div>
           </div>
-        </div>
-
-        <div class="image-processing" *ngIf="processingImage">
-          Compressing image...
-        </div>
-        <div class="image-error" *ngIf="imageError">{{ imageError }}</div>
-
-        <div class="modal-actions">
-          <button type="button" class="outline-button"
-            [disabled]="saving || processingImage" (click)="closeCocoonEditor()">
-            Cancel
-          </button>
-          <button type="submit" class="primary-button"
-            [disabled]="saving || processingImage">
-            {{
-              processingImage ? 'Processing Image...' :
-              saving ? 'Saving...' : 'Save Changes'
-            }}
-          </button>
-        </div>
-      </form>
-    </section>
-  </div>
+          @if (processingImage) {
+            <div class="image-processing">Compressing image...</div>
+          }
+          @if (imageError) {
+            <div class="image-error">{{ imageError }}</div>
+          }
+          <div class="modal-actions">
+            @if (editor.region; as region) {
+              <button type="button" class="table-action delete-action"
+                [disabled]="saving || processingImage" (click)="deleteCocoonRegion(region)">Delete Region</button>
+            }
+            <button type="button" class="outline-button" [disabled]="saving || processingImage"
+              (click)="closeCocoonEditor()">Cancel</button>
+            <button type="submit" class="primary-button" [disabled]="saving || processingImage">
+              {{ saving ? 'Saving...' : editor.region ? 'Save Changes' : 'Save Region' }}
+            </button>
+          </div>
+        </form>
+      </section>
+    </div>
+  }
 
   <!-- VIEW ALL ACTIVITY -->
-  <div class="modal-backdrop" *ngIf="showAllActivity"
-    (click)="closeAllActivity()">
-    <section class="editor-modal all-activity-modal" role="dialog"
-      aria-modal="true" aria-labelledby="all-activity-title"
-      (click)="$event.stopPropagation()">
-
-      <div class="modal-heading">
-        <div>
-          <div class="eyebrow">INVENTORY HISTORY</div>
-          <h2 id="all-activity-title">All Activity</h2>
-          <p>Recorded actions from Firebase.</p>
-        </div>
-        <button type="button" class="close-modal"
-          (click)="closeAllActivity()">×</button>
-      </div>
-
-      <div class="all-activity-list">
-        <div class="activity-item" *ngFor="let activity of allActivities">
-          <div class="activity-symbol" [ngClass]="'activity-' + activity.type">
-            {{
-              activity.type === 'remove' ? '−' :
-              activity.type === 'edit' ? '✎' : '+'
-            }}
+  @if (showAllActivity) {
+    <div class="modal-backdrop" (click)="closeAllActivity()">
+      <section class="editor-modal all-activity-modal" role="dialog" aria-modal="true"
+        aria-labelledby="all-activity-title" (click)="$event.stopPropagation()">
+        <div class="modal-heading">
+          <div>
+            <div class="eyebrow">INVENTORY HISTORY</div>
+            <h2 id="all-activity-title">All Activity</h2>
+            <p>Recorded actions from Firebase.</p>
           </div>
-          <div class="activity-text">
-            <strong>{{ activity.message }}</strong>
-            <small>{{ activity.detail }}</small>
-            <span>{{ formatDate(activity.createdAt) }}</span>
+          <button type="button" class="close-modal" (click)="closeAllActivity()">×</button>
+        </div>
+        <div class="all-activity-list">
+          @for (activity of allActivities; track activity.id) {
+            <div class="activity-item">
+              <div class="activity-symbol" [ngClass]="'activity-' + activity.type">
+                {{ activity.type === 'remove' ? '−' : activity.type === 'edit' ? '✎' : '+' }}
+              </div>
+              <div class="activity-text">
+                <strong>{{ activity.message }}</strong>
+                <small>{{ activity.detail }}</small>
+                <span>{{ formatDate(activity.createdAt) }}</span>
+              </div>
+            </div>
+          }
+          @if (allActivities.length === 0) {
+            <div class="no-activity">No activity recorded yet.</div>
+          }
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="primary-button" (click)="closeAllActivity()">Close</button>
+        </div>
+      </section>
+    </div>
+  }
+
+  <!-- PRODUCTION STATISTICS -->
+  @if (showProductionStatistics) {
+    <div class="modal-backdrop" (click)="closeProductionStatistics()">
+      <section class="editor-modal production-statistics-modal" role="dialog" aria-modal="true"
+        aria-labelledby="production-statistics-title" (click)="$event.stopPropagation()">
+        <div class="modal-heading">
+          <div>
+            <div class="eyebrow">INVENTORY ANALYTICS</div>
+            <h2 id="production-statistics-title">Production Statistics</h2>
+            <p>{{ productionPeriodLabel }}</p>
           </div>
+          <button type="button" class="close-modal" (click)="closeProductionStatistics()">×</button>
         </div>
-        <div class="no-activity" *ngIf="allActivities.length === 0">
-          No activity recorded yet.
+
+        <div class="production-period-tabs">
+          <button type="button" [class.active]="productionPeriod === 'daily'" (click)="setProductionPeriod('daily')">
+            Daily
+          </button>
+          <button type="button" [class.active]="productionPeriod === 'monthly'" (click)="setProductionPeriod('monthly')">
+            Monthly
+          </button>
         </div>
-      </div>
 
-      <div class="modal-actions">
-        <button type="button" class="primary-button"
-          (click)="closeAllActivity()">Close</button>
-      </div>
-    </section>
-  </div>
-
-  <!-- PRODUCTION STATISTICS LINE GRAPH -->
-  <div class="modal-backdrop" *ngIf="showProductionStatistics"
-    (click)="closeProductionStatistics()">
-    <section class="editor-modal production-statistics-modal"
-      role="dialog" aria-modal="true"
-      aria-labelledby="production-statistics-title"
-      (click)="$event.stopPropagation()">
-
-      <div class="modal-heading">
-        <div>
-          <div class="eyebrow">INVENTORY ANALYTICS</div>
-          <h2 id="production-statistics-title">Production Statistics</h2>
-          <p>{{ productionPeriodLabel }}</p>
+        <div class="production-graph-heading">
+          <div>
+            <h3>Inventory Addition Trends</h3>
+            <p>{{ productionPeriod === 'daily' ? 'Last 7 days' : 'Last 6 months' }}</p>
+          </div>
+          <span class="graph-live-label">Firebase Data</span>
         </div>
-        <button type="button" class="close-modal"
-          (click)="closeProductionStatistics()">×</button>
-      </div>
 
-      <!-- DAILY / MONTHLY -->
-      <div class="production-period-tabs">
-        <button type="button" [class.active]="productionPeriod === 'daily'"
-          (click)="setProductionPeriod('daily')">Daily</button>
-        <button type="button" [class.active]="productionPeriod === 'monthly'"
-          (click)="setProductionPeriod('monthly')">Monthly</button>
-      </div>
-
-      <div class="production-graph-heading">
-        <div>
-          <h3>Inventory Addition Trends</h3>
-          <p>{{ productionPeriod === 'daily' ? 'Last 7 days' : 'Last 6 months' }}</p>
+        <div class="production-line-legend">
+          @for (line of productionLines; track line.key) {
+            <div>
+              <span class="production-legend-line" [style.background]="line.color"></span>
+              {{ line.name }}
+            </div>
+          }
         </div>
-        <span class="graph-live-label">Firebase Data</span>
-      </div>
 
-      <!-- GRAPH LEGEND -->
-      <div class="production-line-legend">
-        <div *ngFor="let line of productionLines">
-          <span class="production-legend-line"
-            [style.background]="line.color"></span>
-          {{ line.name }}
-        </div>
-      </div>
+        <div class="production-line-chart">
+          <svg viewBox="0 0 740 310" preserveAspectRatio="xMidYMid meet" role="img"
+            aria-label="Inventory additions by date for silkworms, products, and cocoons">
+            @for (tick of graphTicks; track $index) {
+              <g>
+                <line [attr.x1]="graphLeft" [attr.x2]="graphRight"
+                  [attr.y1]="tick.y" [attr.y2]="tick.y" class="production-grid-line"></line>
+                <text [attr.x]="graphLeft - 13" [attr.y]="tick.y + 4"
+                  text-anchor="end" class="production-axis-text">
+                  {{ formatGraphNumber(tick.value) }}
+                </text>
+              </g>
+            }
 
-      <!-- SVG LINE CHART -->
-      <div class="production-line-chart">
-        <svg viewBox="0 0 740 310" preserveAspectRatio="xMidYMid meet"
-          role="img"
-          aria-label="Inventory additions by date for silkworms, products, and cocoons">
-
-          <!-- GRID -->
-          <g *ngFor="let tick of graphTicks">
+            <line [attr.x1]="graphLeft" [attr.x2]="graphLeft"
+              [attr.y1]="graphTop" [attr.y2]="graphBottom" class="production-axis-line"></line>
             <line [attr.x1]="graphLeft" [attr.x2]="graphRight"
-              [attr.y1]="tick.y" [attr.y2]="tick.y"
-              class="production-grid-line"></line>
-            <text [attr.x]="graphLeft - 13" [attr.y]="tick.y + 4"
-              text-anchor="end" class="production-axis-text">
-              {{ formatGraphNumber(tick.value) }}
-            </text>
-          </g>
+              [attr.y1]="graphBottom" [attr.y2]="graphBottom" class="production-axis-line"></line>
 
-          <!-- AXES -->
-          <line [attr.x1]="graphLeft" [attr.x2]="graphLeft"
-            [attr.y1]="graphTop" [attr.y2]="graphBottom"
-            class="production-axis-line"></line>
-          <line [attr.x1]="graphLeft" [attr.x2]="graphRight"
-            [attr.y1]="graphBottom" [attr.y2]="graphBottom"
-            class="production-axis-line"></line>
+            @for (point of graphData; track point.x) {
+              <g>
+                <text [attr.x]="point.x" y="286" text-anchor="middle" class="production-axis-text">
+                  {{ point.label }}
+                </text>
+              </g>
+            }
 
-          <!-- DATES -->
-          <g *ngFor="let point of graphData">
-            <text [attr.x]="point.x" y="286" text-anchor="middle"
-              class="production-axis-text">
-              {{ point.label }}
-            </text>
-          </g>
+            @for (line of graphSeries; track line.key) {
+              <g>
+                <polyline [attr.points]="line.points" [attr.stroke]="line.color" class="production-svg-line"></polyline>
+              </g>
+            }
 
-          <!-- LINES -->
-          <g *ngFor="let line of graphSeries">
-            <polyline [attr.points]="line.points"
-              [attr.stroke]="line.color"
-              class="production-svg-line"></polyline>
-          </g>
+            @for (line of productionLines; track line.key) {
+              <g>
+                @for (point of graphData; track point.x) {
+                  <circle [attr.cx]="point.x" [attr.cy]="graphY(point[line.key])"
+                    [attr.stroke]="line.color" r="5" class="production-svg-point">
+                    <title>{{ line.name }}: {{ point[line.key] | number }} on {{ point.label }}</title>
+                  </circle>
+                }
+              </g>
+            }
+          </svg>
 
-          <!-- DATA POINTS -->
-          <g *ngFor="let line of productionLines">
-            <circle *ngFor="let point of graphData"
-              [attr.cx]="point.x"
-              [attr.cy]="graphY(point[line.key])"
-              [attr.stroke]="line.color"
-              r="5" class="production-svg-point">
-              <title>
-                {{ line.name }}:
-                {{ point[line.key] | number }}
-                on {{ point.label }}
-              </title>
-            </circle>
-          </g>
-        </svg>
-
-        <div class="production-graph-empty" *ngIf="!graphHasData">
-          No recorded inventory additions in this period.
+          @if (!graphHasData) {
+            <div class="production-graph-empty">
+              No recorded inventory additions in this period.
+            </div>
+          }
         </div>
-      </div>
 
-      <!-- TREND CARDS -->
-      <div class="production-trends">
-        <div class="production-trend-card" *ngFor="let item of currentProductionTrend">
-          <strong>{{ item.name }}</strong>
-          <span>{{ item.current | number }}</span>
-          <small [class.trend-up]="item.direction === 'up'"
-            [class.trend-down]="item.direction === 'down'">
-            <ng-container *ngIf="item.direction === 'up'">↑ Increased</ng-container>
-            <ng-container *ngIf="item.direction === 'down'">↓ Decreased</ng-container>
-            <ng-container *ngIf="item.direction === 'same'">— No change</ng-container>
-          </small>
+        <div class="production-trends">
+          @for (item of currentProductionTrend; track item.key) {
+            <div class="production-trend-card">
+              <strong>{{ item.name }}</strong>
+              <span>{{ item.current | number }}</span>
+              <small [class.trend-up]="item.direction === 'up'" [class.trend-down]="item.direction === 'down'">
+                @if (item.direction === 'up') {
+                  ↑ Increased
+                }
+                @if (item.direction === 'down') {
+                  ↓ Decreased
+                }
+                @if (item.direction === 'same') {
+                  — No change
+                }
+              </small>
+            </div>
+          }
         </div>
-      </div>
 
-      <p class="production-statistics-note">
-        This graph displays positive inventory additions
-        recorded in Firebase Recent Activity.
-        It does not represent verified production
-        measurements or unrecorded quantities.
-      </p>
+        <p class="production-statistics-note">
+          This graph displays positive inventory additions recorded in Firebase Recent Activity.
+          It does not represent verified production measurements or unrecorded quantities.
+        </p>
 
-      <div class="modal-actions">
-        <button type="button" class="primary-button"
-          (click)="closeProductionStatistics()">Close</button>
-      </div>
-    </section>
-  </div>
+        <div class="modal-actions">
+          <button type="button" class="primary-button" (click)="closeProductionStatistics()">Close</button>
+        </div>
+      </section>
+    </div>
+  }
 </div>

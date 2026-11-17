@@ -1,0 +1,256 @@
+<main class="jobapp-page">
+  <header class="page-header">
+    <h1>Job Applications</h1>
+    <p>Review applications and follow up with candidates.</p>
+  </header>
+
+  @if (canManageOpenings()) {
+    <section class="panel openings-panel" aria-labelledby="openings-heading">
+      <h2 id="openings-heading">Available Positions</h2>
+      <form class="opening-form" (ngSubmit)="addOpening()">
+        <label class="form-field">
+          Job title
+          <input type="text" name="openingTitle" maxlength="160" required
+            [(ngModel)]="openingTitle" [disabled]="openingsSaving()" placeholder="Enter a job title">
+        </label>
+        <button type="submit" class="primary-button"
+          [disabled]="openingsSaving() || !openingTitle.trim()">
+          Publish Position
+        </button>
+      </form>
+
+      @if (openingsLoading()) {
+        <p class="message" role="status">Loading available positions…</p>
+      } @else if (openings().length) {
+        <ul class="opening-list" id="available-positions-list">
+          @for (opening of visibleOpenings(); track opening.id) {
+            <li>
+              <span>{{ opening.title }}</span>
+              <button type="button" class="text-button danger" [disabled]="openingsSaving()"
+                [attr.aria-label]="'Remove ' + opening.title" (click)="removeOpening(opening)">
+                Remove
+              </button>
+            </li>
+          }
+        </ul>
+        @if (openings().length > openingPreviewLimit) {
+          <div class="actions">
+            <button type="button" class="outline-button" aria-controls="available-positions-list"
+              [attr.aria-expanded]="showAllOpenings()"
+              (click)="showAllOpenings.set(!showAllOpenings())">
+              {{ showAllOpenings() ? 'Show Fewer Positions' : 'View All Positions' }}
+            </button>
+          </div>
+        }
+      } @else if (!openingsError()) {
+        <p class="message">No positions are currently published.</p>
+      }
+      @if (openingsError()) {
+        <p class="message danger" role="alert">{{ openingsError() }}</p>
+        <button type="button" class="outline-button" [disabled]="openingsSaving()" (click)="loadOpenings()">
+          Reload Positions
+        </button>
+      }
+      @if (openingsFeedback()) {
+        <p class="message" role="status">{{ openingsFeedback() }}</p>
+      }
+    </section>
+  }
+
+  @if (loading()) {
+    <p class="state-box" role="status">Loading job applications…</p>
+  } @else if (error()) {
+    <div class="state-box">
+      <p role="alert">{{ error() }}</p>
+      <button type="button" class="outline-button" (click)="load()">Retry</button>
+    </div>
+  } @else {
+    <section class="summary-grid" aria-label="Application totals">
+      @for (card of summary(); track card.status) {
+        <button type="button" class="summary-card" [attr.aria-pressed]="filter() === card.status"
+          [disabled]="saving()" (click)="setFilter(filter() === card.status ? 'all' : card.status)">
+          <span class="summary-icon" aria-hidden="true"><i class="pi" [class]="card.icon"></i></span>
+          <span>
+            <strong>{{ card.count }}</strong>
+            <small>{{ card.label }}</small>
+          </span>
+        </button>
+      }
+    </section>
+
+    <div class="jobapp-layout">
+      <section class="panel" aria-label="Application list">
+        <div class="toolbar">
+          <label class="search-box">
+            <i class="pi pi-search" aria-hidden="true"></i>
+            <input type="search" aria-label="Search applicants" placeholder="Search applicants…"
+              [disabled]="saving()" [ngModel]="search()" (ngModelChange)="setSearch($event)">
+          </label>
+          <select aria-label="Filter by status" [disabled]="saving()"
+            [ngModel]="filter()" (ngModelChange)="setFilter($event)">
+            <option value="all">All statuses</option>
+            @for (status of statusOptions; track status) {
+              <option [value]="status">{{ statuses[status] }}</option>
+            }
+          </select>
+        </div>
+
+        @if (filteredApplications().length) {
+          <div class="table-scroll">
+            <table class="application-table">
+              <thead>
+                <tr>
+                  <th scope="col">Applicant</th>
+                  <th scope="col">Position</th>
+                  <th scope="col">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (application of filteredApplications(); track application.id) {
+                  <tr [class.selected]="selected()?.id === application.id">
+                    <td>
+                      <button type="button" class="applicant-button" [attr.aria-pressed]="selected()?.id === application.id"
+                        [disabled]="saving()" (click)="select(application)">{{ application.fullName }}</button>
+                    </td>
+                    <td>{{ position(application) }}</td>
+                    <td>
+                      <span class="status-pill" [attr.data-status]="application.status">
+                        {{ statuses[application.status] }}
+                      </span>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        } @else {
+          <p class="state-box">
+            {{ applications().length ? 'No applications match your search or filter.' : 'No job applications yet.' }}
+          </p>
+        }
+      </section>
+
+      <section class="panel" aria-label="Selected application">
+        @if (selected(); as application) {
+          <div class="detail-heading">
+            <h2>{{ application.fullName }}</h2>
+            <span class="status-pill" [attr.data-status]="application.status">{{ statuses[application.status] }}</span>
+          </div>
+          <p class="position">{{ position(application) }}</p>
+
+          <div class="actions">
+            <button type="button" class="outline-button" aria-controls="applicant-details"
+              [attr.aria-expanded]="showApplicationDetails()"
+              (click)="showApplicationDetails.set(!showApplicationDetails())">
+              {{ showApplicationDetails() ? 'Hide Applicant Details' : 'View All Applicant Details' }}
+            </button>
+          </div>
+          <div id="applicant-details">
+            @if (showApplicationDetails()) {
+              <dl class="contact-fields">
+                <div>
+                  <dt>Full name</dt>
+                  <dd>{{ application.fullName }}</dd>
+                </div>
+                <div>
+                  <dt>Email</dt>
+                  <dd>{{ application.email }}</dd>
+                </div>
+                <div>
+                  <dt>Mobile number</dt>
+                  <dd>{{ application.mobileNumber }}</dd>
+                </div>
+                <div>
+                  <dt>Selected position</dt>
+                  <dd>{{ position(application) }}</dd>
+                </div>
+                <div>
+                  <dt>Applied on</dt>
+                  <dd>{{ appliedDate(application) }}</dd>
+                </div>
+              </dl>
+
+              <div class="detail-section">
+                <h3>Work interest</h3>
+                <p>{{ application.desiredWork }}</p>
+              </div>
+
+              <div class="detail-section">
+                <h3>Skills and experience</h3>
+                <p>{{ application.skills }}</p>
+              </div>
+
+              <div class="attachment">
+                <i class="pi pi-file-pdf" aria-hidden="true"></i>
+                @if (application.resumeFile; as resume) {
+                  <span>{{ resume.fileName }}</span>
+                  <button type="button" class="outline-button" (click)="openPdf(application)">
+                    Open PDF
+                  </button>
+                } @else {
+                  <span>No résumé PDF available.</span>
+                }
+              </div>
+            }
+          </div>
+
+          @if (application.trackingEnabled && canApply('close', application)) {
+            <label class="form-field">
+              Note for Applicant (optional)
+              <textarea rows="3" maxlength="1000" [disabled]="saving()" [(ngModel)]="applicantNote"
+                aria-describedby="applicant-note-help"
+                placeholder="Add a message for the applicant"></textarea>
+            </label>
+            <p class="message" id="applicant-note-help">
+              The applicant can see this note on their tracking page after you change the status.
+            </p>
+          }
+
+          <div class="actions">
+            @if (confirmingClose) {
+              <button type="button" class="primary-button" [disabled]="saving()" (click)="save('close')">
+                Confirm Close
+              </button>
+              <button type="button" class="outline-button" [disabled]="saving()" (click)="confirmingClose = false">
+                Cancel
+              </button>
+            } @else {
+              @if (canApply('confirm', application)) {
+                <button type="button" class="primary-button" [disabled]="saving()" (click)="save('confirm')">
+                  Confirm Application
+                </button>
+              }
+              @if (canApply('reject', application)) {
+                <button type="button" class="text-button danger" [disabled]="saving()" (click)="save('reject')">
+                  Reject Application
+                </button>
+              }
+              @if (application.status === 'new') {
+                <button type="button" class="outline-button" [disabled]="saving()" (click)="save('review')">
+                  Mark Under Review
+                </button>
+              }
+              @if (canApply('close', application)) {
+                <button type="button" class="text-button danger" [disabled]="saving()" (click)="confirmingClose = true">
+                  Close Application
+                </button>
+              }
+            }
+          </div>
+        } @else {
+          <p class="state-box">Select an applicant to see their details.</p>
+        }
+
+        @if (saving()) {
+          <p class="message" role="status">Saving…</p>
+        }
+        @if (actionError()) {
+          <p class="message danger" role="alert">{{ actionError() }}</p>
+        }
+        @if (feedback()) {
+          <p class="message" role="status">{{ feedback() }}</p>
+        }
+      </section>
+    </div>
+  }
+</main>

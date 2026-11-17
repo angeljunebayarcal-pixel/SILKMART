@@ -168,17 +168,6 @@
 
               <h3>{{ item.name }}</h3>
 
-              <p class="unit-price">
-                {{
-                  item.price |
-                  currency:'PHP':'symbol':'1.2-2'
-                }}
-
-                <span>
-                  / {{ getStockUnit(item) }}
-                </span>
-              </p>
-
               <!-- OPTIONAL COLOR PREFERENCES -->
               <div
                 class="cart-color-preferences"
@@ -237,17 +226,6 @@
                 <i class="pi pi-trash"></i>
               </button>
 
-              <div class="item-price">
-                <small>ITEM TOTAL</small>
-
-                <strong>
-                  {{
-                    item.price * item.quantity |
-                    currency:'PHP':'symbol':'1.2-2'
-                  }}
-                </strong>
-              </div>
-
             </div>
           </article>
 
@@ -286,42 +264,7 @@
             <strong>{{ selectedCount }}</strong>
           </div>
 
-          <div class="summary-row">
-            <span>Subtotal</span>
-
-            <strong>
-              {{
-                subtotal |
-                currency:'PHP':'symbol':'1.2-2'
-              }}
-            </strong>
-          </div>
-
-          <div class="summary-row">
-            <span>Delivery fee</span>
-
-            <strong class="muted">
-              To be confirmed
-            </strong>
-          </div>
-
         </div>
-
-        <div class="summary-total">
-          <span>Items total</span>
-
-          <strong>
-            {{
-              total |
-              currency:'PHP':'symbol':'1.2-2'
-            }}
-          </strong>
-        </div>
-
-        <p class="summary-note">
-          The displayed amount excludes any delivery fee,
-          which will be confirmed separately.
-        </p>
 
         <!-- PLACE ORDER -->
         <button
@@ -454,18 +397,6 @@
         }}
       </p>
 
-      <!-- ORDER TOTAL -->
-      <div class="checkout-preview">
-        <span>Items total</span>
-
-        <strong>
-          {{
-            total |
-            currency:'PHP':'symbol':'1.2-2'
-          }}
-        </strong>
-      </div>
-
       <!-- DELIVERY DATE -->
       <div class="cart-delivery-date">
 
@@ -495,11 +426,6 @@
           confirmation and delivery availability.
         </small>
       </div>
-
-      <p class="checkout-disclaimer">
-        Delivery details and fees are not included
-        in this amount.
-      </p>
 
       <p
         class="cart-error"

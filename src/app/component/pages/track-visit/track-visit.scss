@@ -1,0 +1,73 @@
+:host {
+  display: block;
+  color: #183d2f;
+  font-family: "DM Sans", Arial, sans-serif;
+}
+
+.tracking-page {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  padding: 24px;
+  background: #f5f7ef;
+}
+
+.tracking-card {
+  box-sizing: border-box;
+  width: min(100%, 500px);
+  padding: clamp(20px, 5vw, 36px);
+  border: 1px solid #dce5d9;
+  border-radius: 16px;
+  background: #fffefb;
+}
+
+.home-link {
+  color: #28624c;
+  font-size: 0.875rem;
+}
+
+h1 {
+  margin: 14px 0 12px;
+  font-family: "Instrument Serif", Georgia, serif;
+  font-size: clamp(2rem, 6vw, 2.75rem);
+  font-weight: 400;
+}
+
+p, dd {
+  line-height: 1.55;
+}
+
+.status {
+  display: inline-block;
+  margin: 0;
+  padding: 6px 12px;
+  border-radius: 20px;
+  background: #eaf2e7;
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+.status[data-status="reschedule_proposed"] {
+  background: #fff0c6;
+  color: #78500b;
+}
+
+.status[data-status="declined"] {
+  background: #f9e5e2;
+  color: #894339;
+}
+
+dl {
+  margin: 18px 0;
+  padding-top: 14px;
+  border-top: 1px solid #e8ede5;
+}
+
+dt {
+  font-weight: 700;
+}
+
+dd {
+  margin: 3px 0 12px;
+  overflow-wrap: anywhere;
+}

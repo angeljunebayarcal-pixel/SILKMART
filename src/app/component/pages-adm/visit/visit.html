@@ -1,0 +1,174 @@
+<main class="visit-page">
+  <header class="page-header">
+    <h1>Visit Requests</h1>
+    <p>Review and schedule visits to SilkMart.</p>
+  </header>
+
+  @if (loading()) {
+    <p class="state-box" role="status">Loading visit requests…</p>
+  } @else if (error()) {
+    <div class="state-box">
+      <p role="alert">{{ error() }}</p>
+      <button type="button" class="outline-button" (click)="load()">Retry</button>
+    </div>
+  } @else {
+    <section class="summary-grid" aria-label="Request totals">
+      @for (card of summary; track card.status) {
+        <button type="button" class="summary-card" [attr.aria-pressed]="filter === card.status"
+          [disabled]="saving()" (click)="setFilter(filter === card.status ? 'all' : card.status)">
+          <span class="summary-icon" aria-hidden="true"><i class="pi" [class]="card.icon"></i></span>
+          <span>
+            <strong>{{ card.count }}</strong>
+            <small>{{ card.label }}</small>
+          </span>
+        </button>
+      }
+    </section>
+
+    <div class="visit-layout">
+      <section class="panel" aria-label="Visit request list">
+        <div class="toolbar">
+          <label class="search-box">
+            <i class="pi pi-search" aria-hidden="true"></i>
+            <input type="search" aria-label="Search visit requests" placeholder="Search requests…" [disabled]="saving()" [ngModel]="search" (ngModelChange)="setSearch($event)">
+          </label>
+          <select aria-label="Filter by status" [disabled]="saving()" [ngModel]="filter" (ngModelChange)="setFilter($event)">
+            <option value="all">All statuses</option>
+            @for (status of filters; track status) {
+              <option [value]="status">{{ statuses[status] }}</option>
+            }
+          </select>
+        </div>
+
+        @if (filteredRequests.length) {
+          <div class="table-scroll">
+            <table class="request-table">
+              <thead>
+                <tr>
+                  <th scope="col">Visitor</th>
+                  <th scope="col">Requested date</th>
+                  <th scope="col">Status</th>
+                  <th scope="col">Details</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (request of filteredRequests; track request.id) {
+                  <tr [class.selected]="selected?.id === request.id">
+                    <td>
+                      <button type="button" class="visitor-button" [attr.aria-pressed]="selected?.id === request.id"
+                        [disabled]="saving()" (click)="select(request)">
+                        <strong>{{ request.fullName }}</strong>
+                        <small>{{ request.purpose }}</small>
+                      </button>
+                    </td>
+                    <td>{{ request.preferredDateTime | date:'MMM d, y':'GMT+0800' }}</td>
+                    <td><span class="status-pill" [attr.data-status]="request.status">{{ statuses[request.status] }}</span></td>
+                    <td>
+                      <button type="button" class="outline-button"
+                        [disabled]="saving()"
+                        [attr.aria-expanded]="selected?.id === request.id && detailsOpen"
+                        [attr.aria-label]="(selected?.id === request.id && detailsOpen ? 'Hide details for ' : 'View details for ') + request.fullName"
+                        aria-controls="visit-request-details"
+                        (click)="toggleDetails(request, requestPanel)">
+                        {{ selected?.id === request.id && detailsOpen ? 'Hide Details' : 'View Details' }}
+                      </button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        } @else {
+          <p class="state-box">{{ requests().length ? 'No requests match your search or filter.' : 'No visit requests yet.' }}</p>
+        }
+      </section>
+
+      <section #requestPanel class="panel detail-panel" aria-label="Selected request" tabindex="-1">
+        @if (selected; as request) {
+          <div class="detail-heading">
+            <h2>{{ request.fullName }}</h2>
+            <span class="status-pill" [attr.data-status]="request.status">{{ statuses[request.status] }}</span>
+          </div>
+          <p class="purpose">{{ request.purpose }}</p>
+
+          <div id="visit-request-details">
+            @if (detailsOpen) {
+              <dl class="detail-fields">
+                <dt>Full name</dt><dd>{{ request.fullName }}</dd>
+                <dt>Email</dt><dd>{{ request.email }}</dd>
+                <dt>Organization</dt><dd>{{ request.organization || '—' }}</dd>
+                <dt>Purpose of visit</dt><dd>{{ request.purpose }}</dd>
+                @if (request.otherPurpose) {
+                  <dt>Visit description</dt><dd>{{ request.otherPurpose }}</dd>
+                }
+                <dt>Preferred schedule</dt>
+                <dd>{{ request.preferredDateTime | date:'MMM d, y, h:mm a':'GMT+0800' }} PHT</dd>
+                <dt>Group size</dt>
+                <dd>{{ request.visitorCount }} {{ request.visitorCount === 1 ? 'visitor' : 'visitors' }}</dd>
+                @if (request.scheduledDateTime) {
+                  <dt>{{ request.status === 'reschedule_proposed' ? 'Proposed schedule' : 'Scheduled visit' }}</dt>
+                  <dd>{{ request.scheduledDateTime | date:'MMM d, y, h:mm a':'GMT+0800' }} PHT</dd>
+                }
+              </dl>
+            }
+          </div>
+
+          @if (!action) {
+            <div class="actions">
+              @if (request.status === 'new' || request.status === 'reschedule_proposed' || request.status === 'confirmed') {
+                @if (request.status !== 'confirmed') {
+                  <button type="button" class="primary-button" [disabled]="saving()" (click)="startAction('confirm')">Confirm Visit</button>
+                }
+                <button type="button" class="outline-button" [disabled]="saving()" (click)="startAction('propose')">Propose New Schedule</button>
+                @if (request.status === 'confirmed') {
+                  <button type="button" class="outline-button" [disabled]="saving()" (click)="startAction('complete')">Mark Completed</button>
+                }
+                <button type="button" class="text-button danger" [disabled]="saving()" (click)="startAction('decline')">Decline</button>
+              }
+            </div>
+          } @else {
+            <form class="decision-form" (ngSubmit)="save(action)">
+              <h3>
+                @switch (action) {
+                  @case ('confirm') { Confirm Visit }
+                  @case ('propose') { Propose New Schedule }
+                  @case ('decline') { Decline Visit }
+                  @case ('complete') { Mark Visit Completed }
+                }
+              </h3>
+              @if (action === 'confirm' || action === 'propose') {
+                @if (request.trackingEnabled) {
+                  <p class="purpose">The visitor can reopen their tracking link to see this {{ action === 'confirm' ? 'confirmation' : 'proposed schedule' }} and your note.</p>
+                } @else {
+                  <p class="purpose">This request was submitted before tracking links were available.</p>
+                }
+                <label class="form-field">
+                  Date and time (Philippine time)
+                  <input type="datetime-local" name="schedule" required [disabled]="saving()" [(ngModel)]="schedule">
+                </label>
+                @if (request.trackingEnabled) {
+                  <label class="form-field">
+                    Note for Visitor (optional)
+                    <textarea name="visitorNote" rows="3" maxlength="1000" [disabled]="saving()"
+                      [(ngModel)]="visitorNote" placeholder="Add instructions for the visitor"></textarea>
+                  </label>
+                }
+              }
+              <div class="actions">
+                <button type="submit" class="primary-button" [disabled]="saving()">
+                  {{ saving() ? 'Saving…' : 'Save Decision' }}
+                </button>
+                <button type="button" class="outline-button" [disabled]="saving()" (click)="cancelAction()">Cancel</button>
+              </div>
+            </form>
+          }
+
+          @if (actionError()) { <p class="message danger" role="alert">{{ actionError() }}</p> }
+          @if (feedback()) { <p class="message" role="status">{{ feedback() }}</p> }
+        } @else {
+          <p class="state-box">Select a visit request to see its details.</p>
+        }
+      </section>
+    </div>
+  }
+</main>

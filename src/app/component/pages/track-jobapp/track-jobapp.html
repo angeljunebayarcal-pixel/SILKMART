@@ -1,0 +1,31 @@
+<main class="tracking-page">
+  <section class="tracking-card" aria-labelledby="track-jobapp-heading">
+    <a class="home-link" routerLink="/">Back to SilkMart</a>
+    <h1 id="track-jobapp-heading">Track Your Application</h1>
+
+    @if (state(); as current) {
+      @if (current.kind === 'loading') {
+        <p role="status">Checking your application status…</p>
+      } @else if (current.kind === 'missing') {
+        <p>We couldn’t find your application. Check that you opened the full tracking link.</p>
+      } @else if (current.kind === 'error') {
+        <p role="alert">We couldn’t load your application status. Refresh this page to try again.</p>
+      } @else if (current.kind === 'ready') {
+        <p class="status" [attr.data-status]="current.application.status" role="status">
+          {{ statusLabels[current.application.status] }}
+        </p>
+
+        @if (current.application.applicantNote) {
+          <div class="applicant-note">
+            <h2>Note from SilkMart</h2>
+            <p>{{ current.application.applicantNote }}</p>
+          </div>
+        }
+
+        @if (current.application.status !== 'closed') {
+          <p>Save your tracking link and reopen it to check for updates.</p>
+        }
+      }
+    }
+  </section>
+</main>

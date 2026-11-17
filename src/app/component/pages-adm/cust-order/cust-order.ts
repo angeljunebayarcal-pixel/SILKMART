@@ -58,7 +58,6 @@ interface Customer {
 interface OrderItem {
   name: string;
   quantity: number;
-  price: number;
   image: string;
   artClass: string;
 }
@@ -67,14 +66,10 @@ interface CustomerOrder {
   id: string;
   customer: Customer;
   items: OrderItem[];
-  total: number;
-  subtotal: number;
   orderedAt: any;
   preferredDate: string;
   status: AdminOrderStatus;
-  paymentMethod: string;
   notes: string;
-  deliveryFee: number | null;
   cancelReason: string;
 }
 
@@ -400,16 +395,10 @@ export class CustOrder implements OnInit, OnDestroy {
 
         quantity: Number(item.quantity || 0),
 
-        price: Number(item.price || 0),
-
         image: item.image || '',
 
         artClass: item.artClass || ''
       })),
-
-      total: Number(order.total || 0),
-
-      subtotal: Number(order.subtotal || 0),
 
       orderedAt: order.createdAt,
 
@@ -419,15 +408,7 @@ export class CustOrder implements OnInit, OnDestroy {
       status:
         order.status || 'Pending',
 
-      paymentMethod:
-        order.paymentMethod || 'Cash on Delivery',
-
       notes: order.notes || '',
-
-      deliveryFee:
-        order.deliveryFee == null
-          ? null
-          : Number(order.deliveryFee),
 
       cancelReason:
         order.cancelReason || ''
@@ -571,28 +552,6 @@ export class CustOrder implements OnInit, OnDestroy {
   // ORDER INFORMATION
   // =========================================
 
-  getOrderSubtotal(order: CustomerOrder): number {
-
-    return order.items.reduce(
-      (sum, item) =>
-        sum + item.quantity * item.price,
-      0
-    );
-  }
-
-  getOrderAdjustment(
-    order: CustomerOrder
-  ): number | null {
-
-    if (order.deliveryFee === null) {
-      return null;
-    }
-
-    return order.total
-      - this.getOrderSubtotal(order)
-      - order.deliveryFee;
-  }
-
   getOrderQuantity(order: CustomerOrder): number {
 
     return order.items.reduce(
@@ -607,7 +566,6 @@ export class CustOrder implements OnInit, OnDestroy {
 
       name: 'Silk Product',
       quantity: 0,
-      price: 0,
       image: '',
       artClass: ''
     };
@@ -641,27 +599,6 @@ export class CustOrder implements OnInit, OnDestroy {
           order.status === 'Delivered'
         )
     ).length;
-  }
-
-  get customerTotalSpent(): number {
-
-    if (!this.selectedOrder) return 0;
-
-    return this.orders
-
-      .filter(order =>
-        order.customer.id ===
-          this.selectedOrder?.customer.id &&
-        (
-          order.status === 'Confirmed' ||
-          order.status === 'Delivered'
-        )
-      )
-
-      .reduce(
-        (sum, order) => sum + order.total,
-        0
-      );
   }
 
   // =========================================

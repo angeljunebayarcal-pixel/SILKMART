@@ -29,9 +29,7 @@ interface SilkOrder {
   userId: string;
   name: string;
   category: string;
-  price: number;
   quantity: number;
-  total: number;
   status: string;
   orderDate: string;
   artClass: string;
@@ -290,9 +288,7 @@ export class Order implements OnInit, OnDestroy {
       category:
         firstProduct?.category ||
         'SILK COLLECTION',
-      price: Number(firstProduct?.price ?? 0),
       quantity,
-      total: Number(order.total ?? 0),
       status: order.status || 'Pending',
       orderDate: this.formatOrderDate(
         order.createdAt

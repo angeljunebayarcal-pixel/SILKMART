@@ -35,7 +35,6 @@
           <path d="m7.5 4.3 9 5.2"/>
         </svg>
       </div>
-
       <div>
         <strong>{{ totalProducts }}</strong>
         <h3>Total Products</h3>
@@ -60,7 +59,6 @@
           <path d="m8 12 2.7 2.7L16.5 9"/>
         </svg>
       </div>
-
       <div>
         <strong>{{ publishedProducts }}</strong>
         <h3>Published</h3>
@@ -87,7 +85,6 @@
           <path d="M8 17h5"/>
         </svg>
       </div>
-
       <div>
         <strong>{{ draftProducts }}</strong>
         <h3>Drafts</h3>
@@ -115,7 +112,6 @@
           <path d="m15 15-6 5"/>
         </svg>
       </div>
-
       <div>
         <strong>{{ outOfStockProducts }}</strong>
         <h3>Out of Stock</h3>
@@ -196,8 +192,6 @@
           <option value="newest">Newest First</option>
           <option value="oldest">Oldest First</option>
           <option value="name">Product Name</option>
-          <option value="priceLow">Price: Low to High</option>
-          <option value="priceHigh">Price: High to Low</option>
           <option value="stockLow">Lowest Stock</option>
         </select>
 
@@ -280,16 +274,6 @@
               <span class="category-pill">
                 {{ product.category }}
               </span>
-            </div>
-
-            <div class="product-data-cell">
-              <span>Price</span>
-              <strong>
-                {{
-                  product.price |
-                  currency:'PHP':'symbol':'1.2-2'
-                }}
-              </strong>
             </div>
 
             <div class="product-data-cell">
@@ -476,19 +460,6 @@
 
           <div>
             <span>
-              <i class="pi pi-money-bill"></i>
-              Price
-            </span>
-            <strong>
-              {{
-                selected.price |
-                currency:'PHP':'symbol':'1.2-2'
-              }}
-            </strong>
-          </div>
-
-          <div>
-            <span>
               <i class="pi pi-box"></i>
               Stock Quantity
             </span>
@@ -498,7 +469,7 @@
             </strong>
           </div>
 
-          <!-- NEW PRODUCT THRESHOLD -->
+          <!-- PRODUCT THRESHOLD -->
           <div>
             <span>
               <i class="pi pi-exclamation-triangle"></i>
@@ -559,6 +530,7 @@
                 for each product color.
               </p>
             </div>
+
             <button
               type="button"
               class="view-all-colors-btn"
@@ -566,7 +538,10 @@
               aria-controls="selected-product-color-list"
               (click)="toggleSelectedColors()">
               {{ showAllSelectedColors ? 'Hide All' : 'View All' }}
-              <i class="pi" [ngClass]="showAllSelectedColors ? 'pi-chevron-up' : 'pi-chevron-down'"></i>
+              <i
+                class="pi"
+                [ngClass]="showAllSelectedColors ? 'pi-chevron-up' : 'pi-chevron-down'">
+              </i>
             </button>
           </div>
 
@@ -580,7 +555,6 @@
               *ngFor="let color of selected.colorStocks">
 
               <div class="product-color-details-name">
-
                 <span
                   class="product-color-dot"
                   [style.background-color]="
@@ -598,7 +572,6 @@
                     '#a5a8a8'
                   ">
                 </span>
-
                 <span>{{ color.name }}</span>
               </div>
 
@@ -620,7 +593,6 @@
               </div>
 
             </div>
-
           </div>
         </div>
 
@@ -644,7 +616,6 @@
 
         <!-- PUBLISH CONTROL -->
         <div class="details-publish-control">
-
           <div>
             <h4>Visible to Customers</h4>
             <p>
@@ -671,7 +642,6 @@
             (click)="togglePublish(selected)">
             <span></span>
           </button>
-
         </div>
 
         <!-- DETAILS BUTTONS -->
@@ -775,9 +745,8 @@
             required>
         </div>
 
-        <!-- CATEGORY AND PRICE -->
+        <!-- CATEGORY -->
         <div class="form-grid">
-
           <div class="form-field">
             <label for="productCategory">
               Category
@@ -796,25 +765,6 @@
               </option>
             </select>
           </div>
-
-          <div class="form-field">
-            <label for="productPrice">
-              Selling Price (PHP)
-              <span>*</span>
-            </label>
-
-            <input
-              id="productPrice"
-              name="productPrice"
-              type="number"
-              min="0"
-              step="0.01"
-              placeholder="0.00"
-              [(ngModel)]="productForm.price"
-              [disabled]="saving"
-              required>
-          </div>
-
         </div>
 
         <!-- LINKED SILKWORM INVENTORY -->
@@ -851,7 +801,6 @@
 
           <!-- COLOR SELECTION -->
           <div class="product-color-options">
-
             <button
               type="button"
               class="product-color-choice"
@@ -873,7 +822,6 @@
                 *ngIf="hasSelectedProductColor(color.name)">
                 ✓
               </span>
-
             </button>
           </div>
 
@@ -892,7 +840,6 @@
 
               <label>
                 <span>Available Pieces</span>
-
                 <input
                   type="number"
                   [name]="'productColorStock_' + color.name"
@@ -908,7 +855,6 @@
 
               <label class="color-threshold-field">
                 <span>Low Stock Alert At</span>
-
                 <input
                   type="number"
                   [name]="'productColorThreshold_' + color.name"
@@ -927,7 +873,6 @@
                 [ngClass]="getColorStockClass(color)">
                 {{ getColorStockLabel(color) }}
               </span>
-
             </div>
 
             <div class="product-color-stock-total">
@@ -936,7 +881,6 @@
                 {{ productColorStockTotal | number }} pcs
               </strong>
             </div>
-
           </div>
 
           <p class="product-color-note">
@@ -944,7 +888,6 @@
             visible in Product Management but cannot
             be ordered until restocked.
           </p>
-
         </div>
 
         <!-- STOCK AND IMAGE -->
@@ -988,12 +931,10 @@
               [(ngModel)]="productForm.imageUrl"
               [disabled]="saving">
           </div>
-
         </div>
 
-        <!-- NEW PRODUCT LOW STOCK THRESHOLD -->
+        <!-- PRODUCT LOW STOCK THRESHOLD -->
         <div class="form-field product-low-stock-field">
-
           <label for="productLowStockThreshold">
             <i class="pi pi-exclamation-triangle"></i>
             Low Stock Alert Threshold
@@ -1016,7 +957,6 @@
             stock reaches this number or lower.
             Zero stock is always marked Out of Stock.
           </small>
-
         </div>
 
         <!-- IMAGE PREVIEW -->

@@ -189,12 +189,8 @@
 
           </div>
 
-          <!-- PRICE, STATUS AND ACTIONS -->
+          <!-- STATUS AND ACTIONS -->
           <div class="order-summary">
-
-            <div class="order-total">
-              ₱{{ order.total | number:'1.2-2' }}
-            </div>
 
             <!-- DELIVERED / REJECTED: DELETE ICON -->
             <div class="order-status-row">
@@ -419,8 +415,7 @@
 
       <p class="cancel-modal-description">
         Tell us why you would like to cancel this order.
-        Your reserved stock will be returned to inventory
-        when the cancellation succeeds.
+        Inventory will be restored if stock was previously deducted.
       </p>
 
       <div

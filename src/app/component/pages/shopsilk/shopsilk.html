@@ -3,13 +3,11 @@
 
   <!-- COLLECTION -->
   <section class="collection-section">
-
     <div class="collection-heading">
       <div>
         <div class="eyebrow">THE COLLECTION</div>
         <h1>Useful beauty, woven slowly.</h1>
       </div>
-
       <p class="collection-description">
         Pieces for quiet mornings, thoughtful gifting, and
         the everyday rituals in between.
@@ -18,22 +16,14 @@
 
     <!-- SEARCH AND FILTERS -->
     <div class="collection-controls">
-
       <div class="search-box">
         <svg viewBox="0 0 24 24" fill="none">
-          <circle
-            cx="11"
-            cy="11"
-            r="6.5"
-            stroke="currentColor"
-            stroke-width="1.5"/>
-          <path
-            d="M16 16L20 20"
-            stroke="currentColor"
-            stroke-width="1.5"
+          <circle cx="11" cy="11" r="6.5"
+            stroke="currentColor" stroke-width="1.5"/>
+          <path d="M16 16L20 20"
+            stroke="currentColor" stroke-width="1.5"
             stroke-linecap="round"/>
         </svg>
-
         <input
           type="text"
           placeholder="Search the collection"
@@ -54,27 +44,18 @@
         class="sort-select"
         [(ngModel)]="sortOption">
         <option value="featured">Featured first</option>
-        <option value="low">Price: Low to high</option>
-        <option value="high">Price: High to low</option>
       </select>
-
     </div>
 
     <!-- PRODUCTS -->
     <div class="product-grid">
-
       <article
         class="product-card"
         *ngFor="let product of filteredProducts"
         (click)="openProduct(product)">
 
-        <div
-          class="product-image"
-          [ngClass]="product.artClass">
-
-          <span
-            class="featured-label"
-            *ngIf="product.featured">
+        <div class="product-image" [ngClass]="product.artClass">
+          <span class="featured-label" *ngIf="product.featured">
             FEATURED
           </span>
 
@@ -100,10 +81,6 @@
 
           <div class="product-bottom">
             <div>
-              <div class="product-price">
-                ₱{{ product.price | number:'1.2-2' }}
-              </div>
-
               <div class="stock">
                 {{ product.stock | number }}
                 {{ getStockUnit(product) }} available
@@ -120,12 +97,9 @@
           </div>
         </div>
       </article>
-
     </div>
 
-    <div
-      class="no-products"
-      *ngIf="loadingProducts">
+    <div class="no-products" *ngIf="loadingProducts">
       <p>Loading the collection...</p>
     </div>
 
@@ -133,10 +107,7 @@
       class="no-products"
       *ngIf="!loadingProducts && productsError">
       <p>{{ productsError }}</p>
-
-      <button
-        type="button"
-        (click)="loadPublishedProducts()">
+      <button type="button" (click)="loadPublishedProducts()">
         Retry
       </button>
     </div>
@@ -150,12 +121,10 @@
       ">
       <p>No published products available right now.</p>
     </div>
-
   </section>
 
   <!-- CARE SECTION -->
   <section class="care-section">
-
     <div class="care-content">
       <div class="care-label">
         CARE IS PART OF THE CRAFT
@@ -183,18 +152,14 @@
       <div class="care-oval"></div>
       <div class="care-circle"></div>
     </div>
-
   </section>
 
   <!-- FOOTER -->
   <footer class="customer-footer">
-
     <div class="footer-main">
-
       <div class="footer-brand">
         <div class="footer-brand-title">
           <div class="footer-leaf">♡</div>
-
           <div>
             <div class="footer-name">SilkMart</div>
             <div class="footer-subtitle">
@@ -212,7 +177,6 @@
 
       <div class="footer-column">
         <div class="footer-heading">STAY CLOSE</div>
-
         <p>
           Every order supports the hands, homes,
           and patient work behind local silk.
@@ -221,12 +185,10 @@
 
       <div class="footer-column">
         <div class="footer-heading">NEED A HAND?</div>
-
         <p>
           Questions about care or delivery?
           Our small team is happy to help.
         </p>
-
         <button
           type="button"
           class="track-button"
@@ -235,13 +197,11 @@
           <span>→</span>
         </button>
       </div>
-
     </div>
 
     <div class="footer-bottom">
       © 2026 SilkMart · Made in Misamis Oriental
     </div>
-
   </footer>
 
   <!-- PRODUCT DETAILS POPUP -->
@@ -291,16 +251,11 @@
 
       <!-- DETAILS -->
       <div class="modal-product-details">
-
         <div class="product-category">
           {{ selectedProduct.category }}
         </div>
 
         <h2>{{ selectedProduct.name }}</h2>
-
-        <div class="modal-price">
-          ₱{{ selectedProduct.price | number:'1.2-2' }}
-        </div>
 
         <p class="modal-description">
           {{
@@ -314,7 +269,7 @@
           {{ getStockUnit(selectedProduct) }} available in total
         </div>
 
-        <!-- ADMIN/STAFF AVAILABLE COLORS -->
+        <!-- AVAILABLE COLORS -->
         <div
           class="product-color-section"
           *ngIf="canChooseColors(selectedProduct)">
@@ -369,7 +324,6 @@
                 ✓
               </span>
             </button>
-
           </div>
 
           <p
@@ -391,16 +345,13 @@
             Your order quantity cannot exceed the stock
             available for the selected color.
           </p>
-
         </div>
 
         <!-- QUANTITY -->
         <div class="modal-quantity-row">
-
           <span>Quantity</span>
 
           <div class="quantity-control editable-quantity">
-
             <button
               type="button"
               aria-label="Decrease quantity"
@@ -428,13 +379,11 @@
               (click)="increaseQuantity()">
               +
             </button>
-
           </div>
         </div>
 
         <!-- ACTIONS -->
         <div class="modal-actions">
-
           <button
             type="button"
             class="modal-add-button"
@@ -451,7 +400,6 @@
             Order now
             <span>→</span>
           </button>
-
         </div>
       </div>
     </div>
@@ -511,17 +459,11 @@
           <div class="product-category">
             {{ addedProduct.category }}
           </div>
-
           <h3>{{ addedProduct.name }}</h3>
-
-          <div class="added-product-price">
-            ₱{{ addedProduct.price | number:'1.2-2' }}
-          </div>
         </div>
       </div>
 
       <div class="add-success-actions">
-
         <button
           type="button"
           class="continue-shopping-button"
@@ -536,7 +478,6 @@
           View orders
           <span>→</span>
         </button>
-
       </div>
     </div>
   </div>
@@ -562,12 +503,18 @@
       <div class="register-brand">
         <div class="register-brand-icon">
           <svg viewBox="0 0 24 24" fill="none">
-            <circle cx="8.7" cy="8.7" r="1.45" stroke="currentColor" stroke-width="1.15"/>
-            <circle cx="10.8" cy="7.9" r="1.45" stroke="currentColor" stroke-width="1.15"/>
-            <circle cx="13" cy="7.4" r="1.45" stroke="currentColor" stroke-width="1.15"/>
-            <circle cx="15.2" cy="7.2" r="1.45" stroke="currentColor" stroke-width="1.15"/>
-            <circle cx="17.4" cy="7.3" r="1.65" stroke="currentColor" stroke-width="1.15"/>
-            <circle cx="17.85" cy="6.95" r="0.22" fill="currentColor"/>
+            <circle cx="8.7" cy="8.7" r="1.45"
+              stroke="currentColor" stroke-width="1.15"/>
+            <circle cx="10.8" cy="7.9" r="1.45"
+              stroke="currentColor" stroke-width="1.15"/>
+            <circle cx="13" cy="7.4" r="1.45"
+              stroke="currentColor" stroke-width="1.15"/>
+            <circle cx="15.2" cy="7.2" r="1.45"
+              stroke="currentColor" stroke-width="1.15"/>
+            <circle cx="17.4" cy="7.3" r="1.65"
+              stroke="currentColor" stroke-width="1.15"/>
+            <circle cx="17.85" cy="6.95" r="0.22"
+              fill="currentColor"/>
 
             <path
               d="M17.7 5.9C18.2 5.1 18.8 4.9 19.5 5.1"
@@ -609,23 +556,19 @@
         <div class="register-eyebrow">
           CUSTOMER ACCOUNT
         </div>
-
         <h2>Create your account</h2>
         <p>Create an account to continue with your order.</p>
       </div>
 
       <form (ngSubmit)="createAccount()">
-
         <div class="register-grid">
 
           <div class="register-field">
             <label for="fullName">
               Full Name
             </label>
-
             <div class="register-input-wrap">
               <i class="pi pi-user"></i>
-
               <input
                 id="fullName"
                 type="text"
@@ -641,10 +584,8 @@
             <label for="registerEmail">
               Email Address
             </label>
-
             <div class="register-input-wrap">
               <i class="pi pi-envelope"></i>
-
               <input
                 id="registerEmail"
                 type="email"
@@ -660,10 +601,8 @@
             <label for="mobileNumber">
               Mobile Number
             </label>
-
             <div class="register-input-wrap">
               <i class="pi pi-phone"></i>
-
               <input
                 id="mobileNumber"
                 type="tel"
@@ -679,10 +618,8 @@
             <label for="completeAddress">
               Complete Address
             </label>
-
             <div class="register-input-wrap register-textarea-wrap">
               <i class="pi pi-map-marker"></i>
-
               <textarea
                 id="completeAddress"
                 name="completeAddress"
@@ -698,10 +635,8 @@
             <label for="registerPassword">
               Password
             </label>
-
             <div class="register-input-wrap register-password-wrap">
               <i class="pi pi-lock"></i>
-
               <input
                 id="registerPassword"
                 [type]="showRegisterPassword ? 'text' : 'password'"
@@ -731,10 +666,8 @@
             <label for="confirmPassword">
               Confirm Password
             </label>
-
             <div class="register-input-wrap register-password-wrap">
               <i class="pi pi-lock"></i>
-
               <input
                 id="confirmPassword"
                 [type]="showConfirmPassword ? 'text' : 'password'"
@@ -759,7 +692,6 @@
               </button>
             </div>
           </div>
-
         </div>
 
         <div
@@ -784,7 +716,6 @@
             <i class="pi pi-spin pi-spinner"></i>
             <span>Creating account...</span>
           </ng-container>
-
         </button>
       </form>
     </div>
@@ -839,18 +770,9 @@
             Selected color: {{ confirmationColors.join(', ') }}
           </small>
         </div>
-
-        <strong>
-          ₱{{
-            confirmationProduct.price *
-            confirmationQuantity |
-            number:'1.2-2'
-          }}
-        </strong>
       </div>
 
       <div class="bag-confirm-actions">
-
         <button
           type="button"
           class="bag-cancel-button"
@@ -865,7 +787,6 @@
           <i class="pi pi-shopping-bag"></i>
           Add to cart
         </button>
-
       </div>
     </div>
   </div>
@@ -922,18 +843,9 @@
             {{ confirmationOrderColors.join(', ') }}
           </small>
         </div>
-
-        <strong>
-          ₱{{
-            confirmationOrderProduct.price *
-            confirmationOrderQuantity |
-            number:'1.2-2'
-          }}
-        </strong>
       </div>
 
       <div class="order-delivery-date">
-
         <label for="preferredDeliveryDate">
           Preferred delivery date
         </label>
@@ -960,7 +872,6 @@
       </div>
 
       <div class="order-confirm-actions">
-
         <button
           type="button"
           class="order-cancel-button"
@@ -988,7 +899,6 @@
 
           {{ orderSaving ? 'Saving...' : 'Confirm order' }}
         </button>
-
       </div>
     </div>
   </div>

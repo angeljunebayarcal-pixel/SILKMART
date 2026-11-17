@@ -2153,3 +2153,202 @@ button:focus-visible {
     transition: none;
   }
 }
+
+
+/* Public visit and job application forms */
+.public-entry-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+  margin-top: 0.75rem;
+}
+
+.public-entry-actions .register-button {
+  justify-content: center;
+  margin: 0;
+  min-width: 0;
+  white-space: normal;
+}
+
+.public-form fieldset {
+  display: grid;
+  gap: 0.85rem;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.public-form label {
+  display: block;
+  color: #234638;
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.public-form label small {
+  color: #516b5d;
+  font-size: inherit;
+  font-weight: 400;
+}
+
+.public-help {
+  margin-top: -0.5rem;
+  color: #516b5d;
+  font-size: 10px;
+  font-weight: 400;
+}
+
+.public-form :is(input, select, textarea) {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  margin-top: 0.35rem;
+  padding: 0.65rem 0.8rem;
+  border: 1px solid #b8cbbf;
+  border-radius: 0.6rem;
+  background: #fff;
+  color: #234638;
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 400;
+}
+
+.public-form textarea {
+  resize: vertical;
+}
+
+.public-form :is(input, select, textarea):focus-visible {
+  outline: 2px solid #245d43;
+  outline-offset: 2px;
+}
+
+.public-form .ng-invalid.ng-touched {
+  border-color: #a12626;
+}
+
+@media (max-width: 420px) {
+  .public-entry-actions {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Visit tracking success screen */
+.public-form:has(> #visitTrackingLink) {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  margin: 14px 0;
+
+  > p:first-child {
+    margin: 0 0 4px;
+    color: #516b5d;
+    font-size: 0.75rem;
+    line-height: 1.5;
+  }
+
+  > label[for="visitTrackingLink"] {
+    margin: 0;
+  }
+
+  > #visitTrackingLink {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    margin: 0;
+    font-size: 0.75rem;
+    text-overflow: ellipsis;
+  }
+
+  > .public-entry-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin: 4px 0 0;
+
+    > .register-button {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-sizing: border-box;
+      width: 100%;
+      min-height: 42px;
+      margin: 0;
+      padding: 8px 12px;
+      text-align: center;
+      text-decoration: none;
+    }
+  }
+
+  > .public-help {
+    margin: 0;
+    padding: 2px 0 4px;
+    font-size: 0.75rem;
+    line-height: 1.5;
+  }
+}
+
+@media (max-width: 480px) {
+  .public-form:has(> #visitTrackingLink) > .public-entry-actions {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Job application tracking success screen */
+.public-form:has(> #jobTrackingLink) {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  margin: 14px 0;
+
+  > p:first-child {
+    margin: 0 0 4px;
+    color: #516b5d;
+    font-size: 0.75rem;
+    line-height: 1.5;
+  }
+
+  > label[for="jobTrackingLink"] {
+    margin: 0;
+  }
+
+  > #jobTrackingLink {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    margin: 0;
+    font-size: 0.75rem;
+    text-overflow: ellipsis;
+  }
+
+  > .public-entry-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin: 4px 0 0;
+
+    > .register-button {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-sizing: border-box;
+      width: 100%;
+      min-height: 42px;
+      margin: 0;
+      padding: 8px 12px;
+      text-align: center;
+      text-decoration: none;
+    }
+  }
+
+  > .public-help {
+    margin: 0;
+    padding: 2px 0 4px;
+    font-size: 0.75rem;
+    line-height: 1.5;
+  }
+}
+
+@media (max-width: 480px) {
+  .public-form:has(> #jobTrackingLink) > .public-entry-actions {
+    grid-template-columns: 1fr;
+  }
+}

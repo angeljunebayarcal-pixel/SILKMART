@@ -2599,3 +2599,189 @@ table tbody tr:nth-child(5) {
     transition: none !important;
   }
 }
+
+/* Cocoon inventory cards */
+.cocoon-card {
+  .heading-title > div {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .cocoon-icon-button {
+    position: relative;
+  }
+
+  .cocoon-icon-image {
+    position: absolute;
+    inset: 0;
+  }
+}
+
+/* Cocoon editor */
+.editor-modal[aria-labelledby="cocoon-editor-title"] {
+  .form-grid > .full-field > .outline-button {
+    border-color: #287457;
+    color: #fff;
+    background: #287457;
+
+    &:hover:not(:disabled) {
+      border-color: #19593f;
+      background: #19593f;
+    }
+  }
+
+  .modal-actions {
+    flex-wrap: wrap;
+
+    .delete-action {
+      min-height: 39px;
+      margin-right: auto;
+      padding: 10px 14px;
+      border-radius: 9px;
+      font-size: 12px;
+    }
+  }
+}
+
+/* Compact cocoon batch rows */
+.cocoon-batches {
+  h2 {
+    margin: 0;
+    padding: 12px 13px;
+    background: #f3f6f1;
+    color: #516a59;
+    font-size: 10px;
+    font-weight: 800;
+  }
+}
+
+.cocoon-batch-row {
+  display: grid;
+  width: 100%;
+  min-height: 57px;
+  grid-template-columns: 35px minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 9px;
+  padding: 11px 13px;
+  border: 0;
+  border-bottom: 1px solid #ecf0eb;
+  background: #fffefa;
+  color: #2c4939;
+  text-align: left;
+  font-size: 11px;
+
+  &:last-child {
+    border-bottom: 0;
+  }
+
+  &:hover {
+    background: #f3f6f1;
+  }
+
+  &:focus-visible {
+    outline: 2px solid #287457;
+    outline-offset: -3px;
+  }
+}
+
+.cocoon-batch-avatar {
+  background: #e6eddb;
+  color: #426e45;
+}
+
+.cocoon-batch-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 700;
+}
+
+.cocoon-batch-stock {
+  white-space: nowrap;
+}
+
+.cocoon-batch-chevron {
+  color: #287457;
+  font-size: 20px;
+  line-height: 1;
+}
+
+/* Batch details popup */
+.cocoon-batch-dialog {
+  position: fixed;
+  inset: 0;
+  width: min(600px, calc(100% - 32px));
+  max-height: calc(100dvh - 32px);
+  padding: 0;
+  border: 0;
+  border-radius: 15px;
+  background: #fffefa;
+  color: inherit;
+  box-shadow: 0 20px 60px rgba(14, 35, 25, 0.2);
+  overscroll-behavior: contain;
+
+  &::backdrop {
+    background: rgba(14, 35, 25, 0.5);
+  }
+
+  &[open] {
+    animation: cocoonBatchSlideIn 0.24s ease-out both;
+  }
+}
+
+.cocoon-batch-close {
+  position: absolute;
+  top: 13px;
+  right: 13px;
+  z-index: 1;
+}
+
+.cocoon-batch-details.inventory-card {
+  border: 0;
+  animation: none;
+
+  .card-heading {
+    padding-right: 58px;
+  }
+}
+
+@keyframes cocoonBatchSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 440px) {
+  .cocoon-card .chart-legend {
+    flex-basis: 100%;
+  }
+
+  .editor-modal[aria-labelledby="cocoon-editor-title"] {
+    .form-grid > .full-field > .outline-button {
+      width: 100%;
+    }
+
+    .modal-actions .delete-action {
+      margin-right: 0;
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cocoon-batch-dialog[open] {
+    animation: none;
+  }
+}
+
+.cocoon-batch-dialog {
+  inset: 0;
+  margin: auto;
+  height: fit-content;
+  overflow-y: auto;
+}

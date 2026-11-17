@@ -16,7 +16,6 @@ interface ShopProduct {
     name: string;
     category: string;
     description: string;
-    price: number;
     stock: number;
     lowStockThreshold: number;
     sourceSpeciesId?: string;
@@ -36,7 +35,6 @@ interface ProductForm {
     name: string;
     category: string;
     description: string;
-    price: number | null;
     stock: number | null;
     lowStockThreshold: number;
     sourceSpeciesId?: string;
@@ -112,9 +110,6 @@ export class Products implements OnInit, OnDestroy {
             this.cdr.detectChanges();
         }
     }
-    // =========================================
-    // INITIALIZATION
-    // =========================================
     ngOnInit(): void {
         this.destroyed = false;
         this.authUnsubscribe = this.inContext(() => onAuthStateChanged(this.auth, user => this.zone.run(() => {
@@ -146,9 +141,6 @@ export class Products implements OnInit, OnDestroy {
         this.productsSubscription?.unsubscribe();
         this.authUnsubscribe?.();
     }
-    // =========================================
-    // FIRESTORE PRODUCT CATALOG
-    // =========================================
     loadProducts(): void {
         if (!this.currentUserId)
             return;
@@ -184,9 +176,6 @@ export class Products implements OnInit, OnDestroy {
             })
         }));
     }
-    // =========================================
-    // NUMBER AND PRODUCT NORMALIZATION
-    // =========================================
     private defaultThreshold(category: string): number {
         return category === 'Silkworms'
             ? 10
@@ -221,7 +210,6 @@ export class Products implements OnInit, OnDestroy {
             name: String(raw.name || ''),
             category,
             description: String(raw.description || ''),
-            price: Number(raw.price || 0),
             stock: Number(raw.stock || 0),
             lowStockThreshold: this.validWholeNumber(raw.lowStockThreshold)
                 ? Number(raw.lowStockThreshold)
@@ -240,9 +228,6 @@ export class Products implements OnInit, OnDestroy {
             colorStocks: this.normalizeColorStocks(raw.colorStocks)
         };
     }
-    // =========================================
-    // INVENTORY DISPLAY HELPERS
-    // =========================================
     isSilkwormProduct(product: ShopProduct | ProductForm): boolean {
         return product.category === 'Silkworms';
     }
@@ -283,9 +268,6 @@ export class Products implements OnInit, OnDestroy {
             ? 'stock-low'
             : 'stock-good';
     }
-    // =========================================
-    // SUMMARY CARDS
-    // =========================================
     get totalProducts(): number {
         return this.products.length;
     }
@@ -307,9 +289,6 @@ export class Products implements OnInit, OnDestroy {
             item.colorStocks.some(color => this.isColorLowStock(color) ||
                 color.quantity === 0)).length;
     }
-    // =========================================
-    // FILTERS AND SORTING
-    // =========================================
     get filteredProducts(): ShopProduct[] {
         const term = this.searchTerm.trim().toLowerCase();
         return this.products
@@ -359,10 +338,6 @@ export class Products implements OnInit, OnDestroy {
                         this.toMillis(b.createdAt));
                 case 'name':
                     return a.name.localeCompare(b.name);
-                case 'priceLow':
-                    return a.price - b.price;
-                case 'priceHigh':
-                    return b.price - a.price;
                 case 'stockLow':
                     return a.stock - b.stock;
                 default:
@@ -391,9 +366,6 @@ export class Products implements OnInit, OnDestroy {
         this.showAllSelectedColors =
             !this.showAllSelectedColors;
     }
-    // =========================================
-    // PRODUCT COLOR MANAGEMENT
-    // =========================================
     canManageProductColors(): boolean {
         const category = this.productForm.category
             .trim()
@@ -455,15 +427,11 @@ export class Products implements OnInit, OnDestroy {
         this.productForm.stock =
             this.productColorStockTotal;
     }
-    // =========================================
-    // PRODUCT FORM
-    // =========================================
     private emptyForm(): ProductForm {
         return {
             name: '',
             category: 'Scarves',
             description: '',
-            price: null,
             stock: null,
             lowStockThreshold: 100,
             imageUrl: '',
@@ -497,7 +465,6 @@ export class Products implements OnInit, OnDestroy {
             name: product.name,
             category: product.category,
             description: product.description,
-            price: product.price,
             stock: product.stock,
             lowStockThreshold: product.lowStockThreshold,
             ...(product.sourceSpeciesId
@@ -521,9 +488,6 @@ export class Products implements OnInit, OnDestroy {
         this.originalEditingProduct = null;
         this.formError = '';
     }
-    // =========================================
-    // IMAGE VALIDATION
-    // =========================================
     private validImage(image: string): boolean {
         const value = image.trim();
         if (!value)
@@ -544,9 +508,6 @@ export class Products implements OnInit, OnDestroy {
             return false;
         }
     }
-    // =========================================
-    // FORM VALIDATION
-    // =========================================
     private validateForm(): string {
         const form = this.productForm;
         if (!form.name.trim()) {
@@ -560,11 +521,6 @@ export class Products implements OnInit, OnDestroy {
         }
         if (form.description.length > 2000) {
             return 'Description must be 2,000 characters or fewer.';
-        }
-        if (form.price === null ||
-            !Number.isFinite(Number(form.price)) ||
-            Number(form.price) < 0) {
-            return 'Please enter a valid selling price.';
         }
         if (!this.validWholeNumber(form.lowStockThreshold)) {
             return 'The low-stock threshold must be zero or a positive whole number.';
@@ -622,9 +578,6 @@ export class Products implements OnInit, OnDestroy {
         }
         return '';
     }
-    // =========================================
-    // SAFE STOCK COMPARISON
-    // =========================================
     private quantitiesEqual(a: ProductColorStock[], b: ProductColorStock[]): boolean {
         if (a.length !== b.length) {
             return false;
@@ -684,9 +637,6 @@ export class Products implements OnInit, OnDestroy {
             };
         });
     }
-    // =========================================
-    // AUTOMATIC SILKWORM SPECIES LINKING
-    // =========================================
     private normalizedSpeciesName(value: string): string {
         return value.trim().toLocaleLowerCase();
     }
@@ -771,9 +721,6 @@ export class Products implements OnInit, OnDestroy {
             }
         }
     }
-    // =========================================
-    // SAVE PRODUCT
-    // =========================================
     async saveProduct(): Promise<void> {
         if (this.saving)
             return;
@@ -809,7 +756,6 @@ export class Products implements OnInit, OnDestroy {
             name: form.name.trim(),
             category: form.category,
             description: form.description.trim(),
-            price: Number(form.price),
             stock: totalStock,
             lowStockThreshold: Number(form.lowStockThreshold),
             colorStocks,
@@ -875,7 +821,6 @@ export class Products implements OnInit, OnDestroy {
                         name: data.name,
                         category: data.category,
                         description: data.description,
-                        price: data.price,
                         imageUrl: data.imageUrl,
                         published: data.published,
                         featured: data.featured,
@@ -997,7 +942,7 @@ export class Products implements OnInit, OnDestroy {
                         });
                         transaction.set(activityReference, {
                             message: 'Silkworm added to Product Management',
-                            detail: `${data.name} — ${available} shared worms at ₱${data.price.toFixed(2)} each`,
+                            detail: `${data.name} — ${available} shared worms`,
                             type: 'add',
                             actorUid: sessionUserId,
                             createdAt: serverTimestamp()
@@ -1058,9 +1003,6 @@ export class Products implements OnInit, OnDestroy {
             this.refresh();
         }
     }
-    // =========================================
-    // PUBLISH / UNPUBLISH
-    // =========================================
     async togglePublish(product: ShopProduct): Promise<void> {
         if (this.saving)
             return;
@@ -1146,10 +1088,6 @@ export class Products implements OnInit, OnDestroy {
             this.refresh();
         }
     }
-    // =========================================
-    // DELETE UNUSED PRODUCT LISTINGS
-    // =========================================
-
     // A product used by an order must remain available for order history.
     // Older orders may have no productId, so use their item name/category
     // as a conservative fallback. This only reads order documents.
@@ -1159,18 +1097,15 @@ export class Products implements OnInit, OnDestroy {
         const snapshot = await getDocsFromServer(
             collection(this.firestore, 'orders')
         );
-
         const matches: string[] = [];
         const targetName = product.name.trim().toLocaleLowerCase();
         const targetCategory = product.category.trim().toLocaleLowerCase();
         const targetSpecies = String(product.sourceSpeciesId || '').trim();
-
         for (const entry of snapshot.docs) {
             const order = entry.data();
             const items: any[] = Array.isArray(order['items'])
                 ? order['items']
                 : [];
-
             const used = items.some(item => {
                 const orderedProductId = String(item?.productId || '').trim();
                 const orderedSpeciesId = String(item?.sourceSpeciesId || '').trim();
@@ -1178,11 +1113,9 @@ export class Products implements OnInit, OnDestroy {
                     .trim().toLocaleLowerCase();
                 const orderedCategory = String(item?.category || '')
                     .trim().toLocaleLowerCase();
-
                 if (orderedProductId === product.id) {
                     return true;
                 }
-
                 if (
                     targetSpecies &&
                     orderedSpeciesId === targetSpecies &&
@@ -1190,20 +1123,16 @@ export class Products implements OnInit, OnDestroy {
                 ) {
                     return true;
                 }
-
                 // Only use name matching if a historical order has no
                 // product ID; avoid confusing two different known IDs.
                 return !orderedProductId &&
                     orderedName === targetName &&
                     (orderedCategory === targetCategory || !orderedCategory);
             });
-
             if (used) matches.push(entry.id);
         }
-
         return matches;
     }
-
     // Remove publication first so new customer checkout transactions
     // cannot successfully order this listing during deletion.
     private async unpublishProductBeforeRemoval(
@@ -1212,15 +1141,12 @@ export class Products implements OnInit, OnDestroy {
         await runTransaction(this.firestore, async transaction => {
             const reference = doc(this.firestore, 'products', product.id);
             const snapshot = await transaction.get(reference);
-
             if (!snapshot.exists()) {
                 throw new Error('Product no longer exists. Refresh the list.');
             }
-
             const latest = snapshot.data() || {};
             const sourceId = String(latest['sourceSpeciesId'] || '').trim();
             const expectedSourceId = String(product.sourceSpeciesId || '').trim();
-
             if (
                 sourceId !== expectedSourceId ||
                 String(latest['category'] || '') !== product.category ||
@@ -1228,13 +1154,11 @@ export class Products implements OnInit, OnDestroy {
             ) {
                 throw new Error('Product information changed. Refresh and try again.');
             }
-
             if (latest['everOrdered'] === true) {
                 throw new Error(
                     'This product has delivery history. Keep it for historical records; unpublish it instead.'
                 );
             }
-
             if (latest['published'] === true) {
                 transaction.update(reference, {
                     published: false,
@@ -1243,10 +1167,8 @@ export class Products implements OnInit, OnDestroy {
             }
         });
     }
-
     async deleteProduct(product: ShopProduct): Promise<void> {
         if (this.saving) return;
-
         if (
             !this.currentUserId ||
             this.auth.currentUser?.uid !== this.currentUserId
@@ -1259,7 +1181,6 @@ export class Products implements OnInit, OnDestroy {
             });
             return;
         }
-
         const currentProduct = this.products.find(item => item.id === product.id);
         if (!currentProduct) {
             await Swal.fire({
@@ -1270,26 +1191,21 @@ export class Products implements OnInit, OnDestroy {
             });
             return;
         }
-
         this.saving = true;
         this.refresh();
-
         try {
             // Do not delete if any customer order has ever used this product.
             const existingOrders = await this.inContext(() =>
                 this.findOrdersUsingProduct(currentProduct)
             );
-
             if (existingOrders.length > 0) {
                 throw new Error(
                     `This product is referenced by ${existingOrders.length} customer order(s). ` +
                     'It must remain for order history. You can unpublish the product instead.'
                 );
             }
-
             this.saving = false;
             this.refresh();
-
             const confirmation = await Swal.fire({
                 icon: 'warning',
                 title: 'Permanently Delete Product?',
@@ -1304,16 +1220,12 @@ export class Products implements OnInit, OnDestroy {
                 confirmButtonColor: '#bf3e3e',
                 reverseButtons: true
             });
-
             if (!confirmation.isConfirmed) return;
-
             this.saving = true;
             this.refresh();
-
             await this.inContext(async () => {
                 // Step 1: stop new checkout attempts.
                 await this.unpublishProductBeforeRemoval(currentProduct);
-
                 // Step 2: re-read order history from the server after
                 // unpublishing, including orders created moments ago.
                 const latestOrders = await this.findOrdersUsingProduct(currentProduct);
@@ -1323,21 +1235,17 @@ export class Products implements OnInit, OnDestroy {
                         'to prevent further orders, but its record was not deleted.'
                     );
                 }
-
                 // Step 3: delete only the product and record the action.
                 // Do not change inventory_species or any customer orders.
                 const reference = doc(this.firestore, 'products', currentProduct.id);
                 const activityReference = doc(
                     collection(this.firestore, 'inventory_activity')
                 );
-
                 await runTransaction(this.firestore, async transaction => {
                     const snapshot = await transaction.get(reference);
-
                     if (!snapshot.exists()) {
                         throw new Error('Product was already deleted. Refresh the list.');
                     }
-
                     const latest = snapshot.data() || {};
                     if (
                         String(latest['sourceSpeciesId'] || '').trim() !==
@@ -1351,7 +1259,6 @@ export class Products implements OnInit, OnDestroy {
                             'Product was changed or has order history. Refresh and try again.'
                         );
                     }
-
                     transaction.delete(reference);
                     transaction.set(activityReference, {
                         message: 'Silk product permanently deleted',
@@ -1364,12 +1271,10 @@ export class Products implements OnInit, OnDestroy {
                     });
                 });
             });
-
             if (this.selectedProduct?.id === currentProduct.id) {
                 this.selectedProduct = null;
                 this.showAllSelectedColors = false;
             }
-
             await Swal.fire({
                 icon: 'success',
                 title: 'Product Deleted',
@@ -1395,9 +1300,6 @@ export class Products implements OnInit, OnDestroy {
             this.refresh();
         }
     }
-    // =========================================
-    // STATUS DISPLAY
-    // =========================================
     getStatusText(product: ShopProduct): string {
         if (product.stock <= 0) {
             return 'Out of Stock';
@@ -1429,9 +1331,6 @@ export class Products implements OnInit, OnDestroy {
             .join('')
             .toUpperCase() || 'SM';
     }
-    // =========================================
-    // DATE HELPERS
-    // =========================================
     private toMillis(value: any): number {
         if (!value)
             return 0;

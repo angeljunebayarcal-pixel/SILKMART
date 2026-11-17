@@ -1,4 +1,3 @@
-
 <div class="login-page">
 
   <!-- WELCOME SCREEN -->
@@ -74,7 +73,7 @@
   >
     <section
       class="login-panel"
-      [class.register-mode]="showRegisterForm"
+      [class.register-mode]="showRegisterForm || publicForm"
       (click)="$event.stopPropagation()"
     >
 
@@ -94,7 +93,7 @@
           class="close-button"
           type="button"
           aria-label="Close"
-          [disabled]="loginLoading || registerLoading || resetLoading"
+          [disabled]="loginLoading || registerLoading || resetLoading || publicLoading"
           (click)="closeLogin()"
         >
           <i class="pi pi-times" aria-hidden="true"></i>
@@ -125,7 +124,7 @@
         </div>
 
         <!-- LOGIN FORM -->
-        <ng-container *ngIf="!showRegisterForm && !showForgotPassword">
+        <ng-container *ngIf="!publicForm && !showRegisterForm && !showForgotPassword">
 
           <div class="login-heading">
             <div class="eyebrow">ACCOUNT</div>
@@ -244,7 +243,197 @@
             <i class="pi pi-arrow-right"></i>
           </button>
 
+          <div class="public-entry-actions">
+            <button class="register-button" type="button" [disabled]="loginLoading" (click)="openPublicForm('visit')">
+              <i class="pi pi-calendar" aria-hidden="true"></i>
+              <span>Request a Visit</span>
+            </button>
+            <button class="register-button" type="button" [disabled]="loginLoading" (click)="openPublicForm('job')">
+              <i class="pi pi-briefcase" aria-hidden="true"></i>
+              <span>Apply for a Job</span>
+            </button>
+          </div>
+
         </ng-container>
+
+        @if (publicForm) {
+          <button class="back-button" type="button" (click)="backFromPublicForm()" [disabled]="publicLoading">
+            <i class="pi pi-arrow-left" aria-hidden="true"></i>
+            <span>Back to sign in</span>
+          </button>
+          <div class="login-heading">
+            <h2>{{ publicForm === 'visit' ? 'Request a Visit' : 'Apply for a Job' }}</h2>
+            @if (publicForm === 'visit') {
+              <p>No SilkMart account is needed. After submitting, save your tracking link to check your visit status.</p>
+            } @else {
+              <p>No SilkMart account is needed. After submitting, save your tracking link to check your application status.</p>
+            }
+          </div>
+
+          @if (publicSuccess) {
+            <p class="reset-password-success" role="status">{{ publicSuccess }}</p>
+            @if (publicForm === 'visit' && visitTrackingUrl; as trackingUrl) {
+              <div class="public-form">
+                <p>Save this link to check whether your visit is confirmed or a new time is proposed.</p>
+                <label for="visitTrackingLink">Your tracking link</label>
+                <input
+                  #visitTrackingInput
+                  id="visitTrackingLink"
+                  type="text"
+                  [value]="trackingUrl"
+                  readonly
+                  (focus)="visitTrackingInput.select()"
+                />
+                <div class="public-entry-actions">
+                  <button class="register-button" type="button" (click)="copyVisitTrackingLink()">
+                    Copy Tracking Link
+                  </button>
+                  <a class="register-button" [href]="trackingUrl" rel="noreferrer" target="_blank">
+                    Track Your Visit
+                  </a>
+                </div>
+                @if (visitTrackingCopyMessage) {
+                  <p class="public-help" role="status">{{ visitTrackingCopyMessage }}</p>
+                }
+              </div>
+            }
+            @if (publicForm === 'job' && jobTrackingUrl; as trackingUrl) {
+              <div class="public-form">
+                <p>Save this link to check for status updates and messages from SilkMart.</p>
+                <label for="jobTrackingLink">Your tracking link</label>
+                <input
+                  #jobTrackingInput
+                  id="jobTrackingLink"
+                  type="text"
+                  [value]="trackingUrl"
+                  readonly
+                  (focus)="jobTrackingInput.select()"
+                />
+                <div class="public-entry-actions">
+                  <button class="register-button" type="button" (click)="copyJobTrackingLink()">
+                    Copy Tracking Link
+                  </button>
+                  <a class="register-button" [href]="trackingUrl" rel="noreferrer" target="_blank">
+                    Track Your Application
+                  </a>
+                </div>
+                @if (jobTrackingCopyMessage) {
+                  <p class="public-help" role="status">{{ jobTrackingCopyMessage }}</p>
+                }
+              </div>
+            }
+            <button class="signin-button" type="button" (click)="backFromPublicForm()">Done</button>
+          } @else {
+            <form class="public-form" #publicRequestForm="ngForm" (ngSubmit)="submitPublicForm(publicRequestForm)" novalidate>
+              <fieldset [disabled]="publicLoading">
+                @if (publicForm === 'visit') {
+                  <label>Full name
+                    <input name="visitorName" [(ngModel)]="visitor.fullName" autocomplete="name" maxlength="120" required />
+                  </label>
+                  <label>Email address
+                    <input name="visitorEmail" type="email" [(ngModel)]="visitor.email" autocomplete="email" maxlength="254" required email />
+                  </label>
+                  <label>Company, school, or organization <small>(optional)</small>
+                    <input name="organization" [(ngModel)]="visitor.organization" autocomplete="organization" maxlength="160" />
+                  </label>
+                  <label>Purpose of visit
+                    <select name="purpose" [(ngModel)]="visitor.purpose" required>
+                      <option value="">Select a purpose</option>
+                      @for (purpose of visitPurposes; track purpose) {
+                        <option [value]="purpose">{{ purpose }}</option>
+                      }
+                    </select>
+                  </label>
+                  @if (visitor.purpose === 'Other') {
+                    <label>Describe your visit
+                      <textarea name="otherPurpose" [(ngModel)]="visitor.otherPurpose" rows="3" maxlength="500" required></textarea>
+                    </label>
+                  }
+                  <label>Preferred date and time (Philippine time)
+                    <input name="preferredDateTime" type="datetime-local" [(ngModel)]="visitor.preferredDateTime" required />
+                  </label>
+                  <label>Number of visitors
+                    <input name="visitorCount" type="number" [(ngModel)]="visitor.visitorCount" min="1" step="1" required />
+                  </label>
+                } @else {
+                  <label>Full name
+                    <input name="applicantName" [(ngModel)]="applicant.fullName" autocomplete="name" maxlength="120" required />
+                  </label>
+                  <label>Email address
+                    <input name="applicantEmail" type="email" [(ngModel)]="applicant.email" autocomplete="email" maxlength="254" required email />
+                  </label>
+                  <label>Mobile number
+                    <input name="applicantMobile" type="tel" [(ngModel)]="applicant.mobileNumber" autocomplete="tel" maxlength="25" required />
+                  </label>
+                  <label>Available positions <small>(optional)</small>
+                    <select name="openingId" [(ngModel)]="applicant.openingId"
+                      [disabled]="publicLoading || openingsLoading || openingsError || !jobOpenings.length"
+                      aria-describedby="opening-help">
+                      <option value="">Select an open position</option>
+                      @for (opening of jobOpenings; track opening.id) {
+                        <option [value]="opening.id">{{ opening.title }}</option>
+                      }
+                    </select>
+                  </label>
+                  <div id="opening-help" class="public-help" aria-live="polite">
+                    @if (openingsLoading) {
+                      Loading available positions…
+                    } @else if (openingsError) {
+                      Available positions couldn’t be loaded. You can still apply.
+                      <button class="forgot-password-link" type="button" (click)="loadPublicJobOpenings()">Retry</button>
+                    } @else if (!jobOpenings.length) {
+                      There are no current openings. You can still describe what work you want below.
+                    } @else {
+                      You can leave the position blank and describe what work you want below.
+                    }
+                  </div>
+                  <label>What kind of work are you interested in?
+                    <textarea name="desiredWork" [(ngModel)]="applicant.desiredWork" rows="3" maxlength="1000" required></textarea>
+                  </label>
+                  <label>Relevant skills or experience
+                    <textarea name="skills" [(ngModel)]="applicant.skills" rows="3" maxlength="2000" required></textarea>
+                  </label>
+                  <div class="staff-verification-group">
+                    <label for="resumePdf">
+                      Résumé or portfolio PDF <span class="required">*</span>
+                    </label>
+
+                    <p id="resumePdfHelp" class="staff-verification-description">PDF only. Maximum file size 700 KB.</p>
+
+                    <input
+                      #resumeInput
+                      id="resumePdf"
+                      name="resumePdf"
+                      type="file"
+                      accept=".pdf,application/pdf"
+                      aria-describedby="resumePdfHelp"
+                      [attr.aria-invalid]="resumeFileError ? 'true' : null"
+                      (change)="onResumeSelected($event)"
+                      required
+                    />
+
+                    @if (resumeFile) {
+                      <div class="staff-verification-file">
+                        <span [title]="resumeFile.name">{{ resumeFile.name }}</span>
+                        <button type="button" (click)="clearResumeFile(resumeInput)">Remove</button>
+                      </div>
+                    }
+                    @if (resumeFileError) {
+                      <p class="staff-verification-error" role="alert">{{ resumeFileError }}</p>
+                    }
+                  </div>
+                }
+
+                @if (publicError) {
+                  <p class="reset-password-error" role="alert">{{ publicError }}</p>
+                }
+                <button class="signin-button" type="submit">
+                  {{ publicLoading ? 'Sending…' : publicForm === 'visit' ? 'Send Visit Request' : 'Submit Application' }}
+                </button>
+              </fieldset>
+            </form>
+          }
+        }
 
         <!-- FORGOT PASSWORD / RESET EMAIL -->
         <ng-container *ngIf="!showRegisterForm && showForgotPassword">
@@ -544,6 +733,7 @@
                   [(ngModel)]="confirmPassword"
                   placeholder="Repeat your password"
                   autocomplete="new-password"
+                  minlength="6"
                   required
                 />
 

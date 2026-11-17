@@ -1,4 +1,3 @@
-
 <div class="notification-page">
 
   <main class="notification-container">
@@ -13,8 +12,8 @@
         </h1>
 
         <p>
-          Keep track of new customer orders, upcoming deliveries,
-          and messages from SilkMart customers.
+          Track customer orders, deliveries, messages, staff registrations,
+          visit requests, and job applications.
         </p>
       </div>
 
@@ -103,7 +102,7 @@
           <i class="pi pi-spin pi-spinner"></i>
         </div>
         <h2>Loading notifications</h2>
-        <p>Checking SilkMart orders and conversations.</p>
+        <p>Checking for new activity.</p>
       </div>
 
       <div
@@ -145,9 +144,16 @@
         "
       >
 
+        <div class="submission-error" *ngIf="submissionError">
+          <p role="alert">{{ submissionError }}</p>
+          <button type="button" class="notification-action" (click)="loadNotifications()">
+            Try again
+          </button>
+        </div>
+
         <div
           class="notifications-empty"
-          *ngIf="filteredNotifications.length === 0"
+          *ngIf="filteredNotifications.length === 0 && !submissionError"
         >
           <div class="empty-icon">
             <i class="pi pi-bell"></i>
@@ -186,13 +192,14 @@
               {{
                 item.type === 'orders' ? 'CUSTOMER ORDER' :
                 item.type === 'delivery' ? 'DELIVERY UPDATE' :
+                item.type === 'submission' ? 'SUBMISSION' :
                 'CUSTOMER MESSAGE'
               }}
             </span>
 
             <h2>{{ item.title }}</h2>
             <p>{{ item.message }}</p>
-            <small>Order #{{ item.orderId }}</small>
+            <small *ngIf="item.orderId">Order #{{ item.orderId }}</small>
           </div>
 
           <div class="notification-side">
@@ -207,7 +214,10 @@
                 (click)="openNotification(item)"
               >
                 {{ item.action }}
-                <i class="pi pi-arrow-right"></i>
+                <i
+                  [class]="item.type === 'submission' && !item.submissionRoute ? 'pi pi-check' : 'pi pi-arrow-right'"
+                  aria-hidden="true"
+                ></i>
               </button>
 
               <button

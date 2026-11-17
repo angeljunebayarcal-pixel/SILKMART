@@ -21,7 +21,6 @@ interface CartItem {
   name: string;
   category: string;
   description?: string;
-  price: number;
   quantity: number;
   stock: number;
   imageUrl?: string;
@@ -162,13 +161,18 @@ export class Add2cart implements OnInit, OnDestroy {
         item => item.userId === this.currentUserId
       )
       .map(item => ({
-        ...item,
-        imageUrl: String(
-          item.imageUrl || item.image || ''
-        ),
-        colors: Array.isArray(item.colors)
-          ? item.colors
-          : [],
+        id: item.id,
+        userId: item.userId,
+        productId: item.productId,
+        name: item.name,
+        category: item.category,
+        description: item.description,
+        quantity: item.quantity,
+        stock: item.stock,
+        imageUrl: String(item.imageUrl || item.image || ''),
+        image: item.image,
+        colors: Array.isArray(item.colors) ? item.colors : [],
+        artClass: item.artClass,
         selected: item.selected !== false
       }))
       .sort((a, b) => b.id - a.id);
@@ -219,18 +223,6 @@ export class Add2cart implements OnInit, OnDestroy {
   get allSelected(): boolean {
     return this.cartItems.length > 0 &&
       this.cartItems.every(item => item.selected);
-  }
-
-  get subtotal(): number {
-    return this.selectedItems.reduce(
-      (sum, item) =>
-        sum + item.price * item.quantity,
-      0
-    );
-  }
-
-  get total(): number {
-    return this.subtotal;
   }
 
   // =========================================
@@ -454,13 +446,6 @@ export class Add2cart implements OnInit, OnDestroy {
         throw new Error(`Invalid quantity for ${item.name}.`);
       }
 
-      if (Number(product['price']) !== Number(item.price)) {
-        throw new Error(
-          `The price of ${item.name} has changed. ` +
-          'Remove it and add the updated product again.'
-        );
-      }
-
       if (colors.length > 0) {
         if (selectedColors.length !== 1) {
           throw new Error(
@@ -547,14 +532,12 @@ export class Add2cart implements OnInit, OnDestroy {
         !item.name?.trim() ||
         !Number.isInteger(item.quantity) ||
         item.quantity < 1 ||
-        item.quantity > item.stock ||
-        !Number.isFinite(Number(item.price)) ||
-        Number(item.price) < 0
+        item.quantity > item.stock
     );
 
     if (unavailable) {
       this.errorMessage =
-        'Some selected items have invalid quantities or prices.';
+        'Some selected items have invalid quantities.';
       return;
     }
 
@@ -590,14 +573,12 @@ export class Add2cart implements OnInit, OnDestroy {
             selectedColor: item.colors?.[0] || '',
             name: item.name,
             category: item.category,
-            price: Number(item.price),
             quantity: Number(item.quantity),
             image: this.getItemImage(item),
             artClass: item.artClass
           })),
 
           preferredDeliveryDate: selectedDate,
-          deliveryFee: 0,
 
           // Preserve optional colors in order notes.
           notes: purchasedItems

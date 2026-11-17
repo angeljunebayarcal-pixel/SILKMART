@@ -37,7 +37,6 @@ import {
 interface RecentOrder {
   id: string;
   name: string;
-  total: number;
   status: string;
   orderDate: string;
 }
@@ -554,7 +553,6 @@ export class ProfileCust implements OnInit, OnDestroy {
                     .map(item => item.name)
                     .filter(Boolean)
                     .join(', ') || 'SilkMart Order',
-                total: Number(order.total || 0),
                 status: order.status,
                 orderDate:
                   this.formatCreatedDate(order.createdAt)
